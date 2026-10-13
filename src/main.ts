@@ -1,9 +1,9 @@
 // Pocket Pantheon · Copyright (c) 2026 Albeen (albeen-sknight)
 import { VERSION } from "./core/version";
-import { bindLangSwitch } from "./ui/i18n";
+import { App } from "./ui/app";
 
 function boot() {
-  bindLangSwitch("play");
+  void new App().start();
   console.log("⚡ [Pocket Pantheon] Engine initialized v" + VERSION);
 }
 
