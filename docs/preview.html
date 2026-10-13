@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<!-- Pocket Pantheon · Copyright (c) 2026 Albeen (albeen-sknight) -->
+<html lang="en"><head><meta charset="utf-8">
+<meta name="generator" content="PocketPantheon-Core">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pocket Pantheon: concept preview</title>
+<meta name="description" content="A tiny pixel world that lives on its own. Concept preview of Pocket Pantheon, a browser god game.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Outfit:wght@400;600&display=swap">
+<style>
+:root{--bg:#e8f0f6;--ink:#1b1e3a;--mut:#4d5478;--panel:#fff;--line:#b6c4d6;--acc:#a86f00;--btn:#1b1e3a;--btnt:#f6e7a8;--ok:#2f8f3a}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#13152b;--ink:#f0ebdc;--mut:#a9aac6;--panel:#1d2044;--line:#363b6e;--acc:#f2c94c;--btn:#f2c94c;--btnt:#1b1e3a;--ok:#5fbf4a}}
+:root[data-theme="dark"]{--bg:#13152b;--ink:#f0ebdc;--mut:#a9aac6;--panel:#1d2044;--line:#363b6e;--acc:#f2c94c;--btn:#f2c94c;--btnt:#1b1e3a;--ok:#5fbf4a}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.55 Outfit,system-ui,sans-serif;padding-bottom:env(safe-area-inset-bottom,0px)}
+h1,h2,h3{font-family:'Pixelify Sans',monospace,sans-serif;margin:0;line-height:1.1}
+a{color:var(--acc)}
+.px{image-rendering:pixelated;display:block}
+.hero{position:relative;height:78vh;min-height:440px;overflow:hidden}
+.hero canvas{width:100%;height:100%;object-fit:cover}
+.hero:after{content:"";position:absolute;inset:0;background:linear-gradient(transparent 35%,var(--bg) 96%);pointer-events:none}
+.hero .t{position:absolute;z-index:2;left:0;right:0;bottom:6px;padding:0 20px;max-width:1000px;margin:auto}
+h1{font-size:clamp(44px,12vw,104px);font-weight:700;text-shadow:4px 4px 0 rgba(0,0,0,.35)}
+.hero p{font-size:clamp(17px,3.6vw,22px);max-width:560px;margin:10px 0 18px}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px}
+.btn{font:600 16px Outfit,sans-serif;background:var(--btn);color:var(--btnt);border:0;padding:12px 18px;cursor:pointer;box-shadow:4px 4px 0 var(--line)}
+.btn:active{transform:translate(2px,2px);box-shadow:2px 2px 0 var(--line)}
+button:focus-visible,a:focus-visible{outline:3px solid var(--acc);outline-offset:3px}
+.seed{font:500 14px 'Pixelify Sans',monospace;color:var(--mut)}
+.soon{color:var(--mut);font-size:15px}
+#lang{position:fixed;z-index:6;top:calc(12px + env(safe-area-inset-top,0px));right:12px;display:flex;box-shadow:4px 4px 0 var(--line)}
+#lang button{font:700 15px 'Pixelify Sans',monospace;min-width:48px;min-height:44px;border:2px solid var(--btn);background:var(--panel);color:var(--ink);cursor:pointer}
+#lang button[aria-pressed="true"]{background:var(--btn);color:var(--btnt)}
+section{max-width:1000px;margin:0 auto;padding:56px 20px 8px}
+h2{font-size:clamp(28px,6vw,40px);margin-bottom:10px}
+.lead{max-width:62ch;color:var(--mut);margin:0 0 26px}
+.game{display:grid;grid-template-columns:1fr 260px;gap:18px;align-items:start}
+.frame{position:relative;border:4px solid var(--ink);box-shadow:6px 6px 0 var(--line);background:#000}
+.frame canvas{width:100%;aspect-ratio:16/9}
+.frame.wide canvas{aspect-ratio:12/5}
+.hud{position:absolute;left:0;right:0;top:0;display:flex;gap:14px;flex-wrap:wrap;padding:6px 10px;background:rgba(15,15,35,.78);color:#f0ebdc;font:500 13px 'Pixelify Sans',monospace}
+.bar{position:absolute;left:0;right:0;bottom:0;display:flex;gap:6px;overflow-x:auto;padding:6px;background:rgba(15,15,35,.78)}
+.bar span{flex:none;color:#f0ebdc;font:500 12px 'Pixelify Sans',monospace;padding:4px 8px;border:2px solid #4b4f86;white-space:nowrap}
+.bar i{display:inline-block;width:8px;height:8px;margin-right:6px}
+em{font-style:normal}
+.insp{background:var(--panel);border:2px solid var(--line);padding:14px}
+.insp h3{font-size:22px;margin:8px 0 2px}.insp small{color:var(--mut);display:block}
+.need{display:flex;align-items:center;gap:8px;font-size:13px;margin-top:6px}.need span{width:62px}.need b{flex:1;height:8px;background:var(--line)}.need b i{display:block;height:100%}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}.tags span{font:500 12px 'Pixelify Sans',monospace;border:2px solid var(--line);padding:2px 6px}
+.insp q{display:block;margin-top:12px;font-size:14px;color:var(--mut);quotes:none}
+.stat{display:flex;justify-content:space-between;border-bottom:1px solid var(--line);padding:6px 0;font-size:14px}.stat b{font-family:'Pixelify Sans',monospace}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:26px 18px}
+.it{display:flex;flex-direction:column;gap:10px}.it h3{font-size:21px}.it p{margin:0;font-size:15px;color:var(--mut)}
+.stage{display:flex;align-items:flex-end;justify-content:center;height:164px;background:var(--panel);border:2px solid var(--line)}
+.stage canvas{margin-bottom:12px;max-width:100%;height:auto}
+.bio{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.bio canvas{width:100%;height:auto;border:2px solid var(--ink)}
+.bio h3{font-size:18px;margin:8px 0 2px}.bio p{margin:0;font-size:14px;color:var(--mut)}
+.tabs{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+.tab{display:flex;gap:12px;align-items:flex-start;background:var(--panel);border:2px solid var(--line);padding:12px}
+.tab canvas{flex:none}.tab h3{font-size:19px;margin-bottom:2px}.tab p{margin:0;font-size:14px;color:var(--mut)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 0;padding:0;list-style:none}
+.chips li{border:2px solid var(--line);background:var(--panel);padding:5px 10px;font-weight:600;font-size:15px}
+.pos{display:grid;grid-template-columns:240px 1fr;gap:24px;align-items:center}
+.who{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:270px;background:var(--panel);border:2px solid var(--line);padding-bottom:16px}
+.bub{position:relative;margin:0 14px 18px;background:#fff;color:#1b1e3a;border:3px solid #1b1e3a;padding:8px 12px;font-size:14px;box-shadow:4px 4px 0 rgba(0,0,0,.2)}
+.bub:after{content:"";position:absolute;left:50%;bottom:-11px;width:12px;height:12px;background:#fff;border-right:3px solid #1b1e3a;border-bottom:3px solid #1b1e3a;transform:translateX(-50%) rotate(45deg)}
+.bub b{display:block;font:700 17px 'Pixelify Sans',monospace}.bub small{color:#4d5478}
+.keys{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;margin:0;padding:0;list-style:none}
+.keys li{display:flex;align-items:center;gap:10px;font-weight:600}
+kbd{display:inline-flex;justify-content:center;align-items:center;min-width:48px;height:44px;padding:0 8px;font:700 15px 'Pixelify Sans',monospace;background:var(--panel);color:var(--ink);border:2px solid var(--ink);box-shadow:3px 3px 0 var(--line)}
+.log{list-style:none;padding:0;margin:0;border-left:4px solid var(--acc)}
+.log li{padding:6px 0 6px 16px}.log b{font-family:'Pixelify Sans',monospace;color:var(--acc);margin-right:8px}
+.steps{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(2,1fr);gap:10px 24px}
+.steps li{display:flex;gap:12px;align-items:center;font-size:16px}
+.steps i{flex:none;width:22px;height:22px;border:3px solid var(--ink);background:var(--panel);position:relative}
+.steps li.on i{background:var(--ok)}
+.steps li.on i:after{content:"";position:absolute;left:4px;top:0;width:6px;height:11px;border:solid #fff;border-width:0 3px 3px 0;transform:rotate(45deg)}
+.steps span{font-family:'Pixelify Sans',monospace;color:var(--mut);min-width:22px}
+.road{list-style:none;padding:0;margin:0;border:2px solid var(--line);background:var(--panel)}
+.road li{display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center;padding:12px 14px;border-top:2px solid var(--line)}
+.road li:first-child{border-top:0}
+.road .n{font:700 22px 'Pixelify Sans',monospace;color:var(--acc)}
+.road h3{font-size:18px}.road p{margin:2px 0 0;font-size:14px;color:var(--mut)}
+.st{font:500 13px 'Pixelify Sans',monospace;padding:3px 8px;border:2px solid var(--line);white-space:nowrap}
+.st.done{background:var(--ok);border-color:var(--ok);color:#fff}.st.next{border-color:var(--acc);color:var(--acc)}
+footer{max-width:1000px;margin:0 auto;padding:60px 20px 50px;color:var(--mut)}
+footer .row{margin-top:14px}
+@media(max-width:760px){.game,.pos{grid-template-columns:1fr}.bio{grid-template-columns:repeat(2,1fr)}.steps{grid-template-columns:1fr}.who{height:240px}}
+@media(max-width:420px){.road li{grid-template-columns:34px 1fr}.road .st{grid-column:2;justify-self:start}}
+</style></head><body>
+<div id="lang" role="group" data-ia="lang" aria-label="Language"><button type="button" data-l="en" aria-pressed="true">EN</button><button type="button" data-l="es" aria-pressed="false">ES</button></div>
+
+<header class="hero"><canvas id="hero" width="384" height="216" class="px" role="img" data-ia="hero_a"></canvas>
+<div class="t"><h1>Pocket Pantheon</h1>
+<p data-i="tag"></p>
+<div class="row"><button class="btn" id="roll" data-i="roll"></button><span class="seed"><span data-i="seed"></span> <span id="seedn">4242</span></span><span class="soon" data-i="soon"></span></div></div></header>
+
+<section><h2 data-i="god_h"></h2><p class="lead" data-i="god_p"></p></section>
+
+<section><h2 data-i="world_h"></h2><p class="lead" data-i="world_p"></p>
+<div class="game"><div class="frame"><canvas id="mock" width="384" height="216" class="px" role="img" data-ia="mock_a"></canvas>
+<div class="hud"><span data-i="h_year"></span><span data-i="h_pop"></span><span data-i="h_kin"></span><span data-i="h_spd"></span></div>
+<div class="bar"><span><i style="background:#f2c94c"></i><em data-i="b_bless"></em></span><span><i style="background:#d9453d"></i><em data-i="b_meteor"></em></span><span><i style="background:#5cc8e6"></i><em data-i="b_rain"></em></span><span><i style="background:#5fbf4a"></i><em data-i="b_spawn"></em></span><span><i style="background:#8a5cc9"></i><em data-i="b_plague"></em></span><span><i style="background:#f08a2c"></i><em data-i="b_fire"></em></span></div></div>
+<aside class="insp"><div id="insp"></div><h3>Brann Durgrim</h3><small data-i="i_role"></small><small data-i="i_kin"></small>
+<div class="need"><span data-i="n_hunger"></span><b><i style="width:35%;background:#d9453d"></i></b></div>
+<div class="need"><span data-i="n_faith"></span><b><i style="width:80%;background:#f2c94c"></i></b></div>
+<div class="need"><span data-i="n_social"></span><b><i style="width:60%;background:#5cc8e6"></i></b></div>
+<div class="tags"><span data-i="t_hide"></span><span data-i="t_night"></span></div>
+<q data-i="i_quote"></q></aside></div></section>
+
+<section><h2 data-i="races_h"></h2><p class="lead" data-i="races_p"></p><div class="grid" id="races"></div></section>
+<section><h2 data-i="beasts_h"></h2><p class="lead" data-i="beasts_p"></p><div class="grid" id="beasts"></div></section>
+<section><h2 data-i="build_h"></h2><p class="lead" data-i="build_p"></p><div class="grid" id="build"></div></section>
+<section><h2 data-i="bio_h"></h2><p class="lead" data-i="bio_p"></p><div class="bio" id="biomes"></div></section>
+
+<section><h2 data-i="pow_h"></h2><p class="lead" data-i="pow_p"></p><div class="tabs" id="tabs"></div></section>
+
+<section><h2 data-i="war_h"></h2><p class="lead" data-i="war_p"></p>
+<div class="game"><div class="frame wide"><canvas id="war" width="384" height="160" class="px" role="img" data-ia="war_a"></canvas></div>
+<aside class="insp"><h3 data-i="a_name"></h3><small data-i="a_sub"></small>
+<div class="stat"><span data-i="a_gen"></span><b>Edda Venn</b></div>
+<div class="stat"><span data-i="a_size"></span><b>21</b></div>
+<div class="stat"><span data-i="a_mor"></span><b>82%</b></div>
+<div class="stat"><span data-i="a_ord"></span><b data-i="a_ordv"></b></div>
+<div class="stat"><span data-i="a_stance"></span><b data-i="a_stancev"></b></div></aside></div>
+<ul class="chips"><li data-i="c_sel"></li><li data-i="c_move"></li><li data-i="c_att"></li><li data-i="c_def"></li><li data-i="c_hold"></li><li data-i="c_stance"></li><li data-i="c_rec"></li><li data-i="c_rally"></li><li data-i="c_ret"></li></ul></section>
+
+<section><h2 data-i="pos_h"></h2><p class="lead" data-i="pos_p"></p>
+<div class="pos"><div class="who" id="who"><div class="bub"><b>Grum dak, zulbar!</b><small data-i="bub_t"></small></div></div>
+<ul class="keys"><li><kbd>WASD</kbd><span data-i="k_walk"></span></li><li><kbd data-i="k_space"></kbd><span data-i="k_jump"></span></li><li><kbd>J</kbd><span data-i="k_att"></span></li><li><kbd>T</kbd><span data-i="k_talk"></span></li><li><kbd>E</kbd><span data-i="k_use"></span></li><li><kbd>Esc</kbd><span data-i="k_rel"></span></li></ul></div></section>
+
+<section><h2 data-i="story_h"></h2><p class="lead" data-i="story_p"></p>
+<ul class="log"><li data-i="l1"></li><li data-i="l2"></li><li data-i="l3"></li><li data-i="l4"></li><li data-i="l5"></li></ul></section>
+
+<section><h2 data-i="tut_h"></h2><p class="lead" data-i="tut_p"></p>
+<ol class="steps"><li class="on"><i></i><span>1</span><em data-i="s1"></em></li><li class="on"><i></i><span>2</span><em data-i="s2"></em></li><li class="on"><i></i><span>3</span><em data-i="s3"></em></li><li><i></i><span>4</span><em data-i="s4"></em></li><li><i></i><span>5</span><em data-i="s5"></em></li><li><i></i><span>6</span><em data-i="s6"></em></li><li><i></i><span>7</span><em data-i="s7"></em></li><li><i></i><span>8</span><em data-i="s8"></em></li><li><i></i><span>9</span><em data-i="s9"></em></li><li><i></i><span>10</span><em data-i="s10"></em></li></ol></section>
+
+<section><h2 data-i="road_h"></h2><p class="lead" data-i="road_p"></p>
+<ol class="road" id="road"></ol></section>
+
+<footer><p data-i="foot"></p><div class="row"><a href="https://github.com/albeen-sknight/pocket-pantheon/blob/main/docs/PLAN.md" data-i="f_plan"></a><a href="https://github.com/albeen-sknight/pocket-pantheon" data-i="f_repo"></a></div></footer>
+
+<script>
+const L={en:{
+doc:"Pocket Pantheon: concept preview",lang:"Language",hero_a:"A pixel world made from a random seed",
+tag:"A tiny pixel world that lives on its own, until you decide it shouldn't.",roll:"Roll a new world",seed:"Seed",soon:"Concept preview. The game is still being built.",
+god_h:"You are the god. The world doesn't wait for you.",god_p:"Four races, 32 creatures and 21 biomes share one map. Villagers are born, farm, marry, pray, argue and go to war. Kingdoms rise and fall with or without you. Step in with a meteor, a blessing or a plague, and watch what happens next.",
+world_h:"In the world",world_p:"Top down pixel art that reads from a whole continent down to a single villager. Kingdom colors show who owns what at a glance.",mock_a:"Four kingdoms share a continent while a dragon circles a capital",
+h_year:"Year 412",h_pop:"Population 3,184",h_kin:"Kingdoms 4",h_spd:"Speed 2x",b_bless:"Bless",b_meteor:"Meteor",b_rain:"Rain",b_spawn:"Spawn",b_plague:"Plague",b_fire:"Fire",
+i_role:"Dwarf smith, age 41",i_kin:"Kingdom of the Hill Dwarves",n_hunger:"Hunger",n_faith:"Faith",n_social:"Social",t_hide:"Tough Hide",t_night:"Night Vision",i_quote:"“The mountain gave us iron. The elves gave us trouble.”",
+races_h:"Four peoples",races_p:"Each race has its own land, strengths and habits. Children inherit genes from both parents, and isolated groups can become new subspecies.",
+humans_n:"Humans",humans_d:"Balanced, fast learners, build the biggest kingdoms. They can settle anywhere.",elves_n:"Elves",elves_d:"Best archers and long lived. They plant forests instead of cutting them.",orcs_n:"Orcs",orcs_d:"Strong, fearless and quick to breed. They start more wars.",dwarves_n:"Dwarves",dwarves_d:"Tough miners and smiths. They tunnel through mountains.",
+beasts_h:"Creatures",beasts_p:"From sheep to dragons. Some are food, some are danger, and one is a giant crab you can drive through a city.",
+sheep_n:"Sheep",sheep_d:"Grazes on grassland and flees wolves.",wolf_n:"Wolf",wolf_d:"Hunts in packs and chases lone villagers.",crab_n:"Crab",crab_d:"Scuttles along beaches. Pinches.",penguin_n:"Penguin",penguin_d:"Waddles around the frozen coast.",slime_n:"Slime",slime_d:"Splits in two every time it is hit.",ghost_n:"Ghost",ghost_d:"Drifts through walls and scares people away.",dragon_n:"Dragon",dragon_d:"Breathes fire, raids towns and hoards gold.",claw_n:"Clawzilla",claw_d:"A giant crab you can steer through a city. Stomp, sweep, laser.",ufo_n:"UFO",ufo_d:"Abducts people and sometimes returns them changed.",
+build_h:"Towns and buildings",build_p:"Every building has its own roof and shape, so you can tell a smithy from a temple from across the map.",
+house_n:"House",house_d:"Homes grow from huts into stone houses as a village ages.",temple_n:"Temple",temple_d:"Priests gather faith here. Bigger temples are heard louder.",smithy_n:"Smithy",smithy_d:"Dwarves forge tools and weapons here. Smoke means work.",tower_n:"Watchtower",tower_d:"Spots raiders and dragons early.",keep_n:"Castle keep",keep_d:"The seat of a kingdom, flying its colors.",mine_n:"Mine",mine_d:"Copper, iron and gold. The usual reason for war.",
+bio_h:"Biomes",bio_p:"Twenty one biomes, from grassland to haunted battlefields, including rare magic patches. A few of them:",
+grass_n:"Grassland",grass_d:"Best farmland. Sheep and flowers.",forest_n:"Forest",forest_d:"Wood and berries. Bears and deer.",desert_n:"Desert",desert_d:"Hot and dry. Gold flecks, little food.",tundra_n:"Tundra",tundra_d:"Cold and sparse. Foxes and penguins.",infernal_n:"Infernal",infernal_d:"Volcanoes. Fire spreads, demons rise.",haunted_n:"Haunted",haunted_d:"Corruption spreads. Undead walk at night.",grove_n:"Enchanted Grove",grove_d:"Mana crystals. Blessings last longer.",mush_n:"Mushroom Wilds",mush_d:"Spores and strange mutations.",
+pow_h:"Eight tabs of powers",pow_p:"About 60 powers, each with a brush size and an effect you can see in under a tenth of a second.",
+shape_n:"Shape",shape_d:"Raise land, paint biomes, drop a volcano.",life_n:"Life",life_d:"Spawn any of the 32 creatures.",cmd_n:"Command",cmd_d:"Move armies, attack, defend, possess.",wrath_n:"Wrath",wrath_d:"Meteor, lightning, acid rain, nuke.",grace_n:"Grace",grace_d:"Bless, heal, bring rain, work a miracle.",gene_n:"Genetics",gene_d:"Mutate, add traits, split a subspecies.",wld_n:"World",wld_d:"Pause, speed up, save, start over.",insp_n:"Inspect",insp_d:"Open anyone's life story.",
+war_h:"Raise armies. Or let them raise themselves.",war_p:"Barracks train soldiers, generals lead them, and kingdoms fight wars on their own. Take command any time: pick an army, tap the map, and it marches.",war_a:"A human army marches on an orc wall while archers shoot from the battlements",
+a_name:"Army of the Blue Crown",a_sub:"Human kingdom, at war with the Redtusk Orcs",a_gen:"General",a_size:"Soldiers",a_mor:"Morale",a_ord:"Order",a_ordv:"Siege the gate",a_stance:"Stance",a_stancev:"Aggressive",
+c_sel:"Select",c_move:"Move",c_att:"Attack",c_def:"Defend",c_hold:"Hold",c_stance:"Stance",c_rec:"Recruit",c_rally:"Rally flag",c_ret:"Retreat",
+pos_h:"Become anyone",pos_p:"Possess a single villager and play them like an action game. The world keeps running around you. A farmer is weak. A champion is not.",
+bub_t:"Orcish for “Get off my field!”",k_walk:"Walk",k_space:"Space",k_jump:"Jump",k_att:"Attack",k_talk:"Talk",k_use:"Interact",k_rel:"Let go",
+story_h:"Stories that write themselves",story_p:"Every named person, war and religion goes into the chronicle. Here is what a few idle centuries might look like.",
+l1:"<b>Year 31</b>The Redtusk Orcs declare war on the Hill Dwarves over a copper mine.",l2:"<b>Year 88</b>Cut off by a mountain range, one orc clan becomes the Ashfoot Orcs.",l3:"<b>Year 140</b>A UFO abducts a priest and returns him with a new religion.",l4:"<b>Year 203</b>Clawzilla wrecks the capital of Elmwick. The elves replant it.",l5:"<b>Year 344</b>A dwarf smith forges the first mythril axe and names it Oathbreaker.",
+tut_h:"Never played a god game? Good.",tut_p:"A ten step tutorial runs the first time you play. Arrows point at the right button, and a checklist ticks itself off as you go. Replay it any time.",
+s1:"Move and zoom the camera",s2:"Raise an island",s3:"Spawn humans and watch them build",s4:"Inspect a person",s5:"Spawn a rival race",s6:"Command an army",s7:"Possess a villager",s8:"Unleash a disaster",s9:"Read the stats",s10:"Save your world",
+road_h:"The road to version 1.0",road_p:"The game is built in phases, and every phase ends in a build you can play. Follow along on GitHub.",
+done:"Done",next:"Next",plan:"Planned",
+r0_n:"Plan and concept preview",r0_d:"The execution plan and this page.",r1_n:"Setup",r1_d:"Repository, build pipeline and automatic publishing.",r2_n:"World",r2_d:"Generator, biomes, renderer, camera, terrain tools, saves.",r3_n:"Life",r3_d:"Animals, 4 races, genes, minds, villages, roads.",r4_n:"Civilization",r4_d:"Economy, tech ages, gear, culture, religion, diplomacy.",r5_n:"War",r5_d:"Armies, command tool, walls, towers, sieges, possession.",r6_n:"Chaos",r6_d:"Disasters, monsters, Clawzilla, UFOs, zombies, nukes.",r7_n:"Data",r7_d:"Charts, pyramids, war history, death stats, leaderboards.",r8_n:"Polish",r8_d:"Tutorial, Codex, achievements, sound, phone controls, balance.",
+foot:"Plays in any modern browser on desktop or phone, online or offline from one file. All art on this page is original and drawn in code.",f_plan:"Read the plan",f_repo:"Project on GitHub"
+},es:{
+doc:"Pocket Pantheon: vista previa del concepto",lang:"Idioma",hero_a:"Un mundo de píxeles creado a partir de una semilla aleatoria",
+tag:"Un mundo diminuto de píxeles que vive por su cuenta, hasta que decides que no debería.",roll:"Genera un mundo nuevo",seed:"Semilla",soon:"Vista previa del concepto. El juego aún está en construcción.",
+god_h:"Eres el dios. El mundo no te espera.",god_p:"Cuatro razas, 32 criaturas y 21 biomas comparten un mapa. Los aldeanos nacen, cultivan, se casan, rezan, discuten y van a la guerra. Los reinos surgen y caen contigo o sin ti. Interviene con un meteorito, una bendición o una plaga, y mira qué pasa después.",
+world_h:"En el mundo",world_p:"Pixel art con vista cenital que se entiende desde un continente entero hasta un solo aldeano. Los colores de cada reino muestran de un vistazo quién domina qué.",mock_a:"Cuatro reinos comparten un continente mientras un dragón ronda una capital",
+h_year:"Año 412",h_pop:"Población 3.184",h_kin:"Reinos 4",h_spd:"Velocidad 2x",b_bless:"Bendecir",b_meteor:"Meteorito",b_rain:"Lluvia",b_spawn:"Crear",b_plague:"Plaga",b_fire:"Fuego",
+i_role:"Herrero enano, 41 años",i_kin:"Reino de los Enanos de la Colina",n_hunger:"Hambre",n_faith:"Fe",n_social:"Social",t_hide:"Piel dura",t_night:"Visión nocturna",i_quote:"«La montaña nos dio hierro. Los elfos nos dieron problemas.»",
+races_h:"Cuatro pueblos",races_p:"Cada raza tiene su propia tierra, sus fortalezas y sus costumbres. Los hijos heredan genes de ambos padres, y los grupos aislados pueden convertirse en nuevas subespecies.",
+humans_n:"Humanos",humans_d:"Equilibrados y rápidos para aprender, levantan los reinos más grandes. Pueden asentarse en cualquier lugar.",elves_n:"Elfos",elves_d:"Los mejores arqueros y muy longevos. Plantan bosques en vez de talarlos.",orcs_n:"Orcos",orcs_d:"Fuertes, intrépidos y se reproducen rápido. Empiezan más guerras.",dwarves_n:"Enanos",dwarves_d:"Mineros y herreros resistentes. Excavan túneles a través de las montañas.",
+beasts_h:"Criaturas",beasts_p:"De ovejas a dragones. Unas son comida, otras son peligro, y una es un cangrejo gigante que puedes conducir por una ciudad.",
+sheep_n:"Oveja",sheep_d:"Pasta en la pradera y huye de los lobos.",wolf_n:"Lobo",wolf_d:"Caza en manada y persigue a los aldeanos solitarios.",crab_n:"Cangrejo",crab_d:"Corretea por las playas. Pellizca.",penguin_n:"Pingüino",penguin_d:"Anda a pasitos por la costa helada.",slime_n:"Limo",slime_d:"Se divide en dos cada vez que lo golpean.",ghost_n:"Fantasma",ghost_d:"Atraviesa paredes flotando y ahuyenta a la gente.",dragon_n:"Dragón",dragon_d:"Escupe fuego, asalta pueblos y acumula oro.",claw_n:"Clawzilla",claw_d:"Un cangrejo gigante que puedes guiar por una ciudad. Pisotón, barrido, láser.",ufo_n:"OVNI",ufo_d:"Abduce a gente y a veces la devuelve cambiada.",
+build_h:"Pueblos y edificios",build_p:"Cada edificio tiene su propio tejado y su propia forma, así que distingues una herrería de un templo desde la otra punta del mapa.",
+house_n:"Casa",house_d:"Las viviendas pasan de chozas a casas de piedra a medida que el pueblo envejece.",temple_n:"Templo",temple_d:"Aquí los sacerdotes reúnen la fe. Los templos más grandes se oyen más fuerte.",smithy_n:"Herrería",smithy_d:"Aquí los enanos forjan herramientas y armas. Si hay humo, hay trabajo.",tower_n:"Atalaya",tower_d:"Detecta pronto a saqueadores y dragones.",keep_n:"Torre del homenaje",keep_d:"La sede de un reino, con sus colores al viento.",mine_n:"Mina",mine_d:"Cobre, hierro y oro. El motivo habitual de las guerras.",
+bio_h:"Biomas",bio_p:"Veintiún biomas, de praderas a campos de batalla embrujados, con raros parches mágicos. Algunos de ellos:",
+grass_n:"Pradera",grass_d:"La mejor tierra de cultivo. Ovejas y flores.",forest_n:"Bosque",forest_d:"Madera y bayas. Osos y ciervos.",desert_n:"Desierto",desert_d:"Caluroso y seco. Pepitas de oro, poca comida.",tundra_n:"Tundra",tundra_d:"Fría y despoblada. Zorros y pingüinos.",infernal_n:"Infernal",infernal_d:"Volcanes. El fuego se extiende y surgen demonios.",haunted_n:"Embrujado",haunted_d:"La corrupción se extiende. Los no muertos caminan de noche.",grove_n:"Arboleda encantada",grove_d:"Cristales de maná. Las bendiciones duran más.",mush_n:"Tierras de hongos",mush_d:"Esporas y mutaciones extrañas.",
+pow_h:"Ocho pestañas de poderes",pow_p:"Unos 60 poderes, cada uno con su tamaño de pincel y un efecto que ves en menos de una décima de segundo.",
+shape_n:"Moldear",shape_d:"Eleva tierra, pinta biomas, coloca un volcán.",life_n:"Vida",life_d:"Crea cualquiera de las 32 criaturas.",cmd_n:"Mando",cmd_d:"Mueve ejércitos, ataca, defiende, posee.",wrath_n:"Ira",wrath_d:"Meteorito, rayo, lluvia ácida, bomba nuclear.",grace_n:"Gracia",grace_d:"Bendice, cura, trae lluvia, obra un milagro.",gene_n:"Genética",gene_d:"Muta, añade rasgos, separa una subespecie.",wld_n:"Mundo",wld_d:"Pausa, acelera, guarda, empieza de nuevo.",insp_n:"Inspeccionar",insp_d:"Abre la historia de la vida de cualquiera.",
+war_h:"Levanta ejércitos. O deja que se levanten solos.",war_p:"Los cuarteles entrenan soldados, los generales los dirigen y los reinos libran guerras por su cuenta. Toma el mando cuando quieras: elige un ejército, toca el mapa y se pone en marcha.",war_a:"Un ejército humano marcha contra una muralla orca mientras los arqueros disparan desde las almenas",
+a_name:"Ejército de la Corona Azul",a_sub:"Reino humano, en guerra con los Orcos Colmillorrojo",a_gen:"General",a_size:"Soldados",a_mor:"Moral",a_ord:"Orden",a_ordv:"Asediar la puerta",a_stance:"Postura",a_stancev:"Agresiva",
+c_sel:"Seleccionar",c_move:"Mover",c_att:"Atacar",c_def:"Defender",c_hold:"Mantener",c_stance:"Postura",c_rec:"Reclutar",c_rally:"Bandera de reunión",c_ret:"Retirada",
+pos_h:"Conviértete en cualquiera",pos_p:"Posee a un solo aldeano y juega con él como en un juego de acción. El mundo sigue funcionando a tu alrededor. Un granjero es débil. Un campeón, no.",
+bub_t:"En orco: «¡Fuera de mi campo!»",k_walk:"Caminar",k_space:"Espacio",k_jump:"Saltar",k_att:"Atacar",k_talk:"Hablar",k_use:"Interactuar",k_rel:"Soltar",
+story_h:"Historias que se escriben solas",story_p:"Cada persona con nombre, cada guerra y cada religión queda en la crónica. Así podrían verse unos cuantos siglos sin tocar nada.",
+l1:"<b>Año 31</b>Los Orcos Colmillorrojo declaran la guerra a los Enanos de la Colina por una mina de cobre.",l2:"<b>Año 88</b>Aislado por una cordillera, un clan orco se convierte en los Orcos Pieceniza.",l3:"<b>Año 140</b>Un OVNI abduce a un sacerdote y lo devuelve con una religión nueva.",l4:"<b>Año 203</b>Clawzilla destroza la capital de Elmwick. Los elfos la vuelven a plantar.",l5:"<b>Año 344</b>Un herrero enano forja la primera hacha de mitril y la llama Rompejuramentos.",
+tut_h:"¿Nunca has jugado a un juego de dioses? Perfecto.",tut_p:"Un tutorial de diez pasos se abre la primera vez que juegas. Las flechas señalan el botón correcto y una lista se marca sola mientras avanzas. Puedes repetirlo cuando quieras.",
+s1:"Mueve y acerca la cámara",s2:"Eleva una isla",s3:"Crea humanos y míralos construir",s4:"Inspecciona a una persona",s5:"Crea una raza rival",s6:"Dirige un ejército",s7:"Posee a un aldeano",s8:"Desata un desastre",s9:"Lee las estadísticas",s10:"Guarda tu mundo",
+road_h:"El camino hacia la versión 1.0",road_p:"El juego se construye por fases, y cada fase termina en una versión que puedes jugar. Síguelo en GitHub.",
+done:"Hecho",next:"Siguiente",plan:"Planeada",
+r0_n:"Plan y vista previa",r0_d:"El plan de ejecución y esta página.",r1_n:"Preparación",r1_d:"Repositorio, proceso de compilación y publicación automática.",r2_n:"Mundo",r2_d:"Generador, biomas, renderizado, cámara, herramientas de terreno, guardado.",r3_n:"Vida",r3_d:"Animales, 4 razas, genes, mentes, aldeas, caminos.",r4_n:"Civilización",r4_d:"Economía, eras tecnológicas, equipo, cultura, religión, diplomacia.",r5_n:"Guerra",r5_d:"Ejércitos, herramienta de mando, murallas, torres, asedios, posesión.",r6_n:"Caos",r6_d:"Desastres, monstruos, Clawzilla, OVNIs, zombis, bombas nucleares.",r7_n:"Datos",r7_d:"Gráficos, pirámides, historial de guerras, estadísticas de muertes, clasificaciones.",r8_n:"Pulido",r8_d:"Tutorial, Códice, logros, sonido, controles para móvil, equilibrio.",
+foot:"Funciona en cualquier navegador moderno, en ordenador o móvil, en línea o sin conexión desde un solo archivo. Todo el arte de esta página es original y está dibujado en código.",f_plan:"Lee el plan",f_repo:"El proyecto en GitHub"
+}};
+let lang='en';
+function setLang(l){lang=L[l]?l:'en';const D=L[lang];document.documentElement.lang=lang;document.title=D.doc;
+document.querySelectorAll('[data-i]').forEach(e=>{const v=D[e.dataset.i];if(v!=null)e.innerHTML=v});
+document.querySelectorAll('[data-ia]').forEach(e=>{const v=D[e.dataset.ia];if(v!=null)e.setAttribute('aria-label',v)});
+document.querySelectorAll('#lang button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.l===lang));
+try{localStorage.setItem('pp-lang',lang)}catch(e){}}
+
+const rnd=s=>()=>(s=(s*1664525+1013904223)>>>0)/4294967296,hx=(x,y,s=0)=>{let h=(x*374761393+y*668265263+s*1274126177)>>>0;h=(h^(h>>13))*1274126177>>>0;return((h^(h>>16))>>>0)/4294967296};
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const rgb=c=>[1,3,5].map(i=>parseInt(c.slice(i,i+2),16));
+const sh=(c,f)=>'#'+rgb(c).map((v,i)=>Math.min(255,Math.max(0,Math.round(f>0?v+(255-v)*f:v*(1+f)+(i==2?-f*30:0)))).toString(16).padStart(2,'0')).join('');
+function noise(seed){const r=rnd(seed),P=new Float32Array(4096);for(let i=0;i<4096;i++)P[i]=r();const g=(a,b)=>P[(a&63)*64+(b&63)],s=t=>t*t*(3-2*t);
+const n=(x,y)=>{const i=Math.floor(x),j=Math.floor(y),u=s(x-i),v=s(y-j);return(g(i,j)*(1-u)+g(i+1,j)*u)*(1-v)+(g(i,j+1)*(1-u)+g(i+1,j+1)*u)*v};
+return(x,y)=>{let a=0,f=1,m=.5;for(let o=0;o<4;o++){a+=n(x*f,y*f)*m;f*=2;m/=2}return a/.9375}}
+/* sprite maker: square pixels, light from the top left, 3 tone bevel, 1px outline in a dark shade of the fill (never pure black) */
+function mk(w,h,fn,sc=4){const W=w+2,H=h+2,G=new Array(W*H).fill(null),s=(x,y,c)=>{if(x>=0&&y>=0&&x<w&&y<h)G[(y+1)*W+x+1]=c};
+const R=(x,y,a,b,c)=>{for(let j=0;j<b;j++)for(let i=0;i<a;i++){let f=0;if(a>=4&&b>=4){if(j==0||i==0)f=.22;if(j==b-1||i==a-1)f=-.25}else if(a>=3&&b>=3&&j==0)f=.15;s(x+i,y+j,f?sh(c,f):c)}};
+const E=(cx,cy,rx,ry,c)=>{for(let y=Math.floor(cy-ry);y<=cy+ry;y++)for(let x=Math.floor(cx-rx);x<=cx+rx;x++){const u=(x-cx)/rx,v=(y-cy)/ry;if(u*u+v*v<=1){const t=u*.6+v*.8;s(x,y,t<-.5?sh(c,.22):t>.5?sh(c,-.25):c)}}};
+const T=(cx,y,hw,h,c)=>{for(let i=0;i<h;i++){const a=Math.round(2*hw*(i+1)/h);R(cx-(a>>1),y+i,a,1,i%3==2?sh(c,-.15):c)}};
+const Wl=(x,y,a,b,c)=>{R(x,y,a,b,c);for(let i=x+3;i<x+a-1;i+=4)R(i,y+1,1,b-2,sh(c,-.12))};
+fn(R,E,(x,y,c)=>s(x,y,c),T,Wl);
+const O=G.slice();for(let y=0;y<H;y++)for(let x=0;x<W;x++){const i=y*W+x;if(G[i])continue;const n=[x>0&&G[i-1],x<W-1&&G[i+1],y>0&&G[i-W],y<H-1&&G[i+W]].find(Boolean);if(n)O[i]=sh(n,-.6)}
+const cv=document.createElement('canvas');cv.width=W;cv.height=H;const c=cv.getContext('2d');
+O.forEach((k,i)=>{if(k){c.fillStyle=k;c.fillRect(i%W,i/W|0,1,1)}});cv.style.width=W*sc+'px';cv.style.height=H*sc+'px';cv.className='px';return cv}
+const K1='#2b2233',WH='#f4f0e8',S1='#e0b184',OG='#7bc24a';
+function fig(o,sc){const b=o.b||0;return mk(32,30,(R,E,P)=>{
+if(o.w=='bow'){[[24,3,2,2],[26,5,1,3],[27,8,1,8],[26,16,1,3],[24,19,2,2]].forEach(a=>R(a[0]+b,a[1],a[2],a[3],'#8a5a36'));R(25+b,5,1,16,WH)}
+if(o.w=='sword'){R(24+b,4,2,15,'#c8d0dc');R(22+b,18,6,2,'#f2c94c')}
+if(o.w=='axe'){R(24+b,6,2,16,'#8a5a36');R(22+b,3,6,6,'#9aa0a6')}
+if(o.w=='hammer'){R(24+b,9,2,13,'#8a5a36');R(21+b,5,8,6,'#9aa0a6')}
+R(9,22,4,6,o.pants);R(15,22,4,6,o.pants);R(8,27,5,2,'#3a2a22');R(15,27,5,2,'#3a2a22');
+R(7-b,12,14+2*b,11,o.cloth);R(7-b,18,14+2*b,2,'#8a5a36');R(13,18,2,2,'#f2c94c');
+R(4-b,13,3,7,o.cloth);R(21+b,13,3,7,o.cloth);R(4-b,19,3,3,o.skin);R(21+b,19,3,3,o.skin);
+if(o.ears){R(7,6,2,2,o.skin);P(6,5,o.skin);R(19,6,2,2,o.skin);P(21,5,o.skin)}
+E(14,7,5,5,o.skin);
+if(o.hair){R(9,1,10,3,o.hair);R(9,3,2,5,o.hair);if(o.ears)R(18,3,2,6,o.hair)}
+if(o.beard){E(14,12,5,4,o.beard);R(8,12,2,8,o.beard);R(18,12,2,8,o.beard)}
+if(o.helm){R(8,0,12,4,o.helm);R(13,0,2,2,'#f2c94c')}
+P(12,7,K1);P(16,7,K1);if(o.tusk){P(12,10,WH);P(16,10,WH)}
+},sc)}
+const DW={skin:S1,beard:'#d9822b',helm:'#9aa0a6',cloth:'#5a5f6b',pants:'#3b3b55',b:2,w:'hammer'},OR={skin:OG,hair:K1,cloth:'#8f2a2f',pants:'#4a3a2a',b:2,tusk:1,w:'axe'};
+const races=[["humans",fig({skin:S1,hair:'#5a3a24',cloth:'#3b6fd4',pants:'#5a3a24',w:'sword'})],["elves",fig({skin:'#f1d9bd',hair:'#f2c94c',cloth:'#2f8f3a',pants:'#4a6a3a',ears:1,w:'bow'})],["orcs",fig(OR)],["dwarves",fig(DW)]];
+const crab=(c,d,big)=>mk(34,22,(R,E,P)=>{R(5,15,5,2,d);R(4,18,5,2,d);R(25,15,5,2,d);R(26,18,5,2,d);R(8,9,6,2,c);R(20,9,6,2,c);E(5,6,5,4,c);E(29,6,5,4,c);P(5,5,K1);P(29,5,K1);R(12,5,2,5,c);R(21,5,2,5,c);E(17,13,10,6,c);E(13,4,2,2,WH);E(22,4,2,2,WH);P(13,4,K1);P(22,4,K1);
+if(big){R(12,6,2,3,'#f2c94c');R(16,5,2,3,'#f2c94c');R(20,6,2,3,'#f2c94c');R(24,3,10,1,'#ff4d4d')}});
+const dragon=mk(50,34,(R,E,P)=>{R(2,21,12,4,'#b5392f');R(0,19,4,3,'#b5392f');E(18,9,9,7,'#8f2a2f');E(24,19,13,7,'#d9453d');E(26,22,10,3,'#f2c94c');R(15,24,4,8,'#b5392f');R(30,24,4,8,'#b5392f');R(14,31,6,2,WH);R(29,31,6,2,WH);R(33,8,6,12,'#d9453d');R(36,4,10,7,'#d9453d');R(44,6,5,4,'#d9453d');R(40,10,8,2,'#b5392f');R(41,5,2,2,'#f2c94c');P(42,6,K1);R(36,1,2,4,WH);R(40,1,2,3,WH);P(47,7,K1);E(24,10,7,4,'#f08a2c')},3);
+const beasts=[["sheep",mk(32,20,(R,E,P)=>{[7,11,18,22].forEach(x=>R(x,14,2,5,'#3a3a44'));E(14,9,10,6,WH);[[8,5],[14,4],[20,5]].forEach(a=>E(a[0],a[1],4,3,WH));E(26,10,3,4,'#3a3a44');R(24,5,4,2,'#3a3a44');P(27,9,WH)})],
+["wolf",mk(34,22,(R,E,P)=>{R(1,6,6,3,'#8b93a1');R(0,4,3,3,'#8b93a1');[8,12,20,24].forEach(x=>R(x,15,2,6,'#6c7482'));E(15,11,10,5,'#8b93a1');E(15,14,7,2,'#c9ced6');E(26,9,4,4,'#8b93a1');R(24,3,2,3,'#8b93a1');R(28,3,2,3,'#8b93a1');R(29,10,4,3,'#8b93a1');P(32,10,K1);P(27,8,'#f2c94c')})],
+["crab",crab('#d9453d','#a8322d')],
+["penguin",mk(18,24,(R,E,P)=>{R(5,21,4,2,'#f08a2c');R(10,21,4,2,'#f08a2c');E(9,13,6,9,'#2b3550');E(9,15,4,7,WH);E(9,5,4,4,'#2b3550');R(8,6,3,2,'#f08a2c');P(7,4,WH);P(11,4,WH)})],
+["slime",mk(22,16,(R,E,P)=>{E(11,9,10,6,'#7fd04a');R(1,10,20,5,'#7fd04a');R(5,4,3,2,'#d8f59a');R(7,7,2,3,K1);R(13,7,2,3,K1);R(10,11,3,1,K1)})],
+["ghost",mk(20,24,(R,E,P)=>{E(10,9,7,7,'#d8e6f5');R(3,9,14,10,'#d8e6f5');R(3,19,3,3,'#d8e6f5');R(8,19,4,4,'#d8e6f5');R(14,19,3,3,'#d8e6f5');R(7,8,2,3,K1);R(12,8,2,3,K1);R(9,13,2,2,K1)})],
+["dragon",dragon],["claw",crab('#f08a2c','#b5602a',1)],
+["ufo",mk(32,20,(R,E,P)=>{R(13,15,6,1,'#f2e8a0');R(12,16,8,1,'#f2e8a0');R(11,17,10,1,'#f2e8a0');E(16,6,6,5,'#5cc8e6');E(16,11,14,4,'#9aa0a6');[5,11,16,21,27].forEach(x=>R(x,11,2,2,'#f2c94c'))})]];
+const roofc='#b5483a',stone='#aab0bc',tm='#6b4428';
+const tower=mk(28,50,(R,E,P)=>{R(13,0,1,9,'#c8d0dc');R(14,1,7,4,'#d9453d');R(6,14,16,34,stone);[4,12,20].forEach(x=>R(x,9,4,6,stone));R(4,14,20,3,'#8a8f9a');R(12,24,4,7,K1);R(11,40,6,8,tm)},3);
+const keepOf=fc=>mk(62,48,(R,E,P)=>{R(20,16,22,30,stone);R(2,20,15,26,'#9aa0a6');R(45,20,15,26,'#9aa0a6');[2,8,13,20,26,32,38,45,51,56].forEach(x=>R(x,x<18||x>44?15:11,4,5,'#8a8f9a'));R(30,2,1,10,'#c8d0dc');R(31,2,8,5,fc);R(26,32,10,14,'#3b2f55');R(8,28,3,6,K1);R(51,28,3,6,K1)},3),keep=keepOf('#3b6fd4');
+const builds=[["house",mk(40,32,(R,E,P,T,W)=>{R(28,3,4,8,'#8a8f9a');W(7,14,26,16,'#d8b98a');T(20,2,19,12,roofc);R(17,21,6,9,tm);R(10,18,4,4,'#5cc8e6');R(26,18,4,4,'#5cc8e6')},3)],
+["temple",mk(46,40,(R,E,P,T)=>{R(2,34,42,4,'#c9ccd6');[6,15,25,34].forEach(x=>R(x,19,4,15,'#efe8d4'));R(4,16,38,3,'#cfc8b4');T(23,5,22,11,'#e8e2d0');R(21,1,4,4,'#f2c94c');R(19,24,8,10,'#3b2f55')},3)],
+["smithy",mk(40,34,(R,E,P,T,W)=>{R(29,0,5,9,'#5a5f6b');W(4,14,32,18,'#8a8f9a');T(20,6,20,9,'#6b5a4a');R(8,22,9,9,'#f08a2c');R(10,24,5,5,'#f2c94c');R(24,27,9,3,K1);R(25,24,5,3,'#5a5f6b')},3)],
+["tower",tower],["keep",keep],
+["mine",mk(42,30,(R,E,P)=>{E(21,28,20,22,'#8a8f9a');E(14,12,8,5,'#a8aeba');R(14,18,14,12,K1);R(12,16,18,3,tm);R(12,18,2,12,tm);R(28,18,2,12,tm);P(32,14,'#5cc8e6');P(8,18,'#f2c94c');P(34,20,'#f2c94c');R(18,25,7,3,'#6c7482')},3)]];
+function card(el,list){list.forEach(([k,cv])=>{const d=document.createElement('div');d.className='it';const st=document.createElement('div');st.className='stage';cv.setAttribute('aria-hidden','true');st.append(cv);d.append(st);d.insertAdjacentHTML('beforeend','<h3 data-i="'+k+'_n"></h3><p data-i="'+k+'_d"></p>');el.append(d)})}
+card(document.getElementById('races'),races);card(document.getElementById('beasts'),beasts);card(document.getElementById('build'),builds);
+document.getElementById('insp').append(fig(DW));
+
+/* power tab icons, 14 x 14 pixels */
+const Y='#f2c94c',ic=f=>mk(14,14,f,3);
+const tabs=[["shape",ic((R,E,P,T)=>{T(7,2,7,12,'#8a8f9a');T(7,2,2,4,WH)})],
+["life",ic((R,E)=>{R(6,6,2,8,'#3f9f3a');E(4,6,3,2,'#5fbf4a');E(10,4,3,2,'#5fbf4a')})],
+["cmd",ic(R=>{R(3,0,2,14,'#8a5a36');R(5,1,8,6,'#3b6fd4')})],
+["wrath",ic(R=>{R(7,0,5,2,Y);R(6,2,4,2,Y);R(4,4,8,2,Y);R(6,6,4,2,Y);R(5,8,3,3,Y);R(4,11,2,3,Y)})],
+["grace",ic((R,E,P)=>{E(7,7,3.6,3.6,Y);[[7,0],[7,13],[0,7],[13,7],[2,2],[11,2],[2,11],[11,11]].forEach(([x,y])=>P(x,y,Y))})],
+["gene",ic((R,E,P)=>{for(let y=0;y<14;y++){const s=Math.round(3*Math.sin(y*.62));P(7+s,y,'#b06be0');P(6-s,y,'#5cc8e6');if(y%3==1&&Math.abs(s)>1)R(Math.min(7+s,6-s)+1,y,Math.abs(2*s)-1,1,'#c8d0dc')}})],
+["wld",ic((R,E)=>{E(7,7,6,6,'#3b78d8');E(5,5,3,2,'#5fbf4a');E(9,9,2.5,2,'#5fbf4a')})],
+["insp",ic((R,E)=>{E(5,5,4.5,4.5,'#5cc8e6');E(5,5,2,2,'#d8f0f8');R(9,9,2,2,'#8a5a36');R(11,11,3,3,'#8a5a36')})]];
+tabs.forEach(([k,cv])=>{const d=document.createElement('div');d.className='tab';cv.setAttribute('aria-hidden','true');d.append(cv);d.insertAdjacentHTML('beforeend','<div><h3 data-i="'+k+'_n"></h3><p data-i="'+k+'_d"></p></div>');document.getElementById('tabs').append(d)});
+
+const O={tree:(a,b)=>mk(14,16,(R,E)=>{R(6,10,3,6,tm);E(7,6,6,5,a);E(5,4,3,2,b)},2),pine:(a)=>mk(15,18,(R,E,P,T)=>{R(6,15,3,3,tm);T(7,0,6,6,a);T(7,4,7,7,a);T(7,9,8,7,a)},2),cac:(a)=>mk(13,17,(R)=>{R(5,2,4,15,a);R(1,6,4,2,a);R(1,4,2,4,a);R(9,8,4,2,a);R(11,6,2,4,a)},2),mush:(a)=>mk(14,14,(R,E,P)=>{R(6,7,3,6,WH);E(7,4,6,4,a);P(4,3,WH);P(8,2,WH);P(10,4,WH)},2),cry:(a)=>mk(13,15,(R,E,P,T)=>{R(5,5,4,10,a);T(6,0,3,5,sh(a,.3));R(1,9,3,6,sh(a,-.1));R(10,8,3,7,sh(a,.1))},2),dead:(a)=>mk(14,16,(R)=>{R(6,3,2,13,a);R(2,5,5,2,a);R(8,7,5,2,a);R(2,3,2,3,a);R(11,5,2,3,a)},2)};
+const bio=[["grass",'#5fbf4a','#8fd14f','#3f9f3a',O.tree('#2f8f3a','#5fbf4a')],["forest",'#2f8f3a','#247a30','#1f6a2a',O.pine('#1f7a3a')],["desert",'#e8c46a','#f2d98a','#d4a94e',O.cac('#3fa04a')],["tundra",'#dfe9ef','#ffffff','#c3d3de',O.pine('#4f8f6a')],
+["infernal",'#3a1f2b','#5a2a30','#f08a2c',O.dead('#2b2233')],["haunted",'#4a3d68','#5b4a7a','#3a2f55',O.dead('#9a8fb8')],["grove",'#6aa86a','#8fd88f','#4f9a5a',O.cry('#b58cf0')],["mush",'#5a4a7a','#7a6aa0','#4a3a6a',O.mush('#f08bb4')]];
+const BN=noise(99);
+bio.forEach(([k,a,b,c,ob],q)=>{const cv=document.createElement('canvas');cv.width=96;cv.height=64;cv.className='px';cv.setAttribute('aria-hidden','true');const x=cv.getContext('2d');
+for(let j=0;j<64;j++)for(let i=0;i<96;i++){const v=BN(i*.09+q*9,j*.09),d=(i+j&1)?.02:-.02;x.fillStyle=v+d>.62?b:v+d<.36?c:a;x.fillRect(i,j,1,1)}
+[[8,10],[34,5],[62,14],[20,36],[52,38],[76,30]].forEach(([i,j],n)=>x.drawImage(ob,i,j+(n%2)*3));
+const d=document.createElement('div');d.append(cv);d.insertAdjacentHTML('beforeend','<h3 data-i="'+k+'_n"></h3><p data-i="'+k+'_d"></p>');document.getElementById('biomes').append(d)});
+
+/* world generator for the hero and the in game mock */
+const D=(v,t,x,y)=>Math.abs(v-t)<.03?(x+y&1)>0:v>t;
+function gen(seed,W=384,H=216){const N=noise(seed),M=noise(seed+7),Z=noise(seed+13),px=new Uint8ClampedArray(W*H*4),hs=new Float32Array(W*H),wat=[];
+for(let y=0;y<H;y++)for(let x=0;x<W;x++){const dx=(x/W-.5)*2,dy=(y/H-.5)*2,d=Math.sqrt(dx*dx*.7+dy*dy*1.1);hs[y*W+x]=N(x*.0175,y*.0175)*1.25-d*.55+.1}
+for(let y=0;y<H;y++)for(let x=0;x<W;x++){const i=y*W+x,u=x/2,v=y/2,h=hs[i],t=1-Math.abs(y/H-.5)*2-(h-.5)*.4,m=M(u*.05,v*.05),z=Z(u*.06,v*.06);let c,fo=0;
+if(h<.28)c='#2a5db0';else if(h<.36)c='#3b78d8';else if(h<.43)c='#5cc8e6';else if(h<.46)c='#f0d9a0';
+else if(h>.92)c='#f4f0e8';else if(h>.8)c=z>.62?'#c33a2c':'#8a8f9a';
+else if(z>.66&&h<.7)c='#b58cf0';
+else if(t<.28)c=D(m,.5,x,y)?(fo=1,'#2f6f4a'):'#dfe9ef';else if(t>.7&&m<.42)c='#e8c46a';else if(t>.7&&m>.6)c=(fo=1,'#1f8f4a');else if(t>.7)c='#c9b84a';
+else c=D(m,.6,x,y)?(fo=1,'#2f8f3a'):!D(m,.35,x,y)?'#8fd14f':'#5fbf4a';
+let k=(hx(x,y,seed+3)-.5)*6;
+if(fo&&hx(x,y,seed)>.88)c='#1b5e2a';
+if(h>.46&&x>0&&y>0&&x<W-1&&y<H-1){const sd=hs[i-W-1]-hs[i+W+1];k+=(sd>.006?1:sd<-.006?-1:0)*(h>.7?24:11)}
+const o=i*4,[r,g,b]=rgb(c);px[o]=r+k;px[o+1]=g+k;px[o+2]=b+k;px[o+3]=255;if(h<.43)wat.push(i)}
+return{W,H,px,hs,wat,seed}}
+function anim(cv,get,over){const c=cv.getContext('2d');let t=0;const f=()=>{const w=get(),img=new ImageData(new Uint8ClampedArray(w.px),w.W,w.H);
+for(const i of w.wat){const x=i%w.W,y=i/w.W|0,v=Math.sin(x*.25+y*.45+t)+Math.sin(x*.1-y*.2+t*.7);let k=v>1.5?40:0;const h=w.hs[i];
+if(h>.40&&h<.43)k=Math.max(k,18+22*Math.sin(t*2+x*.15));const o=i*4;img.data[o]+=k;img.data[o+1]+=k;img.data[o+2]+=k}
+c.putImageData(img,0,0);over&&over(c,t,w);t+=.35};f();if(!reduce)setInterval(f,160)}
+let hero=gen(4242);anim(document.getElementById('hero'),()=>hero);
+document.getElementById('roll').onclick=()=>{const s=1+Math.floor(Math.random()*99998);hero=gen(s);document.getElementById('seedn').textContent=s};
+
+const mw=gen(77),mr=rnd(5),KC=['#e04040','#3b6fd4','#f2c94c','#b06be0'],cap=[],W=384;
+for(let n=0;n<4000&&cap.length<4;n++){const x=40+mr()*304|0,y=28+mr()*160|0,h=mw.hs[y*W+x];if(h>.5&&h<.7&&cap.every(c=>Math.hypot(c[0]-x,c[1]-y)>80))cap.push([x,y])}
+const own=new Int8Array(W*216).fill(-1);
+for(let y=0;y<216;y++)for(let x=0;x<W;x++){const i=y*W+x;if(mw.hs[i]<.45)continue;let b=-1,bd=68;cap.forEach((c,k)=>{const d=Math.hypot(c[0]-x,c[1]-y);if(d<bd){bd=d;b=k}});own[i]=b}
+for(let y=0;y<215;y++)for(let x=0;x<W-1;x++){const i=y*W+x,k=own[i];if(k<0)continue;const o=i*4,[r,g,b]=rgb(KC[k]);
+if(own[i+1]!==k||own[i+W]!==k){mw.px[o]=r;mw.px[o+1]=g;mw.px[o+2]=b}else{mw.px[o]=mw.px[o]*.86+r*.14;mw.px[o+1]=mw.px[o+1]*.86+g*.14;mw.px[o+2]=mw.px[o+2]*.86+b*.14}}
+const mh=KC.map(c=>mk(9,8,(R,E,P,T)=>{R(1,4,7,4,'#e4cfa4');T(4,0,5,4,c);P(4,6,tm)})),mkp=KC.map(c=>mk(14,14,(R,E,P)=>{R(2,5,10,9,stone);[2,6,10].forEach(x=>R(x,3,2,3,stone));R(6,0,1,4,'#ccc');R(7,0,4,3,c);R(5,9,4,5,'#3b2f55')}));
+const offs=[[-17,-8],[12,-10],[-14,9],[10,10],[-2,16],[22,4]],vs=[[-9,4],[8,3],[-3,-9],[5,14],[-12,-2],[14,-3],[0,8]];
+anim(document.getElementById('mock'),()=>mw,(c,t,w)=>{cap.forEach(([x,y],k)=>{offs.forEach(([a,b])=>{if(w.hs[(y+b)*W+x+a]>.47)c.drawImage(mh[k],x+a-5,y+b-4)});c.drawImage(mkp[k],x-8,y-8);
+vs.forEach(([a,b],u)=>{const px=x+a+Math.round(Math.sin(t*.6+u*2)*2),py=y+b;if(w.hs[py*W+px]<.47)return;c.fillStyle=S1;c.fillRect(px,py,1,1);c.fillStyle=KC[k];c.fillRect(px,py+1,1,2)})});
+const [fx,fy]=cap[1];for(let u=0;u<9;u++){c.fillStyle=u%2?'#f08a2c':'#f2c94c';c.fillRect(fx+10+u%3,fy-8-Math.floor((t*3+u*2)%5),1,1)}
+const dx=cap[1][0]+22+Math.round(Math.sin(t*.5)*4),dy=cap[1][1]-34;c.fillStyle='rgba(0,0,0,.25)';c.fillRect(dx+8,dy+40,30,3);c.drawImage(dragon,dx,dy)});
+
+/* war scene: small soldiers with 2 walk frames */
+const mini=(o,f)=>mk(9,11,(R,E,P)=>{
+if(o.w=='spear'){R(8,0,1,11,'#8a5a36');P(8,0,'#c8d0dc')}
+if(o.w=='bow'){R(8,2,1,7,'#8a5a36');P(7,1,'#8a5a36');P(7,9,'#8a5a36')}
+R(2,1,4,3,o.skin);if(o.helm)R(2,0,4,2,o.helm);P(3,2,K1);P(5,2,K1);
+R(1,4,6,4,o.cloth);if(o.shield)R(0,4,2,4,'#9aa0a6');
+if(f){R(1,8,2,3,o.pants);R(5,8,2,2,o.pants)}else{R(1,8,2,2,o.pants);R(5,8,2,3,o.pants)}},1);
+const HU={skin:S1,helm:'#9aa0a6',cloth:'#3b6fd4',pants:'#5a3a24',w:'spear',shield:1},GE={skin:S1,helm:'#f2c94c',cloth:'#3b6fd4',pants:'#5a3a24',w:'spear'},OA={skin:OG,cloth:'#8f2a2f',pants:'#4a3a2a',w:'bow'},OS={skin:OG,helm:'#5a5f6b',cloth:'#8f2a2f',pants:'#4a3a2a',w:'spear',shield:1};
+const hu=[mini(HU,0),mini(HU,1)],ge=[mini(GE,0),mini(GE,1)],oa=[mini(OA,0),mini(OA,1)],os=[mini(OS,0),mini(OS,1)];
+const banner=mk(9,16,R=>{R(0,0,1,16,'#8a5a36');R(1,0,8,6,'#3b6fd4');R(1,6,6,2,'#3b6fd4');R(3,2,3,2,'#f2c94c')},1);
+const wall=mk(18,150,(R,E,P,T,Wl)=>{Wl(3,8,15,142,stone);[3,9,15].forEach(x=>R(x,1,3,8,stone));R(3,72,15,26,'#3b2f55');for(let x=5;x<18;x+=3)R(x,74,1,24,'#5a5f6b')},1);
+const WW=384,WH2=160,GN=noise(31),wpx=new Uint8ClampedArray(WW*WH2*4);
+for(let y=0;y<WH2;y++)for(let x=0;x<WW;x++){const v=GN(x*.05,y*.05),d=(x+y&1)?.02:-.02,road=Math.abs(y-(92+Math.sin(x*.04)*3))<7&&x<300;
+let c=road?(v+d>.55?'#c9a46a':'#b38d55'):(v+d>.62?'#8fd14f':v+d<.38?'#3f9f3a':'#5fbf4a');const o=(y*WW+x)*4,[r,g,b]=rgb(c),k=(hx(x,y,7)-.5)*8;wpx[o]=r+k;wpx[o+1]=g+k;wpx[o+2]=b+k;wpx[o+3]=255}
+const orcKeep=keepOf('#d9453d'),ww={W:WW,H:WH2,px:wpx,hs:new Float32Array(1),wat:[]},trees=[[14,6],[44,2],[90,10],[150,4],[204,8],[22,128],[70,136],[132,140],[196,132],[248,138]].map(([x,y],i)=>[x,y,i%2?O.pine('#1f7a3a'):O.tree('#2f8f3a','#5fbf4a')]);
+const formation=[];for(let r=0;r<4;r++)for(let q=0;q<5;q++)formation.push([150+q*16-(r%2)*6,58+r*15]);
+anim(document.getElementById('war'),()=>ww,(c,t)=>{trees.forEach(([x,y,s])=>c.drawImage(s,x,y));
+c.drawImage(orcKeep,322,58);c.drawImage(tower,322,4);c.drawImage(wall,296,6);
+const f=Math.floor(t*2)%2;
+[[300,22],[300,46],[300,118],[300,136]].forEach(([x,y],i)=>c.drawImage(oa[(f+i)%2],x,y));
+[[278,84],[280,100],[264,92]].forEach(([x,y],i)=>c.drawImage(os[(f+i)%2],x,y));
+formation.forEach(([x,y],i)=>c.drawImage(hu[(f+i)%2],x+Math.round(Math.sin(t*.5+i)*1),y));
+c.drawImage(banner,226,68+(f?1:0));c.drawImage(ge[f],238,78);
+for(let k=0;k<5;k++){const p=(t*.12+k*.2)%1,x0=304,y0=26+k*26,x1=230-k*12,y1=70+k*10,x=x0+(x1-x0)*p,y=y0+(y1-y0)*p-Math.sin(p*Math.PI)*22;c.fillStyle='#f4f0e8';c.fillRect(Math.round(x),Math.round(y),3,1);c.fillStyle='#8a5a36';c.fillRect(Math.round(x)+3,Math.round(y),1,1)}});
+
+/* possess: a big orc with a soft glow under the feet */
+const whoFig=fig(OR,5);whoFig.setAttribute('aria-hidden','true');document.getElementById('who').append(whoFig);
+
+/* roadmap */
+const road=[["r0","done"],["r1","done"],["r2","next"],["r3","plan"],["r4","plan"],["r5","plan"],["r6","plan"],["r7","plan"],["r8","plan"]];
+road.forEach(([k,s],i)=>{const li=document.createElement('li');li.innerHTML='<span class="n">'+(i?i-1:'\u2713')+'</span><div><h3 data-i="'+k+'_n"></h3><p data-i="'+k+'_d"></p></div><span class="st '+s+'" data-i="'+s+'"></span>';document.getElementById('road').append(li)});
+
+document.querySelectorAll('#lang button').forEach(b=>b.onclick=()=>setLang(b.dataset.l));
+let start='en';try{start=localStorage.getItem('pp-lang')||''}catch(e){start=''}
+if(!L[start])start=/^es\b/i.test(navigator.language||'')?'es':'en';
+setLang(start);
+console.log('\u26a1 [Pocket Pantheon] Preview initialized');
+</script></body></html>
