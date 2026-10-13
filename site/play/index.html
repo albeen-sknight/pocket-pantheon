@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<!-- Pocket Pantheon · Copyright (c) 2026 Albeen (albeen-sknight) -->
+<html lang="en"><head><meta charset="utf-8">
+<meta name="generator" content="PocketPantheon-Core">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pocket Pantheon</title>
+<script src="coi-serviceworker.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Outfit:wght@400;600&display=swap" crossorigin>
+<style>
+:root{--bg:#e8f0f6;--ink:#1b1e3a;--mut:#4d5478;--panel:#fff;--line:#b6c4d6;--acc:#a86f00;--btn:#1b1e3a;--btnt:#f6e7a8}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#13152b;--ink:#f0ebdc;--mut:#a9aac6;--panel:#1d2044;--line:#363b6e;--acc:#f2c94c;--btn:#f2c94c;--btnt:#1b1e3a}}
+:root[data-theme="dark"]{--bg:#13152b;--ink:#f0ebdc;--mut:#a9aac6;--panel:#1d2044;--line:#363b6e;--acc:#f2c94c;--btn:#f2c94c;--btnt:#1b1e3a}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:grid;place-items:center;background:var(--bg);color:var(--ink);font:17px/1.55 Outfit,system-ui,sans-serif;padding:16px}
+h1{font:700 clamp(40px,10vw,80px)/1.1 'Pixelify Sans',monospace,sans-serif;margin:0;text-shadow:4px 4px 0 rgba(0,0,0,.25)}
+main{max-width:560px}
+.soon{font:500 clamp(20px,4vw,26px) 'Pixelify Sans',monospace;color:var(--acc);margin:14px 0 6px}
+p{color:var(--mut);margin:0 0 24px}
+a.btn{display:inline-block;font:600 16px Outfit,sans-serif;background:var(--btn);color:var(--btnt);text-decoration:none;padding:12px 18px;box-shadow:4px 4px 0 var(--line)}
+a:focus-visible,button:focus-visible{outline:3px solid var(--acc);outline-offset:3px}
+#lang{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));right:12px;display:flex;box-shadow:4px 4px 0 var(--line)}
+#lang button{font:700 15px 'Pixelify Sans',monospace;min-width:48px;min-height:44px;border:2px solid var(--btn);background:var(--panel);color:var(--ink);cursor:pointer}
+#lang button[aria-pressed="true"]{background:var(--btn);color:var(--btnt)}
+</style></head><body>
+<div id="lang" role="group" data-ia="lang"><button type="button" data-l="en" aria-pressed="true">EN</button><button type="button" data-l="es" aria-pressed="false">ES</button></div>
+<main><h1 data-i="title"></h1><div class="soon" data-i="soon"></div><p data-i="hint"></p><a class="btn" href="../" data-i="back"></a></main>
+<script src="__PP_MAIN__"></script>
+</body></html>
