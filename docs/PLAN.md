@@ -1,6 +1,6 @@
 # Pocket Pantheon: Execution Plan
 
-**Owner:** Albeen ([albeen-sknight](https://github.com/albeen-sknight)) · **Repository:** [albeen-sknight/pocket-pantheon](https://github.com/albeen-sknight/pocket-pantheon) · **Live site:** https://albeen-sknight.github.io/pocket-pantheon/ · **Updated:** 13 October 2026 · **Status:** Phase 0 in review, Phase 1 next
+**Owner:** Albeen ([albeen-sknight](https://github.com/albeen-sknight)) · **Repository:** [albeen-sknight/pocket-pantheon](https://github.com/albeen-sknight/pocket-pantheon) · **Live site:** https://albeen-sknight.github.io/pocket-pantheon/ · **Updated:** 13 October 2026 · **Status:** Phases 0 and 1 done, Phase 2 next
 
 Pocket Pantheon is a browser god game. A living pixel world runs itself, and you shape it, command it, bless it or wreck it. This file is the single source of truth for building it. The visual target is the concept preview in [`docs/preview.html`](preview.html).
 
@@ -758,6 +758,17 @@ Every phase ends in a playable build and is merged only when its gate passes.
 - [ ] The build deploys and runs at the live site.
 - [ ] The roadmap list on the landing page is updated.
 - [ ] This plan is updated if anything changed.
+
+**Phase 1 notes (what shipped and what moved)**
+
+- [x] Generator in a worker: layered noise with domain warping, 7 layout masks, droplet erosion, sea level from the land slider, lakes and rivers from a priority flood, wind driven moisture with rain shadows, the 21 biome lookup, magic patches, ore and fertility. A Large world takes about 0.35 s, far under the 4 s gate.
+- [x] Erosion runs as TypeScript, the planned twin of the C++ module (section 24). The C++ and WebAssembly port waits for pathfinding in Phase 2, where the speed gain matters more, and both share one Emscripten setup.
+- [x] WebGL2 terrain in one full screen draw: palette tones picked from hillshade, clumped noise and dither, soft biome edges, animated water and foam, rivers and lakes, and trees, rocks and other decoration at Town zoom and closer. Canvas2D fallback when WebGL2 is missing. 60 fps at every zoom stop (`npm run bench`).
+- [x] Zoom stops 1, 2, 3, 4, 8, 12, 16, 32, 64, 96 and 128 pixels per tile. Art detail switches at 8 (Region) and 32 (Town).
+- [x] Shape tab: raise, lower, flatten, smooth, paint any of the 21 biomes, and the island, volcano and mountain range stamps. The ore placer, road and wall brushes wait for Phase 3, when towns can use roads and walls.
+- [x] Saves: 3 slots and an autosave in IndexedDB with gzip, autosave every 2 minutes and when the tab hides, resume on reload, export and import as a `.ppworld` file, save version and migration hook, engine metadata.
+- [x] Master palette of exactly 48 colours from `tools/palette.py`. The biome tones are pinned and every other preview colour folds into its nearest neighbour. `npm test` runs the palette check.
+- [x] Minimap, tile inspector (Inspect tab), keyboard and touch controls, and a Play button on the landing page.
 
 **Phase 0 checklist**
 

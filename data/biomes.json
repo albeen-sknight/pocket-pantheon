@@ -1,0 +1,240 @@
+{
+  "biomes": [
+    {
+      "key": "deep_ocean",
+      "water": true,
+      "tones": [
+        "#3b78d8",
+        "#5cc8e6",
+        "#2a5db0",
+        "#f4f0e8"
+      ],
+      "deco": "none"
+    },
+    {
+      "key": "coral",
+      "water": true,
+      "tones": [
+        "#5cc8e6",
+        "#d8f0f8",
+        "#3b78d8",
+        "#f08bb4"
+      ],
+      "deco": "coral"
+    },
+    {
+      "key": "beach",
+      "water": false,
+      "tones": [
+        "#f0d9a0",
+        "#f4f0e8",
+        "#d4a94e",
+        "#e8c46a"
+      ],
+      "deco": "palm"
+    },
+    {
+      "key": "grassland",
+      "water": false,
+      "tones": [
+        "#5fbf4a",
+        "#8fd14f",
+        "#3f9f3a",
+        "#f2c94c"
+      ],
+      "deco": "flower"
+    },
+    {
+      "key": "forest",
+      "water": false,
+      "tones": [
+        "#2f8f3a",
+        "#3f9f3a",
+        "#1f6a2a",
+        "#5fbf4a"
+      ],
+      "deco": "tree"
+    },
+    {
+      "key": "jungle",
+      "water": false,
+      "tones": [
+        "#1f8f4a",
+        "#2f8f3a",
+        "#1f6a2a",
+        "#7bc24a"
+      ],
+      "deco": "palm"
+    },
+    {
+      "key": "savanna",
+      "water": false,
+      "tones": [
+        "#c9b84a",
+        "#e8c46a",
+        "#b38d55",
+        "#8a5a36"
+      ],
+      "deco": "acacia"
+    },
+    {
+      "key": "desert",
+      "water": false,
+      "tones": [
+        "#e8c46a",
+        "#f0d9a0",
+        "#d4a94e",
+        "#3f9f3a"
+      ],
+      "deco": "cactus"
+    },
+    {
+      "key": "badlands",
+      "water": false,
+      "tones": [
+        "#b5602a",
+        "#d9822b",
+        "#8a5a36",
+        "#e8c46a"
+      ],
+      "deco": "rock"
+    },
+    {
+      "key": "swamp",
+      "water": false,
+      "tones": [
+        "#4a6a3a",
+        "#4f8f6a",
+        "#2f6f4a",
+        "#5cc8e6"
+      ],
+      "deco": "reed"
+    },
+    {
+      "key": "taiga",
+      "water": false,
+      "tones": [
+        "#2f6f4a",
+        "#4f8f6a",
+        "#1f6a2a",
+        "#dfe9ef"
+      ],
+      "deco": "pine"
+    },
+    {
+      "key": "tundra",
+      "water": false,
+      "tones": [
+        "#dfe9ef",
+        "#f4f0e8",
+        "#c3d3de",
+        "#8a8f9a"
+      ],
+      "deco": "rock"
+    },
+    {
+      "key": "permafrost",
+      "water": false,
+      "tones": [
+        "#c3d3de",
+        "#dfe9ef",
+        "#aab0bc",
+        "#5cc8e6"
+      ],
+      "deco": "none"
+    },
+    {
+      "key": "snow_peaks",
+      "water": false,
+      "tones": [
+        "#f4f0e8",
+        "#ffffff",
+        "#c3d3de",
+        "#aab0bc"
+      ],
+      "deco": "none"
+    },
+    {
+      "key": "mountains",
+      "water": false,
+      "tones": [
+        "#8a8f9a",
+        "#aab0bc",
+        "#6c7482",
+        "#5a5f6b"
+      ],
+      "deco": "rock"
+    },
+    {
+      "key": "hills",
+      "water": false,
+      "tones": [
+        "#6aa86a",
+        "#8fd14f",
+        "#4f8f6a",
+        "#8a8f9a"
+      ],
+      "deco": "rock"
+    },
+    {
+      "key": "infernal",
+      "water": false,
+      "tones": [
+        "#5a2a30",
+        "#8a5a36",
+        "#2b2233",
+        "#f08a2c"
+      ],
+      "deco": "lava"
+    },
+    {
+      "key": "haunted",
+      "water": false,
+      "tones": [
+        "#4a3a6a",
+        "#5a4a7a",
+        "#3a2f55",
+        "#9a8fb8"
+      ],
+      "deco": "dead"
+    },
+    {
+      "key": "grove",
+      "water": false,
+      "tones": [
+        "#8fd88f",
+        "#d8f0f8",
+        "#6aa86a",
+        "#b58cf0"
+      ],
+      "deco": "crystal"
+    },
+    {
+      "key": "mushroom",
+      "water": false,
+      "tones": [
+        "#5a4a7a",
+        "#9a8fb8",
+        "#4a3a6a",
+        "#f08bb4"
+      ],
+      "deco": "mushroom"
+    },
+    {
+      "key": "wasteland",
+      "water": false,
+      "tones": [
+        "#6b5a4a",
+        "#b38d55",
+        "#5a5f6b",
+        "#8fd14f"
+      ],
+      "deco": "none"
+    }
+  ],
+  "freshWater": [
+    "#5cc8e6",
+    "#d8f0f8",
+    "#3b78d8"
+  ]
+}

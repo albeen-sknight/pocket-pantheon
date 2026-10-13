@@ -20,9 +20,9 @@ async function buildLanding(en, es) {
   await writeFile(out + "index.html", html.replace("/*PP_TEXT*/{}", () => text));
 }
 
-async function buildGame(dev) {
+async function bundle(entry, dev, define = {}) {
   const result = await build({
-    entryPoints: [root + "src/main.ts"],
+    entryPoints: [root + entry],
     bundle: true,
     format: "iife",
     target: "es2022",
@@ -31,12 +31,17 @@ async function buildGame(dev) {
     entryNames: "[name].[hash]",
     outdir: out + "play",
     metafile: true,
-    define: { PP_VERSION: JSON.stringify(pkg.version) },
+    define: { PP_VERSION: JSON.stringify(pkg.version), ...define },
     logLevel: "warning",
   });
-  const js = Object.keys(result.metafile.outputs).find((f) => f.endsWith(".js"));
+  return basename(Object.keys(result.metafile.outputs).find((f) => f.endsWith(".js")));
+}
+
+async function buildGame(dev) {
+  const worker = await bundle("src/world/gen.worker.ts", dev);
+  const main = await bundle("src/main.ts", dev, { PP_GEN_WORKER: JSON.stringify(worker) });
   const html = await readFile(root + "site/play/index.html", "utf8");
-  await writeFile(out + "play/index.html", html.replace("__PP_MAIN__", basename(js)));
+  await writeFile(out + "play/index.html", html.replace("__PP_MAIN__", main));
   await cp(root + "node_modules/coi-serviceworker/coi-serviceworker.min.js", out + "play/coi-serviceworker.min.js");
 }
 

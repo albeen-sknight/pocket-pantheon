@@ -1,6 +1,6 @@
 {
   "name": "pocket-pantheon",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "A browser god game. A living pixel world runs itself, and you shape it.",
   "type": "module",
@@ -9,8 +9,10 @@
     "build": "node tools/build.mjs",
     "typecheck": "tsc --noEmit",
     "lint:text": "python tools/lint_text.py",
-    "test": "npm run typecheck && npm run lint:text && vitest run",
-    "test:e2e": "playwright test"
+    "lint:palette": "python tools/palette.py --check",
+    "test": "npm run typecheck && npm run lint:text && npm run lint:palette && vitest run",
+    "test:e2e": "playwright test",
+    "bench": "node tools/bench.mjs"
   },
   "engines": {
     "node": ">=20"
