@@ -3,7 +3,10 @@ import { expect, test, type Page } from "@playwright/test";
 
 type Hooks = { world(): { w: number; h: number; height: Float32Array; options: { seed: number } } | null; renderer: string };
 
-const ready = (page: Page) => page.waitForFunction(() => (window as unknown as { __pp?: Hooks }).__pp?.world());
+// The isolation service worker reloads the page once on a first visit, so
+// wait for that before touching anything.
+const ready = (page: Page) =>
+  page.waitForFunction(() => window.crossOriginIsolated && (window as unknown as { __pp?: Hooks }).__pp?.world(), null, { timeout: 30_000 });
 
 test("landing page renders, switches language and links to the game", async ({ page }) => {
   const logs: string[] = [];
