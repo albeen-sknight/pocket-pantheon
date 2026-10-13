@@ -1,0 +1,62 @@
+{
+  "stats": ["strength", "agility", "intelligence", "vitality", "charisma", "faith", "fertility", "size"],
+  "races": {
+    "human": {
+      "stats": [[8, 14], [8, 14], [10, 16], [8, 14], [9, 15], [6, 14], [8, 14], [9, 12]],
+      "lifespan": [60, 85], "adult": 16, "elder": 55, "speed": 1.6,
+      "biomes": ["grassland", "forest"], "anywhere": true,
+      "skin": ["#e0b184", "#d4a94e", "#b38d55", "#8a5a36"], "hair": ["#5a2a30", "#8a5a36", "#2b2233", "#f2c94c"],
+      "cloth": "#3b6fd4", "pants": "#8a5a36", "weapon": "sword"
+    },
+    "elf": {
+      "stats": [[5, 10], [12, 18], [12, 18], [9, 14], [9, 15], [8, 15], [3, 7], [8, 11]],
+      "lifespan": [300, 360], "adult": 40, "elder": 260, "speed": 1.8,
+      "biomes": ["forest", "grove"], "anywhere": false,
+      "skin": ["#f0d9a0", "#e0b184"], "hair": ["#f2c94c", "#f4f0e8", "#8a5a36"],
+      "cloth": "#2f8f3a", "pants": "#4a6a3a", "weapon": "bow", "ears": true, "plantsTrees": true
+    },
+    "orc": {
+      "stats": [[13, 19], [7, 12], [4, 9], [11, 16], [5, 11], [5, 12], [12, 18], [11, 15]],
+      "lifespan": [45, 65], "adult": 12, "elder": 40, "speed": 1.6,
+      "biomes": ["savanna", "badlands"], "anywhere": false,
+      "skin": ["#7bc24a", "#6aa86a", "#8fa04a"], "hair": ["#2b2233", "#5a2a30"],
+      "cloth": "#5a2a30", "pants": "#6b5a4a", "weapon": "axe", "tusks": true
+    },
+    "dwarf": {
+      "stats": [[11, 16], [5, 9], [9, 14], [14, 19], [7, 12], [7, 13], [4, 9], [6, 9]],
+      "lifespan": [140, 200], "adult": 30, "elder": 110, "speed": 1.2,
+      "biomes": ["hills", "mountains"], "anywhere": false,
+      "skin": ["#e0b184", "#d4a94e"], "hair": ["#d9822b", "#8a5a36", "#f4f0e8", "#2b2233"],
+      "cloth": "#5a5f6b", "pants": "#3a2f55", "weapon": "hammer", "beard": true, "helm": "#aab0bc", "climbs": true
+    }
+  },
+  "animals": {
+    "sheep": { "habitat": ["grassland", "hills"], "diet": "grass", "speed": 1.2, "hp": 20, "damage": 1, "lifespan": 12, "adult": 2, "litter": 1, "cap": 3, "herd": true },
+    "cow": { "habitat": ["grassland"], "diet": "grass", "speed": 1.0, "hp": 40, "damage": 3, "lifespan": 15, "adult": 2, "litter": 1, "cap": 1.5, "herd": true },
+    "chicken": { "habitat": ["grassland", "savanna"], "diet": "grass", "speed": 1.0, "hp": 6, "damage": 1, "lifespan": 6, "adult": 1, "litter": 2, "cap": 1.5 },
+    "rabbit": { "habitat": ["grassland", "forest"], "diet": "grass", "speed": 1.9, "hp": 5, "damage": 0, "lifespan": 5, "adult": 1, "litter": 3, "cap": 4 },
+    "deer": { "habitat": ["forest", "taiga"], "diet": "grass", "speed": 2.0, "hp": 25, "damage": 3, "lifespan": 14, "adult": 2, "litter": 1, "cap": 3, "herd": true },
+    "wolf": { "habitat": ["forest", "taiga", "savanna"], "diet": "meat", "prey": ["sheep", "rabbit", "deer", "chicken", "human", "elf", "orc", "dwarf"], "speed": 2.0, "hp": 35, "damage": 7, "lifespan": 12, "adult": 2, "litter": 2, "cap": 0.5, "herd": true },
+    "bear": { "habitat": ["forest", "mountains", "taiga"], "diet": "meat", "prey": ["deer", "sheep", "fish"], "speed": 1.4, "hp": 90, "damage": 14, "lifespan": 25, "adult": 3, "litter": 1, "cap": 0.25 },
+    "fox": { "habitat": ["forest", "tundra"], "diet": "meat", "prey": ["rabbit", "chicken"], "speed": 1.9, "hp": 15, "damage": 4, "lifespan": 10, "adult": 1, "litter": 2, "cap": 0.7 },
+    "camel": { "habitat": ["desert", "savanna"], "diet": "grass", "speed": 1.2, "hp": 50, "damage": 3, "lifespan": 30, "adult": 3, "litter": 1, "cap": 1, "herd": true },
+    "penguin": { "habitat": ["tundra", "permafrost"], "diet": "grass", "speed": 0.8, "hp": 12, "damage": 1, "lifespan": 15, "adult": 2, "litter": 1, "cap": 2.5, "herd": true },
+    "crab": { "habitat": ["beach", "swamp"], "diet": "grass", "speed": 0.8, "hp": 10, "damage": 2, "lifespan": 8, "adult": 1, "litter": 3, "cap": 3 },
+    "fish": { "habitat": ["deep_ocean", "coral"], "diet": "grass", "speed": 1.2, "hp": 4, "damage": 0, "lifespan": 5, "adult": 1, "litter": 3, "cap": 1.5, "swims": true, "herd": true },
+    "snake": { "habitat": ["jungle", "desert"], "diet": "meat", "prey": ["rabbit", "chicken"], "speed": 1.0, "hp": 10, "damage": 6, "lifespan": 10, "adult": 1, "litter": 2, "cap": 0.8 },
+    "parrot": { "habitat": ["jungle"], "diet": "grass", "speed": 2.2, "hp": 4, "damage": 0, "lifespan": 20, "adult": 2, "litter": 1, "cap": 2, "flies": true },
+    "horse": { "habitat": ["grassland", "savanna"], "diet": "grass", "speed": 2.4, "hp": 45, "damage": 4, "lifespan": 25, "adult": 3, "litter": 1, "cap": 0.8, "herd": true }
+  },
+  "traits": {
+    "giant": { "size": 5, "speed": -0.15 },
+    "tiny": { "size": -4, "speed": 0.1 },
+    "night_vision": { "safety": 0.2 },
+    "tough_hide": { "armor": 0.25 },
+    "quick_wits": { "intelligence": 4 },
+    "long_lived": { "lifespan": 0.3 },
+    "albino": { "vitality": -2 },
+    "extra_fertile": { "fertility": 5 },
+    "fire_resistant": { "fire": 0.6 },
+    "iron_stomach": { "hunger": -0.25 }
+  }
+}

@@ -1,12 +1,16 @@
 // Pocket Pantheon · Copyright (c) 2026 Albeen (albeen-sknight)
 import { expect, test, type Page } from "@playwright/test";
 
-type Hooks = { world(): { w: number; h: number; height: Float32Array; options: { seed: number } } | null; renderer: string };
+type Hooks = {
+  world(): { w: number; h: number; height: Float32Array; options: { seed: number } } | null;
+  frame(): { pop: number; year: number } | null;
+  renderer: string;
+};
 
 // The isolation service worker reloads the page once on a first visit, so
 // wait for that before touching anything.
 const ready = (page: Page) =>
-  page.waitForFunction(() => window.crossOriginIsolated && (window as unknown as { __pp?: Hooks }).__pp?.world(), null, { timeout: 30_000 });
+  page.waitForFunction(() => window.crossOriginIsolated && (window as unknown as { __pp?: Hooks }).__pp?.frame(), null, { timeout: 30_000 });
 
 test("landing page renders, switches language and links to the game", async ({ page }) => {
   const logs: string[] = [];
@@ -36,17 +40,18 @@ test("the game builds a world and switches language in place", async ({ page }) 
   await ready(page);
 
   await expect(page.locator("#t-seed")).toHaveText("Seed 4242");
-  await expect(page.locator("#tabs button[data-tab=life]")).toBeDisabled();
+  await expect(page.locator("#tabs button[data-tab=cmd]")).toBeDisabled();
   await page.getByRole("button", { name: "ES" }).click();
   await expect(page.locator("#t-seed")).toHaveText("Semilla 4242");
-  await expect(page.locator("#t-year")).toHaveText("Año 0");
+  await expect(page.locator("#t-year")).toHaveText(/^Año [0-9]+$/);
   await expect(page.locator("#tabs button[data-tab=shape]")).toContainText("Moldear");
   expect(logs.some((l) => l.startsWith("⚡ [Pocket Pantheon] Engine initialized v"))).toBe(true);
 });
 
 test("raise brush changes the land under the cursor", async ({ page }) => {
-  await page.goto("./play/?seed=4242&size=small");
+  await page.goto("./play/?seed=4242&size=small&races=");
   await ready(page);
+  await page.keyboard.press("1");
   const box = (await page.locator("#world").boundingBox())!;
   const at = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
   const read = () =>
@@ -79,10 +84,37 @@ test("saves to a slot and loads it back", async ({ page }) => {
 });
 
 test("inspect shows what is on a tile", async ({ page }) => {
-  await page.goto("./play/?seed=4242&size=small");
+  await page.goto("./play/?seed=4242&size=small&races=");
   await ready(page);
   await page.keyboard.press("8");
   const box = (await page.locator("#world").boundingBox())!;
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
   await expect(page.locator("#insp dl")).toContainText("Biome");
+});
+
+test("spawning people from the Life tab adds to the population", async ({ page }) => {
+  await page.goto("./play/?seed=4242&size=small&races=");
+  await ready(page);
+  const pop = () => page.evaluate(() => (window as unknown as { __pp: Hooks }).__pp.frame()!.pop);
+  expect(await pop()).toBe(0);
+  await page.locator("#tabs button[data-tab=life]").click();
+  await page.locator("#shelf button", { hasText: "Human" }).click();
+  // drop them on the first land tile near the middle of the view
+  const at = await page.evaluate(() => {
+    const pp = (window as unknown as { __pp: Hooks & { camera: { x: number; y: number; scale: number } } }).__pp;
+    const w = pp.world()!;
+    const c = pp.camera;
+    for (let r = 0; r < 60; r++) {
+      for (let a = 0; a < 16; a++) {
+        const tx = Math.floor(w.w / 2 + Math.cos(a) * r);
+        const ty = Math.floor(w.h / 2 + Math.sin(a) * r);
+        if (w.height[ty * w.w + tx]! > 0.45) return { x: ((tx + 0.5 - c.x) * c.scale) / devicePixelRatio, y: ((ty + 0.5 - c.y) * c.scale) / devicePixelRatio };
+      }
+    }
+    return null;
+  });
+  expect(at).not.toBeNull();
+  const box = (await page.locator("#world").boundingBox())!;
+  await page.mouse.click(box.x + at!.x, box.y + at!.y);
+  await expect.poll(pop).toBeGreaterThan(0);
 });

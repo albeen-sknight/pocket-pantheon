@@ -38,15 +38,16 @@ async function bundle(entry, dev, define = {}) {
 }
 
 async function buildGame(dev) {
-  const worker = await bundle("src/world/gen.worker.ts", dev);
-  const main = await bundle("src/main.ts", dev, { PP_GEN_WORKER: JSON.stringify(worker) });
+  const gen = await bundle("src/world/gen.worker.ts", dev);
+  const sim = await bundle("src/sim/sim.worker.ts", dev);
+  const main = await bundle("src/main.ts", dev, { PP_GEN_WORKER: JSON.stringify(gen), PP_SIM_WORKER: JSON.stringify(sim) });
   const html = await readFile(root + "site/play/index.html", "utf8");
   await writeFile(out + "play/index.html", html.replace("__PP_MAIN__", main));
   await cp(root + "node_modules/coi-serviceworker/coi-serviceworker.min.js", out + "play/coi-serviceworker.min.js");
 }
 
 export async function buildSite({ dev = false } = {}) {
-  await rm(out, { recursive: true, force: true });
+  await rm(out, { recursive: true, force: true, maxRetries: 5 });
   await mkdir(out + "play", { recursive: true });
   const [en, es] = await Promise.all([readText("en"), readText("es")]);
   await buildLanding(en, es);

@@ -2,7 +2,9 @@
 // Fallback for devices without WebGL2: one pixel per tile, scaled up with no
 // smoothing. Also paints the minimap.
 import biomes from "../../data/biomes.json";
-import { LAKE, RIVER, type World } from "../world/types";
+import { FARM, LAKE, RIVER, ROAD, type World } from "../world/types";
+import type { Atlas } from "./atlas";
+import { INST, type Scene } from "./scene";
 import type { Rect } from "../world/edit";
 import type { Camera } from "./camera";
 import { rgb } from "./palette";
@@ -12,6 +14,8 @@ const TONES = biomes.biomes.map((b) => b.tones.map(rgb));
 const FRESH = biomes.freshWater.map(rgb);
 // same dimmed deep water the WebGL shader shows past the map edge
 const OUTSIDE = "#173372";
+const ROAD_RGB = rgb("#b38d55");
+const FARM_RGB = rgb("#7bc24a");
 
 export function paintTiles(world: World, img: ImageData, r: Rect) {
   const { w, height, biome, flags, seaLevel } = world;
@@ -20,7 +24,11 @@ export function paintTiles(world: World, img: ImageData, r: Rect) {
       const i = y * w + x;
       const tones = TONES[biome[i]!]!;
       let c: [number, number, number];
-      if (height[i]! >= seaLevel && flags[i]! & (RIVER | LAKE)) {
+      if (flags[i]! & ROAD) {
+        c = ROAD_RGB;
+      } else if (flags[i]! & FARM) {
+        c = FARM_RGB;
+      } else if (height[i]! >= seaLevel && flags[i]! & (RIVER | LAKE)) {
         c = FRESH[0]!;
       } else if (height[i]! < seaLevel) {
         const depth = seaLevel - height[i]!;
@@ -66,6 +74,23 @@ export function createCanvasRenderer(canvas: HTMLCanvasElement): Renderer | null
       ctx.fillStyle = OUTSIDE;
       ctx.fillRect(0, 0, cam.viewW, cam.viewH);
       ctx.drawImage(map, -cam.x * cam.scale, -cam.y * cam.scale, map.width * cam.scale, map.height * cam.scale);
+    },
+    drawSprites(scene: Scene, atlas: Atlas) {
+      const d = scene.data;
+      for (let i = 0; i < scene.count; i++) {
+        const o = i * INST;
+        const sp = atlas.sprites[d[o + 2]!]!;
+        const k = d[o + 3]!;
+        if (d[o + 4]) {
+          ctx.save();
+          ctx.translate(d[o]! + sp.w * k, d[o + 1]!);
+          ctx.scale(-1, 1);
+          ctx.drawImage(atlas.canvas, sp.x, sp.y, sp.w, sp.h, 0, 0, sp.w * k, sp.h * k);
+          ctx.restore();
+        } else {
+          ctx.drawImage(atlas.canvas, sp.x, sp.y, sp.w, sp.h, d[o]!, d[o + 1]!, sp.w * k, sp.h * k);
+        }
+      }
     },
   };
 }

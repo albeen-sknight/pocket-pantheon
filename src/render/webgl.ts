@@ -3,9 +3,12 @@ import { B } from "../world/biomes";
 import type { Rect } from "../world/edit";
 import type { World } from "../world/types";
 import type { Camera } from "./camera";
-import { biomeTable, FOAM, FRESH_WATER, paletteRGBA } from "./palette";
+import type { Atlas } from "./atlas";
+import { biomeTable, FARM_TONES, FOAM, FRESH_WATER, paletteRGBA, ROAD_TONES } from "./palette";
 import { packTiles, type Renderer } from "./renderer";
+import type { Scene } from "./scene";
 import { TERRAIN_FRAG, TERRAIN_VERT } from "./shaders";
+import { SpriteGL } from "./spritegl";
 
 export function createWebGLRenderer(canvas: HTMLCanvasElement): Renderer | null {
   let gl: WebGL2RenderingContext | null = null;
@@ -44,6 +47,7 @@ class WebGLTerrain implements Renderer {
   private uni: Record<string, WebGLUniformLocation | null> = {};
   private size = { w: 1, h: 1 };
   private sea = 0.4;
+  private sprites: SpriteGL | null = null;
 
   constructor(private gl: WebGL2RenderingContext, private program: WebGLProgram) {
     gl.useProgram(program);
@@ -54,7 +58,7 @@ class WebGLTerrain implements Renderer {
     gl.enableVertexAttribArray(loc);
     gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
 
-    for (const name of ["uTiles", "uPalette", "uBiomes", "uOffset", "uScale", "uArt", "uViewH", "uSize", "uSea", "uTime", "uFresh", "uFoam", "uTreeTones", "uPineTones", "uTrunkTones"]) {
+    for (const name of ["uTiles", "uPalette", "uBiomes", "uOffset", "uScale", "uArt", "uViewH", "uSize", "uSea", "uTime", "uFresh", "uFoam", "uTreeTones", "uPineTones", "uTrunkTones", "uRoad", "uFarm", "uSeason"]) {
       this.uni[name] = gl.getUniformLocation(program, name);
     }
 
@@ -69,6 +73,8 @@ class WebGLTerrain implements Renderer {
     gl.uniform1ui(this.uni.uTreeTones!, B.forest);
     gl.uniform1ui(this.uni.uPineTones!, B.taiga);
     gl.uniform1ui(this.uni.uTrunkTones!, B.savanna);
+    gl.uniform1uiv(this.uni.uRoad!, ROAD_TONES);
+    gl.uniform1uiv(this.uni.uFarm!, FARM_TONES);
   }
 
   private texture(unit: number, uniform: string): WebGLTexture {
@@ -105,9 +111,11 @@ class WebGLTerrain implements Renderer {
     gl.texSubImage2D(gl.TEXTURE_2D, 0, r.x0, r.y0, r.x1 - r.x0, r.y1 - r.y0, gl.RGBA_INTEGER, gl.UNSIGNED_BYTE, data);
   }
 
-  draw(cam: Camera, time: number) {
+  draw(cam: Camera, time: number, season: number) {
     const gl = this.gl;
     const u = this.uni;
+    gl.useProgram(this.program);
+    gl.uniform1f(u.uSeason!, season);
     gl.viewport(0, 0, cam.viewW, cam.viewH);
     gl.uniform2f(u.uOffset!, cam.x, cam.y);
     gl.uniform1f(u.uScale!, cam.scale);
@@ -117,5 +125,10 @@ class WebGLTerrain implements Renderer {
     gl.uniform1f(u.uSea!, this.sea);
     gl.uniform1f(u.uTime!, time);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
+  }
+
+  drawSprites(scene: Scene, atlas: Atlas, cam: Camera) {
+    this.sprites ??= new SpriteGL(this.gl, atlas);
+    this.sprites.draw(scene, cam.viewW, cam.viewH);
   }
 }
