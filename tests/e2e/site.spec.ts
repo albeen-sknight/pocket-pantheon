@@ -83,13 +83,14 @@ test("saves to a slot and loads it back", async ({ page }) => {
   await expect(page.locator("#t-seed")).toHaveText("Seed 4242");
 });
 
-test("inspect shows what is on a tile", async ({ page }) => {
+test("inspect shows what is under the cursor", async ({ page }) => {
   await page.goto("./play/?seed=4242&size=small&races=");
   await ready(page);
   await page.keyboard.press("8");
   const box = (await page.locator("#world").boundingBox())!;
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
-  await expect(page.locator("#insp dl")).toContainText("Biome");
+  // a tile, or whichever animal happened to wander under the click
+  await expect(page.locator("#insp dl")).toContainText(/Biome|Health/);
 });
 
 test("spawning people from the Life tab adds to the population", async ({ page }) => {
