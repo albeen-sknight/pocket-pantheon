@@ -4,6 +4,8 @@ import { decodeWorld, encodeWorld, gunzip, gzip, makeMeta, SAVE_VERSION } from "
 import { generateWorld } from "../../src/world/generate";
 import { worldHash } from "../../src/world/hash";
 import { defaultOptions } from "../../src/world/types";
+import { Sim } from "../../src/sim/sim";
+import { fromSnapshot, toSnapshot } from "../../src/sim/snapshot";
 
 describe("save format", () => {
   const world = generateWorld({ ...defaultOptions(31), size: "small" });
@@ -30,5 +32,23 @@ describe("save format", () => {
   it("rejects saves from a newer version", () => {
     const bytes = encodeWorld(world, { ...makeMeta(world, "test"), saveVersion: SAVE_VERSION + 1 });
     expect(() => decodeWorld(bytes)).toThrow();
+  });
+});
+
+describe("save format with a running simulation", () => {
+  it("round trips units, towns and buildings", async () => {
+    const world = generateWorld({ ...defaultOptions(12), size: "small" });
+    const sim = new Sim(world, 12);
+    sim.populate(["human", "orc"]);
+    for (let k = 0; k < 120 * 8; k++) sim.step();
+    const snap = toSnapshot(sim);
+    const packed = await gzip(encodeWorld(world, makeMeta(world, "test", sim.year), snap));
+    const back = decodeWorld(await gunzip(packed));
+    expect(back.sim).toBeDefined();
+    const restored = fromSnapshot(back.world, 12, back.sim!);
+    expect(restored.population()).toBe(sim.population());
+    expect(restored.buildings.length).toBe(sim.buildings.length);
+    expect(restored.tick).toBe(sim.tick);
+    expect(back.meta.year).toBe(sim.year);
   });
 });

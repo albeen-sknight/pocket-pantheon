@@ -1,0 +1,72 @@
+{
+  "ticksPerSecond": 20,
+  "ticksPerYear": 120,
+  "dayTicks": 240,
+  "thinkEvery": 8,
+  "speeds": [
+    0,
+    1,
+    2,
+    4,
+    8
+  ],
+  "unitCaps": {
+    "small": 3000,
+    "medium": 6000,
+    "large": 10000,
+    "xl": 15000
+  },
+  "needs": {
+    "hungerPerYear": 0.3,
+    "restPerYear": 0.45,
+    "socialPerYear": 0.25,
+    "faithPerYear": 0.1,
+    "purposePerYear": 0.35,
+    "safetyRecoverPerYear": 2.0
+  },
+  "genes": {
+    "mutation": 0.02,
+    "mutationWild": 0.08,
+    "brainNoise": 0.15,
+    "traitChance": 0.03
+  },
+  "life": {
+    "birthChancePerYear": 0.45,
+    "starveYears": 3.0,
+    "spawnBand": 6,
+    "startBand": 6,
+    "animalStartShare": 0.5
+  },
+  "town": {
+    "plannerEvery": 20,
+    "foundMinPeople": 2,
+    "houseCapacity": 4,
+    "farmPerPeople": 4,
+    "foodPerFarmPerYear": 24,
+    "foodPerForagePerYear": 3,
+    "woodPerChop": 2,
+    "chopsToClear": 6,
+    "eatPerYear": 4,
+    "villagePop": 10,
+    "townPop": 40,
+    "cityPop": 100,
+    "settleAtHousing": 0.6,
+    "settleMinPop": 12,
+    "settleBand": 4,
+    "settleRange": [
+      18,
+      36
+    ],
+    "startFood": 20,
+    "startWood": 20
+  },
+  "roads": {
+    "heatPerStep": 10,
+    "decayEvery": 600,
+    "decay": 0.75,
+    "threshold": 60
+  },
+  "path": {
+    "maxNodes": 3000
+  }
+}

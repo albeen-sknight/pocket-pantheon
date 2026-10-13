@@ -28,11 +28,16 @@ uniform uint uFoam;
 uniform uint uTreeTones;   // biome whose tones colour round trees
 uniform uint uPineTones;
 uniform uint uTrunkTones;   // its accent is the trunk brown
+uniform uint uRoad[3];      // base, light, dark
+uniform uint uFarm[3];      // soil, young crop, ripe crop
+uniform float uSeason;      // 0 to 1 through the year, ripens crops
 
 out vec4 outColor;
 
 const uint RIVER = 1u;
 const uint LAKE = 2u;
+const uint ROAD = 4u;
+const uint FARM = 8u;
 
 // Integer hash of a cell and a salt, in [0, 1). No visible grid patterns.
 float hash(vec2 p, uint salt) {
@@ -205,6 +210,33 @@ void main() {
   uvec4 tn = tones(d.r);
   float v = shade + clump * 0.9 + dither;
   uint c = v > 0.5 ? tn.g : v < -0.5 ? tn.b : tn.r;
+
+  // Farms: rows of crops over dark soil, ripening through the year.
+  if ((me.a & FARM) != 0u) {
+    if (uArt == 1.0) { outColor = pal(uFarm[1]); return; }
+    float row = mod(ap.y, uArt >= 32.0 ? 6.0 : 2.0);
+    bool ripe = hash(vec2(home), 9u) * 0.4 + uSeason > 0.8;
+    uint crop = ripe ? uFarm[2] : uFarm[1];
+    outColor = pal(row < (uArt >= 32.0 ? 2.0 : 1.0) ? uFarm[0] : crop);
+    return;
+  }
+
+  // Roads: a dirt band through the tile, joining neighbouring road tiles.
+  if ((me.a & ROAD) != 0u) {
+    if (uArt == 1.0) { outColor = pal(uRoad[0]); return; }
+    vec2 f = fract(wp) - 0.5;
+    float w = 0.24;
+    bool on = max(abs(f.x), abs(f.y)) < w;
+    if ((tileAt(home + ivec2(1, 0)).a & ROAD) != 0u && f.x > 0.0 && abs(f.y) < w) on = true;
+    if ((tileAt(home - ivec2(1, 0)).a & ROAD) != 0u && f.x < 0.0 && abs(f.y) < w) on = true;
+    if ((tileAt(home + ivec2(0, 1)).a & ROAD) != 0u && f.y > 0.0 && abs(f.x) < w) on = true;
+    if ((tileAt(home - ivec2(0, 1)).a & ROAD) != 0u && f.y < 0.0 && abs(f.x) < w) on = true;
+    if (on) {
+      float rv = clump * 0.8 + dither;
+      outColor = pal(rv > 0.45 ? uRoad[1] : rv < -0.45 ? uRoad[2] : uRoad[0]);
+      return;
+    }
+  }
 
   if (uArt >= 4.0) {
     // Scatter accent pixels (flowers, pebbles) on a few art pixels.
