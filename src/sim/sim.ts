@@ -3,8 +3,18 @@
 // Deterministic: one seeded random stream per system, fixed iteration order,
 // and every command applies at a known tick.
 import buildingData from "../../data/buildings.json";
-import names from "../../data/names.json";
+import civData from "../../data/civ.json";
 import config from "../../data/sim.json";
+import { yearlyDiplomacy, type LiveRelation } from "../civ/diplomacy";
+import { yearlyEconomy } from "../civ/economy";
+import { inherit } from "../civ/gear";
+import { grace, type GracePower } from "../civ/grace";
+import { culture, kingdom, kingdomOfTown, newCulture, newKingdom, updateKingdoms, updateTerritory } from "../civ/kingdoms";
+import { personName, placeName } from "../civ/language";
+import { yearlyReligion } from "../civ/religion";
+import { checkSubspecies, rememberBaseline, split } from "../civ/subspecies";
+import { RESOURCES, type Chronicle, type Culture, type Grave, type Kingdom, type Legend, type Religion, type Subspecies } from "../civ/types";
+import { directorYear, type DirectorMode } from "../director/director";
 import { createRng, type Rng } from "../core/rng";
 import { B, BIOMES, isWaterBiome } from "../world/biomes";
 import { applyStroke, type Rect, type Stroke } from "../world/edit";
@@ -49,6 +59,40 @@ export interface Town {
   founded: number;
   lastSettle: number;
   alive: boolean;
+  kingdom: number;
+  loyalty: number; // 0 to 100
+  res: number[]; // stockpile per resource in data/civ.json (food and wood live above)
+}
+
+// Everything kingdoms, faiths and history need, kept together for saves.
+export class CivState {
+  cultures: Culture[] = [];
+  raceCulture: number[] = []; // the culture wandering bands of each race speak
+  kingdoms: Kingdom[] = [];
+  relations = new Map<string, LiveRelation>();
+  religions: Religion[] = [];
+  subspecies: Subspecies[] = [];
+  legends: Legend[] = [];
+  graves: Grave[] = [];
+  log: Chronicle[] = [];
+  baseline: number[][] = [];
+  everLived: boolean[] = [];
+  goneSince: number[] = [];
+  owner: Uint16Array;
+  ownerChanged = true;
+  borders = new Set<string>();
+  settlements: { x: number; y: number; kingdom: number; until: number }[] = [];
+
+  constructor(tiles: number) {
+    this.owner = new Uint16Array(tiles);
+  }
+}
+
+export interface Fx {
+  kind: string;
+  x: number;
+  y: number;
+  r: number;
 }
 
 export type SimEvent =
@@ -57,7 +101,8 @@ export type SimEvent =
   | { t: "town"; town: number; race: number; tick: number; name: string }
   | { t: "built"; building: number; type: BuildingType; town: number; tick: number }
   | { t: "stage"; town: number; stage: number; tick: number }
-  | { t: "marry"; a: number; b: number; tick: number };
+  | { t: "marry"; a: number; b: number; tick: number }
+  | { t: "chronicle"; entry: Chronicle };
 
 export type Command =
   | { c: "spawn"; kind: number; x: number; y: number; count: number }
@@ -65,7 +110,10 @@ export type Command =
   | { c: "mutate"; uid: number }
   | { c: "trait"; uid: number; trait: number; add: boolean }
   | { c: "clone"; uid: number }
-  | { c: "kill"; uid: number };
+  | { c: "kill"; uid: number }
+  | { c: "grace"; power: GracePower; x: number; y: number; radius: number }
+  | { c: "split"; uid: number }
+  | { c: "director"; mode: DirectorMode; lifeReturns: boolean };
 
 export class Sim {
   tick = 0;
@@ -77,7 +125,11 @@ export class Sim {
   readonly chops: Uint8Array; // trees cut per tile
   readonly grid: SpatialGrid;
   readonly paths: Pathfinder;
-  readonly rng: { life: Rng; mind: Rng; genes: Rng; towns: Rng; spawn: Rng };
+  readonly rng: { life: Rng; mind: Rng; genes: Rng; towns: Rng; spawn: Rng; civ: Rng };
+  readonly civ: CivState;
+  directorMode: DirectorMode = "normal";
+  lifeReturns = true;
+  fx: Fx[] = [];
   events: SimEvent[] = [];
   changed = new Set<number>(); // tiles the sim changed since the last frame
   buildingsChanged = true;
@@ -100,7 +152,14 @@ export class Sim {
       genes: createRng(seed * 7 + 3),
       towns: createRng(seed * 7 + 4),
       spawn: createRng(seed * 7 + 5),
+      civ: createRng(seed * 7 + 6),
     };
+    this.civ = new CivState(n);
+    for (let race = 0; race < RACE_COUNT; race++) {
+      this.civ.raceCulture[race] = newCulture(this, race).id;
+      this.civ.everLived[race] = false;
+      this.civ.goneSince[race] = -1;
+    }
     this.speciesCount = new Int32Array(SPECIES.length);
     this.speciesCap = new Float32Array(SPECIES.length);
     this.updateCaps();
@@ -127,6 +186,19 @@ export class Sim {
       const at = this.bestStart(kind, r);
       if (at >= 0) this.spawnBand(kind, (at % this.world.w) + 0.5, Math.floor(at / this.world.w) + 0.5, config.life.startBand);
     }
+    rememberBaseline(this);
+  }
+
+  // History, for the chronicle and the UI. Director entries carry a reason.
+  chronicle(kind: string, text: Chronicle["text"], why?: string) {
+    const entry: Chronicle = { tick: this.tick, kind, text, why };
+    this.civ.log.push(entry);
+    if (this.civ.log.length > 4000) this.civ.log.splice(0, 1000);
+    this.events.push({ t: "chronicle", entry });
+  }
+
+  directorScale(): number {
+    return civData.director.modes[this.directorMode];
   }
 
   private randomHabitatTile(kind: number, r: Rng): number {
@@ -169,6 +241,7 @@ export class Sim {
 
   spawnBand(kind: number, x: number, y: number, count: number) {
     const r = this.rng.spawn;
+    if (isCiv(kind)) this.civ.everLived[kind] = true;
     const adult = SPECIES_INFO[kind]!.adult;
     for (let n = 0; n < count; n++) {
       const slot = this.spawnUnit(kind, x + r.next() * 3 - 1.5, y + r.next() * 3 - 1.5, adult + r.int(0, Math.max(2, adult)));
@@ -194,12 +267,14 @@ export class Sim {
       inheritBrain(u.brainOf(m), u.brainOf(f), r, u.brainOf(slot));
       u.mother[slot] = u.uid[m]!;
       u.father[slot] = u.uid[f]!;
+      u.religion[slot] = u.religion[m]!;
+      u.subspecies[slot] = u.subspecies[m]!;
     } else {
       randomGenes(kind, r, u.genesOf(slot));
       randomBrain(r, u.brainOf(slot));
     }
     u.hp[slot] = this.maxHp(slot);
-    if (isCiv(kind)) u.names[slot] = this.makeName(kind, r);
+    if (isCiv(kind)) u.names[slot] = this.makeName(kind, parents ? u.town[parents[0]]! : -1);
     this.speciesCount[kind]!++;
     return slot;
   }
@@ -214,20 +289,30 @@ export class Sim {
     const u = this.units;
     if (!u.alive[slot]) return;
     const kind = u.kind[slot]!;
-    if (isCiv(kind)) this.events.push({ t: "death", uid: u.uid[slot]!, kind, cause, tick: this.tick, name: u.names[slot]! });
+    if (isCiv(kind)) {
+      this.events.push({ t: "death", uid: u.uid[slot]!, kind, cause, tick: this.tick, name: u.names[slot]! });
+      const graves = this.civ.graves;
+      graves.push({ kind, x: u.x[slot]!, y: u.y[slot]!, name: u.names[slot]!, genes: Array.from(u.genesOf(slot)), town: u.town[slot]!, tick: this.tick });
+      if (graves.length > civData.director.graveyard) graves.shift();
+      if (u.gearQ[slot] === 4) inherit(this, u.uid[slot]!);
+      const k = kingdomOfTown(this, this.town(u.town[slot]!));
+      if (k && k.ruler === u.uid[slot]) this.chronicle("ruler_died", { name: u.names[slot]!, kingdom: k.name });
+    }
     const spouse = u.find(u.spouse[slot]!);
     if (spouse >= 0) u.spouse[spouse] = 0;
     this.speciesCount[kind]!--;
     u.remove(slot);
   }
 
-  private makeName(kind: number, r: Rng): string {
-    const set = names[RACES[kind]!];
-    const pick = (list: string[]) => list[r.int(0, list.length - 1)]!;
-    const first = pick(set.first) + (r.chance(0.6) ? pick(set.first) : "");
-    const last = pick(set.first) + pick(set.last);
-    const cap = (s: string) => s[0]!.toUpperCase() + s.slice(1);
-    return cap(first) + " " + cap(last);
+  // Names come from the language of the kingdom someone is born into, or
+  // their race's wandering culture.
+  private makeName(kind: number, townId: number): string {
+    return personName(this.cultureFor(kind, townId).lang, this.rng.civ);
+  }
+
+  cultureFor(kind: number, townId: number): Culture {
+    const k = kingdomOfTown(this, this.town(townId));
+    return culture(this, k ? k.culture : this.civ.raceCulture[kind]!)!;
   }
 
   // Terrain
@@ -362,10 +447,13 @@ export class Sim {
   foundTown(race: number, x: number, y: number): Town | null {
     const hall = this.findSite("hall", Math.round(x) - 1, Math.round(y) - 1, 0, 8);
     if (!hall) return null;
+    const settle = this.civ.settlements.find((p) => Math.hypot(p.x - x, p.y - y) < 12 && p.until > this.tick && kingdom(this, p.kingdom)?.race === race);
+    const parentKingdom = settle ? kingdom(this, settle.kingdom) : undefined;
+    const lang = culture(this, parentKingdom ? parentKingdom.culture : this.civ.raceCulture[race]!)!.lang;
     const t: Town = {
       id: this.nextTown++,
       race,
-      name: this.makeName(race, this.rng.towns).split(" ")[1]!,
+      name: placeName(lang, this.rng.civ),
       x: hall[0] + 1,
       y: hall[1] + 1,
       food: config.town.startFood,
@@ -376,10 +464,22 @@ export class Sim {
       founded: this.tick,
       lastSettle: this.tick,
       alive: true,
+      kingdom: 0,
+      loyalty: civData.loyalty.start,
+      res: new Array(RESOURCES.length).fill(0),
     };
     this.towns.push(t);
     this.place("hall", hall[0], hall[1], t.id, race, true);
     this.events.push({ t: "town", town: t.id, race, tick: this.tick, name: t.name });
+    // Settlers stay under their old crown if home is close enough; a band on
+    // its own starts a kingdom with a culture and language of its own.
+    const home = parentKingdom ? this.town(parentKingdom.capital) : undefined;
+    if (parentKingdom && home && Math.hypot(home.x - t.x, home.y - t.y) < civData.loyalty.vassalRange) {
+      t.kingdom = parentKingdom.id;
+    } else {
+      // Far flung settlers break away from the crown that sent them.
+      newKingdom(this, t, parentKingdom ? culture(this, parentKingdom.culture)! : newCulture(this, race), parentKingdom?.id ?? 0, parentKingdom ? "independence" : "kingdom");
+    }
     return t;
   }
 
@@ -434,6 +534,22 @@ export class Sim {
         else removeTrait(u.genesOf(s), cmd.trait + 1);
         return null;
       }
+      case "grace":
+        grace(this, cmd.power, cmd.x, cmd.y, cmd.radius);
+        return null;
+      case "split": {
+        const s = u.find(cmd.uid);
+        const t = s >= 0 ? this.town(u.town[s]!) : undefined;
+        if (!t?.kingdom) return null;
+        const slots: number[] = [];
+        for (let o = 0; o < u.count; o++) if (u.alive[o] && u.town[o] === t.id && u.kind[o] === u.kind[s]) slots.push(o);
+        split(this, t.kingdom, slots);
+        return null;
+      }
+      case "director":
+        this.directorMode = cmd.mode;
+        this.lifeReturns = cmd.lifeReturns;
+        return null;
       case "clone": {
         const s = u.find(cmd.uid);
         if (s < 0) return null;
@@ -482,6 +598,13 @@ export class Sim {
     if (this.tick % TPY === 0) {
       this.updateCaps();
       updateTownStats(this);
+      updateTerritory(this);
+      updateKingdoms(this);
+      yearlyEconomy(this);
+      yearlyDiplomacy(this);
+      yearlyReligion(this);
+      checkSubspecies(this);
+      directorYear(this);
     }
   }
 
@@ -507,6 +630,8 @@ export class Sim {
     if (u.age[s]! > span) return this.kill(s, DEATH.age);
     if (u.starve[s]! > config.life.starveYears) return this.kill(s, DEATH.hunger);
     u.hp[s] = Math.min(this.maxHp(s), u.hp[s]! + this.maxHp(s) * 0.3);
+    if (u.blessed[s]! > 0) u.blessed[s] = Math.max(0, u.blessed[s]! - 1);
+    if (u.fertile[s]! > 0) u.fertile[s] = Math.max(0, u.fertile[s]! - 1);
   }
 
   private breed(s: number) {
@@ -535,7 +660,8 @@ export class Sim {
     const town = this.town(u.town[s]!);
     if (!town || town.pop >= town.housing + 2) return;
     const fert = (stat(u.genesOf(s), STAT.fertility) + stat(u.genesOf(mate), STAT.fertility)) / 20;
-    if (!r.chance(config.life.birthChancePerYear * fert * (town.food > 0 ? 1 : 0.3))) return;
+    const boost = u.fertile[s]! > 0 ? 2 : 1;
+    if (!r.chance(config.life.birthChancePerYear * fert * boost * (town.food > 0 ? 1 : 0.3))) return;
     const baby = this.spawnUnit(kind, u.x[s]!, u.y[s]!, 0, [s, mate]);
     if (baby < 0) return;
     u.town[baby] = town.id;

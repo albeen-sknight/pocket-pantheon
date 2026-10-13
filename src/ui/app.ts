@@ -1,6 +1,11 @@
 // Pocket Pantheon · Copyright (c) 2026 Albeen (albeen-sknight)
+import civConfig from "../../data/civ.json";
 import config from "../../data/world.json";
 import simConfig from "../../data/sim.json";
+import { GRACE, type GracePower } from "../civ/grace";
+import type { DirectorMode } from "../director/director";
+import { paletteIndex } from "../render/palette";
+import { figure, FX_ICON, raceFigure } from "../render/art";
 import { buildSprites, type SpriteSet } from "../render/atlas";
 import { Camera } from "../render/camera";
 import { createCanvasRenderer, paintTiles } from "../render/canvas2d";
@@ -11,6 +16,7 @@ import { createWebGLRenderer } from "../render/webgl";
 import { exportFile, importFile, listSlots, loadSlot, saveSlot, type Loaded, type SlotId } from "../save/store";
 import { SimClient } from "../sim/client";
 import type { Frame } from "../sim/protocol";
+import type { Fx } from "../sim/sim";
 import type { SimSnapshot } from "../sim/snapshot";
 import { RACES, SPECIES, TRAITS, type RaceKey } from "../sim/species";
 import { BIOMES } from "../world/biomes";
@@ -20,18 +26,20 @@ import { defaultOptions, type Layout, type SizeKey, type World, type WorldOption
 import { $, el, randomSeed, SAVE_SLOTS, toast, txt } from "./dom";
 import { bindLangSwitch, fmt, onLangChange, t, toggleLang, type PlayKey } from "./i18n";
 import { bindMapInput } from "./input";
-import { kindName, tileCard, traitName, unitCard } from "./inspector";
+import { chronicleText, kindName, tileCard, townCard, traitName, unitCard } from "./inspector";
 import { SimView } from "./simview";
 
 type Tab = "shape" | "life" | "cmd" | "wrath" | "grace" | "gene" | "world" | "insp";
-type Tool = ShapeTool | "pan" | "inspect" | "spawn" | "pick";
+type Tool = ShapeTool | "pan" | "inspect" | "spawn" | "pick" | "grace";
 
 // Which phase brings each tab to life (PLAN section 21).
 const TABS: { key: Tab; phase: number }[] = [
   { key: "shape", phase: 1 }, { key: "life", phase: 2 }, { key: "cmd", phase: 4 }, { key: "wrath", phase: 5 },
   { key: "grace", phase: 3 }, { key: "gene", phase: 2 }, { key: "world", phase: 1 }, { key: "insp", phase: 1 },
 ];
-const READY_PHASE = 2;
+const READY_PHASE = 3;
+// Chronicle entries big enough to pop up as a toast.
+const TOASTS = new Set(["kingdom", "rebellion", "independence", "fallen", "age", "faith", "sect", "alliance", "rivals", "subspecies", "legend", "revive", "sickness"]);
 const CONTINUOUS: Tool[] = ["raise", "lower", "flatten", "smooth", "paint"];
 const BRUSH = config.brush;
 const SPEEDS = simConfig.speeds;
@@ -50,6 +58,12 @@ export class App {
   private brush = BRUSH.default;
   private paintBiome = BIOMES.findIndex((b) => b.key === "grassland");
   private spawnKind = 0;
+  private gracePower: GracePower = "bless";
+  private selectedTown = 0;
+  private fx: { fx: Fx; at: number }[] = [];
+  private kingdomCount = 0;
+  private directorMode: DirectorMode = "normal";
+  private lifeReturns = true;
   private trait = 0;
   private stroke: Stroke | null = null;
   private strokeSeed = 1;
@@ -68,7 +82,7 @@ export class App {
 
   async start() {
     this.renderer = createWebGLRenderer(this.canvas) ?? this.fallback();
-    this.sprites = buildSprites();
+    this.sprites = buildSprites(this.renderer.kind === "webgl2");
     this.scene = new Scene(this.sprites);
     this.sim.onFrame = (f) => this.onFrame(f);
     bindLangSwitch("play");
@@ -163,8 +177,21 @@ export class App {
   private onFrame(f: Frame) {
     const rect = this.view.receive(f, this.world);
     if (rect) this.markDirty(rect);
-    for (const e of f.events) if (e.t === "town") toast(t("ev_town", { name: e.name }));
+    if (f.owner && this.world) this.renderer.setOwner(f.owner, this.world.w, this.world.h);
+    if (f.kingdoms) {
+      this.kingdomCount = f.kingdoms.length;
+      const colors = new Uint8Array(256);
+      for (const k of f.kingdoms) colors[k.id % 256] = paletteIndex(civConfig.kingdomColors[k.color]!);
+      this.renderer.setKingdomColors(colors);
+    }
+    const now = performance.now() / 1000;
+    for (const fx of f.fx) this.fx.push({ fx, at: now });
+    this.fx = this.fx.filter((e) => now - e.at < 2);
+    for (const e of f.events) {
+      if (e.t === "chronicle" && TOASTS.has(e.entry.kind)) toast(chronicleText(e.entry));
+    }
     if (f.selected === null && this.selected) this.select(0);
+    if (f.town !== undefined) this.view.town = f.town;
     this.updateTopBar();
     if (this.tab === "insp" || this.tab === "gene") this.renderInspector();
   }
@@ -191,7 +218,7 @@ export class App {
     if (this.world) {
       const year = this.view.frame ? (this.view.frame.tick % simConfig.ticksPerYear) / simConfig.ticksPerYear : 0;
       this.renderer.draw(this.cam, now / 400, year);
-      this.scene.build(this.cam, this.view.units(now), this.view.count, this.view.buildings, this.view.towns, this.selected, now / 1000);
+      this.scene.build(this.cam, this.view.units(now), this.view.count, this.view.buildings, this.view.towns, this.selected, now / 1000, this.fx);
       this.renderer.drawSprites(this.scene, this.sprites.atlas, this.cam);
     }
     if (this.miniDirty) this.drawMinimap();
@@ -271,6 +298,9 @@ export class App {
         return this.select(this.view.nearest(tx, ty, 1.5));
       case "pan":
         return;
+      case "grace":
+        this.sim.command({ c: "grace", power: this.gracePower, x: tx, y: ty, radius: this.brush });
+        return;
       case "spawn": {
         const civ = this.spawnKind < RACES.length;
         const count = civ ? Math.max(2, this.brush * 2) : this.brush;
@@ -288,7 +318,7 @@ export class App {
 
   private updateBrushRing() {
     const at = this.lastHover;
-    const brushy = (this.tab === "shape" && this.tool !== "pan") || (this.tab === "life" && this.tool === "spawn");
+    const brushy = (this.tab === "shape" && this.tool !== "pan") || (this.tab === "life" && this.tool === "spawn") || (this.tab === "grace" && this.tool === "grace");
     if (!brushy || at.x < 0) {
       this.brushRing.style.display = "none";
       return;
@@ -358,8 +388,15 @@ export class App {
     document.querySelectorAll<HTMLButtonElement>("#speed button").forEach((b) => b.setAttribute("aria-pressed", String(Number(b.dataset.speed) === speed)));
   }
 
+  private selectTown(id: number) {
+    this.selectedTown = id;
+    this.view.town = null;
+    this.sim.selectTown(id);
+  }
+
   private select(uid: number) {
     this.selected = uid;
+    if (uid) this.selectTown(0);
     if (!uid) this.following = false;
     this.sim.select(uid);
     this.view.selected = null;
@@ -386,7 +423,7 @@ export class App {
     const f = this.view.frame;
     $("#t-year").textContent = t("year", { n: f?.year ?? 0 });
     $("#t-pop").textContent = t("pop", { n: f?.pop ?? 0 });
-    $("#t-kin").textContent = t("kin", { n: 0 });
+    $("#t-kin").textContent = t("kin", { n: this.kingdomCount });
   }
 
   private buildTabs() {
@@ -409,8 +446,8 @@ export class App {
   private selectTab(tab: Tab) {
     this.tab = tab;
     document.querySelectorAll<HTMLButtonElement>("#tabs button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === tab)));
-    const defaults: Partial<Record<Tab, Tool>> = { shape: "raise", life: "spawn", gene: "pick", insp: "inspect", world: "pan" };
-    const keep = (tab === "shape" && !["inspect", "pan", "spawn", "pick"].includes(this.tool)) || this.tool === "pan";
+    const defaults: Partial<Record<Tab, Tool>> = { shape: "raise", life: "spawn", gene: "pick", insp: "inspect", world: "pan", grace: "grace" };
+    const keep = (tab === "shape" && !["inspect", "pan", "spawn", "pick", "grace"].includes(this.tool)) || this.tool === "pan";
     if (!keep || tab === "world") this.tool = defaults[tab] ?? "pan";
     this.buildShelf();
     this.renderInspector();
@@ -459,14 +496,16 @@ export class App {
       case "life":
         shelf.append(panButton(), sep());
         SPECIES.forEach((key, kind) => {
-          const sprite = this.sprites.atlas.sprites[this.sprites.unit(kind, 0, 0, 0)]!;
+          // Races are drawn fresh in their own colours; the atlas holds key colours.
+          const src = kind < RACES.length ? mk(32, 30, figure(raceFigure(RACES[kind]!, 0, false), 0), 1) : this.sprites.atlas.canvas;
+          const sprite = kind < RACES.length ? { x: 0, y: 0, w: src.width, h: src.height } : this.sprites.atlas.sprites[this.sprites.unit(kind, 0, 0, 0)]!;
           const icon = el("canvas", { width: 24, height: 24, className: "px" });
           const ctx = icon.getContext("2d")!;
           const k = Math.min(1, 24 / Math.max(sprite.w, sprite.h));
           ctx.imageSmoothingEnabled = false;
           const w = Math.round(sprite.w * k);
           const h = Math.round(sprite.h * k);
-          ctx.drawImage(this.sprites.atlas.canvas, sprite.x, sprite.y, sprite.w, sprite.h, (24 - w) / 2, 24 - h, w, h);
+          ctx.drawImage(src, sprite.x, sprite.y, sprite.w, sprite.h, (24 - w) / 2, 24 - h, w, h);
           icon.setAttribute("aria-hidden", "true");
           const b = this.toolButton(icon, txt(("kind_" + key) as PlayKey), "tip_life", () => {
             this.spawnKind = kind;
@@ -485,7 +524,21 @@ export class App {
           this.iconButton("raise", "gene_add", "gene_add", () => this.gene({ c: "trait", uid: this.selected, trait: this.trait, add: true })),
           this.iconButton("lower", "gene_remove", "gene_remove", () => this.gene({ c: "trait", uid: this.selected, trait: this.trait, add: false })),
           this.iconButton("saves", "gene_clone", "tip_clone", () => this.gene({ c: "clone", uid: this.selected })),
+          this.iconButton("range", "gene_split", "tip_split", () => this.gene({ c: "split", uid: this.selected })),
         );
+        return;
+      case "grace":
+        shelf.append(panButton(), sep());
+        for (const power of GRACE) {
+          const icon = mk(12, 12, graceIcon(power), 2);
+          const b = this.toolButton(icon, txt(`grace_${power}`), `tip_${power}`, () => {
+            this.gracePower = power;
+            this.tool = "grace";
+            this.buildShelf();
+          }, this.tool === "grace" && this.gracePower === power);
+          shelf.append(b);
+        }
+        shelf.append(sep(), this.brushControl());
         return;
       case "insp":
         shelf.append(panButton(), this.iconButton("fit", "tool_pick", "in_hint", pick("inspect"), this.tool === "inspect"));
@@ -501,6 +554,8 @@ export class App {
             this.cam.fit();
             this.cameraMoved();
           }),
+          el("span", { className: "sep" }),
+          this.directorControl(),
         );
     }
   }
@@ -508,6 +563,23 @@ export class App {
   private gene(cmd: Parameters<SimClient["command"]>[0]) {
     if (!this.selected) return toast(t("gene_none"));
     this.sim.command(cmd);
+  }
+
+  private directorControl() {
+    const select = el("select", { id: "director" });
+    for (const mode of Object.keys(civConfig.director.modes)) select.append(el("option", { value: mode }, txt(("dir_" + mode) as PlayKey)));
+    select.value = this.directorMode;
+    const life = el("input", { type: "checkbox", id: "life-returns", checked: this.lifeReturns });
+    const send = () => {
+      this.directorMode = select.value as DirectorMode;
+      this.lifeReturns = life.checked;
+      this.sim.command({ c: "director", mode: this.directorMode, lifeReturns: this.lifeReturns });
+    };
+    select.onchange = send;
+    life.onchange = send;
+    const box = el("label", { htmlFor: "director", title: t("tip_director") }, txt("w_director"), select);
+    box.dataset.it = "tip_director";
+    return el("div", { className: "director" }, box, el("label", { htmlFor: "life-returns" }, life, txt("life_returns")));
   }
 
   private brushControl() {
@@ -541,6 +613,16 @@ export class App {
       this.inspected = null;
       return this.select(uid);
     }
+    // A click on a town hall opens the town and its kingdom.
+    const hall = this.view.buildings.find((b) => b.type === "hall" && tx >= b.x - 0.5 && tx <= b.x + b.w + 0.5 && ty >= b.y - 1 && ty <= b.y + b.h + 0.5);
+    const town = hall && this.view.towns.find((tw) => Math.abs(tw.x - (hall.x + 1)) < 1.5 && Math.abs(tw.y - (hall.y + 1)) < 1.5);
+    if (town) {
+      this.select(0);
+      this.inspected = null;
+      this.selectTown(town.id);
+      return this.renderInspector();
+    }
+    this.selectTown(0);
     const x = Math.floor(tx);
     const y = Math.floor(ty);
     if (x < 0 || y < 0 || x >= this.world.w || y >= this.world.h) return;
@@ -553,8 +635,12 @@ export class App {
     const box = $("#insp");
     const show = this.tab === "insp" || this.tab === "gene";
     box.hidden = !show;
-    box.classList.toggle("open", show && (!!this.inspected || !!this.selected));
+    box.classList.toggle("open", show && (!!this.inspected || !!this.selected || !!this.selectedTown));
     if (!show) return;
+    if (this.selectedTown && this.view.town) {
+      box.replaceChildren(...townCard(this.view.town));
+      return;
+    }
     const d = this.view.selected;
     if (this.selected && d) {
       box.replaceChildren(...unitCard(d, this.following, () => {
@@ -769,6 +855,12 @@ export class App {
       fmt,
     };
   }
+}
+
+// Shelf icons for the Grace powers, built from the effect sprites.
+function graceIcon(power: GracePower) {
+  const name = power === "rain" ? "drop" : power === "heal" ? "plus" : "sparkle";
+  return FX_ICON[name]!;
 }
 
 declare global {

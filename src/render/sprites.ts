@@ -12,10 +12,16 @@ type Tri = (cx: number, y: number, hw: number, h: number, c: string) => void;
 export type Draw = (R: Rect, E: Ellipse, P: Px, T: Tri) => void;
 
 const fromPreview: Record<string, string> = palette.fromPreview;
+
+// Clothes are drawn in these key colours; the sprite shader swaps them for
+// the wearer's kingdom colour at draw time.
+export const KEY = { base: "#ff00fe", light: "#ff60fe", dark: "#c000c0", outline: "#600060" };
+const KEYS = new Set(Object.values(KEY));
 const paletteLab = COLORS.map(rgb);
 
 // Nearest palette colour, so bevel and outline shades stay on palette.
 export function snap(hex: string): string {
+  if (KEYS.has(hex)) return hex;
   const direct = fromPreview[hex.toLowerCase()];
   if (direct) return direct;
   const [r, g, b] = rgb(hex);
@@ -32,6 +38,7 @@ export function snap(hex: string): string {
 }
 
 export function shade(hex: string, f: number): string {
+  if (KEYS.has(hex)) return f > 0 ? KEY.light : f <= -0.4 ? KEY.outline : KEY.dark;
   const out = rgb(hex).map((v, i) => {
     const s = f > 0 ? v + (255 - v) * f : v * (1 + f) + (i === 2 ? -f * 30 : 0);
     return Math.min(255, Math.max(0, Math.round(s))).toString(16).padStart(2, "0");

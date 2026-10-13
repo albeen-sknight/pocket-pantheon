@@ -64,6 +64,13 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 #insp{max-height:calc(100vh - var(--below-top,64px) - 110px);overflow:auto}
 .races{display:flex;flex-wrap:wrap;gap:6px 14px}
 .races label{display:flex;align-items:center;gap:6px}
+#insp q{display:block;margin:8px 0;quotes:none}
+#insp q b{display:block;font:700 15px 'Pixelify Sans',monospace;color:var(--ink)}
+#insp q small{margin:0}
+#insp h3.sub{display:flex;align-items:center;gap:8px;margin-top:14px;font-size:16px}
+#insp .swatch{display:inline-block;width:12px;height:12px;border:2px solid var(--ink)}
+#shelf .director{display:flex;flex-direction:column;gap:2px;font-size:12px;padding:0 6px}
+#shelf .director label{flex-direction:row;gap:6px}
 #toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none;z-index:20}
 #toast div{background:var(--panel);border:2px solid var(--acc);padding:8px 14px;box-shadow:4px 4px 0 rgba(0,0,0,.4);max-width:90vw}
 dialog{background:var(--panel);color:var(--ink);border:3px solid var(--acc);box-shadow:6px 6px 0 rgba(0,0,0,.5);padding:18px 20px;max-width:min(440px,calc(100vw - 32px));width:100%}

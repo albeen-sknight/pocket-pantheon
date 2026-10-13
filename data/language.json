@@ -1,0 +1,26 @@
+{
+  "human": {
+    "onsets": ["b", "br", "d", "f", "g", "h", "k", "l", "m", "n", "p", "r", "s", "st", "t", "th", "v", "w"],
+    "vowels": ["a", "e", "i", "o", "u", "ai", "ea"],
+    "codas": ["", "", "n", "r", "s", "l", "nd", "th", "ck"],
+    "endings": ["ton", "ford", "wick", "ham", "mere", "dale", "by"]
+  },
+  "elf": {
+    "onsets": ["l", "th", "s", "f", "n", "r", "v", "el", "gl", "m", "y"],
+    "vowels": ["a", "e", "i", "ae", "ia", "ie", "y", "ea"],
+    "codas": ["", "", "", "l", "n", "s", "th", "r"],
+    "endings": ["iel", "wen", "las", "dor", "ith", "ael", "ion"]
+  },
+  "orc": {
+    "onsets": ["g", "gr", "k", "kr", "z", "zug", "m", "r", "sh", "th", "b", "d", "n"],
+    "vowels": ["a", "u", "o", "ar", "ur"],
+    "codas": ["k", "g", "z", "sh", "rk", "gg", "", "t", "r"],
+    "endings": ["gash", "rok", "dush", "mak", "zug", "grak"]
+  },
+  "dwarf": {
+    "onsets": ["b", "d", "dr", "g", "gr", "k", "kh", "t", "th", "br", "n", "m"],
+    "vowels": ["a", "o", "u", "i", "ai", "ou"],
+    "codas": ["n", "r", "rn", "k", "m", "nd", "rg", "l", ""],
+    "endings": ["grim", "dun", "heim", "rak", "zad", "dor", "barak"]
+  }
+}

@@ -74,6 +74,10 @@ export class SimClient {
     this.send({ type: "select", uid });
   }
 
+  selectTown(id: number) {
+    this.send({ type: "selectTown", id });
+  }
+
   snapshot(): Promise<SimSnapshot> {
     const id = this.nextId++;
     return new Promise((resolve) => {

@@ -75,12 +75,16 @@ export function createCanvasRenderer(canvas: HTMLCanvasElement): Renderer | null
       ctx.fillRect(0, 0, cam.viewW, cam.viewH);
       ctx.drawImage(map, -cam.x * cam.scale, -cam.y * cam.scale, map.width * cam.scale, map.height * cam.scale);
     },
+    // The simple renderer skips territory tints to stay fast on weak devices.
+    setOwner() {},
+    setKingdomColors() {},
     drawSprites(scene: Scene, atlas: Atlas) {
       const d = scene.data;
       for (let i = 0; i < scene.count; i++) {
         const o = i * INST;
         const sp = atlas.sprites[d[o + 2]!]!;
         const k = d[o + 3]!;
+        // no cloth tinting here: the fallback atlas is drawn in race colours
         if (d[o + 4]) {
           ctx.save();
           ctx.translate(d[o]! + sp.w * k, d[o + 1]!);

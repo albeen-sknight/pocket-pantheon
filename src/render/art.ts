@@ -3,7 +3,7 @@
 // maker. The race figures and buildings are ported from the concept preview.
 import creatures from "../../data/creatures.json";
 import { RACES, type RaceKey } from "../sim/species";
-import type { Draw } from "./sprites";
+import { KEY, type Draw } from "./sprites";
 
 const K1 = "#2b2233";
 const WH = "#f4f0e8";
@@ -24,12 +24,12 @@ export interface Figure {
   long?: boolean; // longer hair
 }
 
-export function raceFigure(race: RaceKey, skin: number, female: boolean): Figure {
+export function raceFigure(race: RaceKey, skin: number, female: boolean, keyed = false): Figure {
   const r = creatures.races[race] as (typeof creatures.races)[RaceKey] & { ears?: boolean; tusks?: boolean; beard?: boolean; helm?: string };
   return {
     skin: r.skin[skin % r.skin.length]!,
     hair: r.hair[skin % r.hair.length],
-    cloth: r.cloth,
+    cloth: keyed ? KEY.base : r.cloth,
     pants: r.pants,
     weapon: female && race !== "dwarf" ? undefined : r.weapon,
     ears: r.ears,
@@ -338,6 +338,13 @@ export const BUILDING_ICON: Record<string, (race: RaceKey) => Draw> = {
   lumber: () => (R) => { R(0, 3, 8, 2, WOOD); R(0, 6, 8, 2, WOOD); },
   well: () => (R) => { R(1, 4, 6, 4, "#8a8f9a"); R(2, 5, 4, 1, "#3b78d8"); },
   site: () => (R) => { R(0, 6, 8, 2, "#b38d55"); R(1, 1, 1, 6, WOOD); R(6, 1, 1, 6, WOOD); },
+};
+
+// Grace power effects, 7 x 7.
+export const FX_ICON: Record<string, Draw> = {
+  sparkle: (R) => { R(3, 0, 1, 7, GOLD); R(0, 3, 7, 1, GOLD); R(2, 2, 3, 3, WH); },
+  drop: (R) => { R(3, 0, 1, 2, "#5cc8e6"); R(2, 2, 3, 3, "#5cc8e6"); R(3, 5, 1, 1, "#3b78d8"); },
+  plus: (R) => { R(2, 0, 3, 7, "#5fbf4a"); R(0, 2, 7, 3, "#5fbf4a"); },
 };
 
 // Action icons above heads, 7 x 7.

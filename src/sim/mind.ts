@@ -3,7 +3,14 @@
 // score per action picks what to do, and each unit's small brain tilts the
 // scores. Actions walk to a spot, take some ticks, then apply their effect.
 import buildingData from "../../data/buildings.json";
+import civ from "../../data/civ.json";
 import config from "../../data/sim.json";
+import { count } from "../civ/economy";
+import { craft, gearBonus } from "../civ/gear";
+import { kingdomOfTown } from "../civ/kingdoms";
+import { prayAtTemple, preach } from "../civ/religion";
+import { ORES } from "../world/types";
+import { RES } from "../civ/types";
 import { B } from "../world/biomes";
 import { FARM, ROAD } from "../world/types";
 import { GROUP, HIDDEN, INPUTS, OUTPUTS, think } from "./brain";
@@ -24,6 +31,7 @@ const hidden = new Float32Array(HIDDEN);
 const output = new Float32Array(OUTPUTS);
 
 const TREES = new Set([B.forest, B.jungle, B.taiga, B.grove]);
+const ROCK = new Set([B.hills, B.mountains, B.badlands, B.snowPeaks]);
 
 export function thinkAll(sim: Sim) {
   const u = sim.units;
@@ -138,6 +146,20 @@ function thinkCiv(sim: Sim, s: number) {
   start(sim, s, best, threat, town, home);
 }
 
+function nearestBuilding(sim: Sim, town: Town, type: string, x: number, y: number): Building | undefined {
+  let best: Building | undefined;
+  let d = Infinity;
+  for (const b of sim.buildings) {
+    if (b.town !== town.id || b.type !== type || !b.done) continue;
+    const bd = Math.hypot(b.x - x, b.y - y);
+    if (bd < d) {
+      d = bd;
+      best = b;
+    }
+  }
+  return best;
+}
+
 function pendingBuilding(sim: Sim, town: Town): Building | undefined {
   return sim.buildings.find((b) => b.town === town.id && !b.done);
 }
@@ -166,8 +188,11 @@ function start(sim: Sim, s: number, act: Act, threat: number, town: Town | undef
       if (home) return go(sim, s, home.x + home.w / 2, home.y + home.h, 50);
       if (town) return go(sim, s, town.x, town.y + 1, 50);
       return go(sim, s, x, y, 50);
-    case ACT.pray:
+    case ACT.pray: {
+      const temple = nearestBuilding(sim, town!, "temple", x, y);
+      if (temple) return go(sim, s, temple.x + temple.w / 2, temple.y + temple.h, 20);
       return go(sim, s, town!.x, town!.y + 1, 20);
+    }
     case ACT.social: {
       let mate = -1;
       sim.grid.query(x, y, 10, (o) => {
@@ -209,6 +234,20 @@ function startWork(sim: Sim, s: number, town: Town) {
       if (!farms.length) return goForage(sim, s, 30);
       const f = farms[sim.rng.mind.int(0, farms.length - 1)]!;
       return go(sim, s, f.x + sim.rng.mind.int(0, f.w - 1) + 0.5, f.y + sim.rng.mind.int(0, f.h - 1) + 0.5, 40);
+    }
+    case JOB.miner:
+    case JOB.smith:
+    case JOB.priest:
+    case JOB.scholar: {
+      const type = u.job[s] === JOB.miner ? "mine" : u.job[s] === JOB.smith ? "smithy" : u.job[s] === JOB.priest ? "temple" : "library";
+      const b = nearestBuilding(sim, town, type, u.x[s]!, u.y[s]!);
+      if (!b) return goForage(sim, s, 30);
+      // Priests sometimes take the faith to a neighbouring town.
+      if (u.job[s] === JOB.priest && sim.rng.mind.chance(civ.religion.missionChance)) {
+        const other = sim.towns.find((t) => t.alive && t.id !== town.id && Math.hypot(t.x - town.x, t.y - town.y) < 40);
+        if (other) return go(sim, s, other.x, other.y + 1, 30);
+      }
+      return go(sim, s, b.x + b.w / 2, b.y + b.h, 40);
     }
     case JOB.woodcutter: {
       const tree = nearestTile(sim, u.x[s]!, u.y[s]!, 14, (i) => TREES.has(w.biome[i]!));
@@ -467,10 +506,12 @@ function strike(sim: Sim, s: number, t: number) {
   const u = sim.units;
   const g = u.genesOf(s);
   const info = SPECIES_INFO[u.kind[s]!]!;
-  const armour = 1 - Math.min(0.6, traitEffect(u.genesOf(t), "armor"));
+  const armour = 1 - Math.min(0.9, traitEffect(u.genesOf(t), "armor") + gearBonus(u.armor[t]!).armor * 0.6);
   const dodge = sim.rng.mind.chance(stat(u.genesOf(t), STAT.agility) / 80);
   if (dodge) return;
-  const dmg = info.damage * (1 + stat(g, STAT.strength) / 40) * armour;
+  // PLAN section 13: weapon damage x (1 + Strength / 40) x (1 + gear bonus)
+  const quality = 0.8 + u.gearQ[s]! * 0.1;
+  const dmg = info.damage * (1 + stat(g, STAT.strength) / 40) * (1 + gearBonus(u.weapon[s]!).damage * quality) * armour * (u.blessed[s]! > 0 ? 1.25 : 1);
   u.hp[t]! -= dmg;
   // The victim fights back or runs.
   if (u.act[t] !== ACT.fight && u.act[t] !== ACT.flee) {
@@ -479,6 +520,10 @@ function strike(sim: Sim, s: number, t: number) {
   }
   if (u.hp[t]! > 0) return;
   u.kills[s]!++;
+  if (u.gearQ[s] === 4) {
+    const item = sim.civ.legends.find((l) => l.owner === u.uid[s]);
+    if (item) item.kills++;
+  }
   const cause = isCiv(u.kind[s]!) ? DEATH.battle : DEATH.monster;
   sim.kill(t, cause);
   if (info.meat) {
@@ -507,6 +552,7 @@ function finish(sim: Sim, s: number) {
       return;
     case ACT.pray:
       u.setNeed(s, NEED.faith, 0);
+      if (town && count(sim, town, "temple")) prayAtTemple(sim, s, town);
       return;
     case ACT.social:
       return finishSocial(sim, s);
@@ -551,6 +597,19 @@ function finishWork(sim: Sim, s: number, town: Town) {
   }
   const i = Math.floor(u.y[s]!) * w.w + Math.floor(u.x[s]!);
   const skill = 0.7 + stat(u.genesOf(s), STAT.intelligence) / 40;
+  switch (u.job[s]) {
+    case JOB.miner:
+      return mine(sim, s, town);
+    case JOB.smith:
+      return craft(sim, s, town);
+    case JOB.priest:
+      return preach(sim, s);
+    case JOB.scholar: {
+      const k = kingdomOfTown(sim, town);
+      if (k) k.research += 0.5 * skill;
+      return;
+    }
+  }
   if (u.job[s] === JOB.farmer && w.flags[i]! & FARM) {
     town.food += (T.foodPerFarmPerYear / T.farmPerPeople) * 0.6 * skill;
     return;
@@ -567,6 +626,18 @@ function finishWork(sim: Sim, s: number, town: Town) {
   }
   // Gathering berries and roots
   if (w.fertility[i]! > 60) u.carry[s] = 1;
+}
+
+// Miners bring up stone, plus whatever ore lies in the rock around the mine.
+function mine(sim: Sim, s: number, town: Town) {
+  const w = sim.world;
+  const u = sim.units;
+  const amount = civ.economy.minePerWork * (0.7 + stat(u.genesOf(s), STAT.strength) / 40);
+  town.res[RES.stone!]! += amount;
+  const spot = nearestTile(sim, u.x[s]!, u.y[s]!, 6, (i) => w.ore[i]! > 1 && ROCK.has(w.biome[i]!));
+  if (spot < 0) return;
+  const ore = ORES[w.ore[spot]!]!;
+  if (RES[ore] !== undefined) town.res[RES[ore]!]! += amount * 0.6;
 }
 
 // Elves never fell living trees; they plant new ones instead.

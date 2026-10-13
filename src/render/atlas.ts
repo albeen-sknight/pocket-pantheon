@@ -2,8 +2,11 @@
 // Draws every sprite once at load and packs them into one atlas canvas, padded
 // so edges never bleed (PLAN section 6.2).
 import { ANIMALS, RACES, RACE_COUNT } from "../sim/species";
-import { ACTION_ICON, ANIMAL_ART, BUILDING_ART, BUILDING_ICON, child, figure, RACE_COLORS, raceFigure, skinCount } from "./art";
-import { mk, type Draw } from "./sprites";
+import civ from "../../data/civ.json";
+import creatures from "../../data/creatures.json";
+import { ACTION_ICON, ANIMAL_ART, BUILDING_ART, BUILDING_ICON, child, figure, FX_ICON, RACE_COLORS, raceFigure, skinCount } from "./art";
+import { paletteIndex } from "./palette";
+import { mk, shade, snap, type Draw } from "./sprites";
 
 export interface Sprite {
   x: number;
@@ -87,15 +90,31 @@ export interface SpriteSet {
   icon(type: string, race: number): number;
   town(race: number): number;
   action(icon: string): number;
+  fx(name: string): number;
   ring: number;
+  aura: number;
+  keyed: boolean;
 }
 
-export function buildSprites(): SpriteSet {
+// Cloth tint rows: 0 to 3 are each race's own colours, 4 onward the kingdom
+// colours. Each row holds base, light, dark and outline palette indices.
+export const RACE_TINT_ROWS = 4;
+
+export function tintRamps(): Uint8Array {
+  const colors = [...RACES.map((r) => creatures.races[r].cloth), ...civ.kingdomColors];
+  const out = new Uint8Array(32 * 4);
+  colors.forEach((c, i) => {
+    out.set([paletteIndex(snap(c)), paletteIndex(shade(c, 0.22)), paletteIndex(shade(c, -0.25)), paletteIndex(shade(c, -0.6))], i * 4);
+  });
+  return out;
+}
+
+export function buildSprites(keyed = true): SpriteSet {
   const atlas = new Atlas();
   RACES.forEach((race) => {
     for (let skin = 0; skin < skinCount(race); skin++) {
       for (const female of [false, true]) {
-        const fig = raceFigure(race, skin, female);
+        const fig = raceFigure(race, skin, female, keyed);
         for (const f of [0, 1]) atlas.add(`${race}.${skin}.${+female}.${f}`, 32, 30, figure(fig, f));
         for (const f of [0, 1]) atlas.add(`${race}.child.${skin}.${+female}.${f}`, 16, 18, child(fig, f));
       }
@@ -117,7 +136,9 @@ export function buildSprites(): SpriteSet {
   }
   atlas.addDot("dot.animal", "#f0d9a0", 2);
   for (const [name, draw] of Object.entries(ACTION_ICON)) atlas.add(`act.${name}`, 7, 7, draw);
-  atlas.add("ring", 18, 6, (R, E) => E(9, 3, 8.5, 2.5, "#f2c94c"));
+  atlas.add("ring", 18, 6, (R, E) => E(9, 3, 8.5, 2.5, "#f4f0e8"));
+  atlas.add("aura", 20, 7, (R, E) => E(10, 3.5, 9.5, 3, "#f2c94c"));
+  for (const [name, draw] of Object.entries(FX_ICON)) atlas.add(`fx.${name}`, 7, 7, draw);
   atlas.pack();
 
   // Lookup tables so the per frame code never builds strings.
@@ -161,6 +182,9 @@ export function buildSprites(): SpriteSet {
     icon: (type, race) => icons.get(`${type}.${race}`) ?? icons.get(`site.${race}`)!,
     town: (race) => towns[race]!,
     action: (name) => actions.get(name)!,
+    fx: (name) => atlas.id(`fx.${name}`),
     ring: atlas.id("ring"),
+    aura: atlas.id("aura"),
+    keyed,
   };
 }

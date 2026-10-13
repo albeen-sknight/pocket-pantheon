@@ -1,7 +1,7 @@
 // Pocket Pantheon · Copyright (c) 2026 Albeen (albeen-sknight)
 // What the main thread knows about the running sim: the last two frames, so
 // units glide smoothly between ticks at any frame rate.
-import { UNIT_STRIDE, type BuildingView, type Frame, type TownView, type UnitDetail } from "../sim/protocol";
+import { UNIT_STRIDE, type BuildingView, type Frame, type TownDetail, type TownView, type UnitDetail } from "../sim/protocol";
 import type { Rect } from "../world/edit";
 import type { World } from "../world/types";
 
@@ -10,6 +10,7 @@ export class SimView {
   buildings: BuildingView[] = [];
   towns: TownView[] = [];
   selected: UnitDetail | null = null;
+  town: TownDetail | null = null;
   private prev = new Map<number, number>(); // uid -> index into prevUnits
   private prevUnits: Float32Array = new Float32Array(0);
   private at = 0;

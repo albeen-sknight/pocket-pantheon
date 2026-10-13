@@ -1,0 +1,235 @@
+{
+  "ages": [
+    {
+      "key": "stone",
+      "research": 0
+    },
+    {
+      "key": "bronze",
+      "research": 60
+    },
+    {
+      "key": "iron",
+      "research": 180
+    },
+    {
+      "key": "steel",
+      "research": 400
+    },
+    {
+      "key": "mythril",
+      "research": 800
+    }
+  ],
+  "research": {
+    "perCitizen": 0.02,
+    "library": 6,
+    "temple": 1.5,
+    "scholarly": 1.5,
+    "tradeSpread": 0.12,
+    "inspiration": 50
+  },
+  "resources": [
+    "food",
+    "wood",
+    "stone",
+    "copper",
+    "tin",
+    "coal",
+    "iron",
+    "gold",
+    "mythril",
+    "adamantine",
+    "wool",
+    "herbs",
+    "mana"
+  ],
+  "economy": {
+    "taxPerPerson": 0.5,
+    "minePerWork": 1.2,
+    "tradeRange": 70,
+    "tradeShare": 0.15,
+    "woolPerSheepTown": 0.2
+  },
+  "loyalty": {
+    "start": 80,
+    "base": 62,
+    "pull": 0.25,
+    "famine": -20,
+    "distancePerTile": -0.3,
+    "charisma": 1.2,
+    "sameReligion": 6,
+    "otherReligion": -8,
+    "dominance": -12,
+    "rebelBelow": 25,
+    "rebelMinPop": 6,
+    "joinBelow": 40,
+    "joinRange": 30,
+    "vassalRange": 55
+  },
+  "cultureTraits": [
+    "militaristic",
+    "scholarly",
+    "seafaring",
+    "builder",
+    "nomadic",
+    "mercantile",
+    "devout",
+    "isolationist"
+  ],
+  "doctrines": [
+    "peace",
+    "conquest",
+    "nature",
+    "ancestors",
+    "sun",
+    "sea",
+    "forge",
+    "harvest"
+  ],
+  "religion": {
+    "prophetFaith": 15,
+    "prophetCharisma": 13,
+    "prophetChance": 0.006,
+    "minPeople": 15,
+    "convertAtTemple": 0.35,
+    "missionChance": 0.2,
+    "missionConvert": 0.25,
+    "sectEvery": 50,
+    "sectChance": 0.25
+  },
+  "diplomacy": {
+    "range": 140,
+    "sameRace": 1.0,
+    "otherRace": -0.6,
+    "sameReligion": 2.0,
+    "otherReligion": -1.0,
+    "border": -1.5,
+    "trade": 3.0,
+    "isolationist": -1.0,
+    "decay": 0.06,
+    "alliance": 50,
+    "tradePact": 20,
+    "embargo": -30,
+    "rivals": -50,
+    "peacePower": 40
+  },
+  "subspecies": {
+    "every": 25,
+    "minGroup": 12,
+    "drift": 0.06,
+    "isolation": 45
+  },
+  "gear": [
+    {
+      "key": "wood",
+      "age": 0,
+      "damage": 0,
+      "armor": 0,
+      "cost": {
+        "wood": 1
+      }
+    },
+    {
+      "key": "copper",
+      "age": 1,
+      "damage": 0.15,
+      "armor": 0.1,
+      "cost": {
+        "copper": 1
+      }
+    },
+    {
+      "key": "bronze",
+      "age": 1,
+      "damage": 0.3,
+      "armor": 0.2,
+      "cost": {
+        "copper": 1,
+        "tin": 1
+      }
+    },
+    {
+      "key": "iron",
+      "age": 2,
+      "damage": 0.5,
+      "armor": 0.35,
+      "cost": {
+        "iron": 1
+      }
+    },
+    {
+      "key": "steel",
+      "age": 3,
+      "damage": 0.75,
+      "armor": 0.5,
+      "cost": {
+        "iron": 1,
+        "coal": 1
+      }
+    },
+    {
+      "key": "mythril",
+      "age": 4,
+      "damage": 1.1,
+      "armor": 0.7,
+      "cost": {
+        "mythril": 1
+      }
+    },
+    {
+      "key": "adamantine",
+      "age": 4,
+      "damage": 1.5,
+      "armor": 0.9,
+      "cost": {
+        "adamantine": 1
+      }
+    }
+  ],
+  "quality": [
+    "poor",
+    "common",
+    "good",
+    "excellent",
+    "legendary"
+  ],
+  "kingdomColors": [
+    "#e04040",
+    "#3b6fd4",
+    "#f2c94c",
+    "#b06be0",
+    "#5fbf4a",
+    "#f08a2c",
+    "#5cc8e6",
+    "#f08bb4",
+    "#f4f0e8",
+    "#d9822b",
+    "#8fd88f",
+    "#9a8fb8"
+  ],
+  "director": {
+    "modes": {
+      "off": 0,
+      "gentle": 0.5,
+      "normal": 1,
+      "dramatic": 2
+    },
+    "reviveYears": 20,
+    "reviveBand": [
+      5,
+      10
+    ],
+    "crowded": 0.9,
+    "sickness": 0.02,
+    "dominance": 0.5,
+    "quietYears": 10,
+    "graveyard": 40
+  },
+  "grace": {
+    "blessYears": 2,
+    "fertilityYears": 3,
+    "bounty": 25,
+    "rainFertility": 30
+  }
+}
