@@ -340,28 +340,36 @@ test("construction sites show localized progress on hover and tap", async ({ pag
   await page.goto("./play/?seed=4242&size=small");
   await ready(page);
   await page.waitForFunction(() => {
-    const hooks = (window as unknown as { __pp: Hooks }).__pp;
-    const building = hooks.frame()?.buildings?.some((b) => !b.done) ?? false;
-    if (building) hooks.speed(0);
-    return building;
+    const state = window as unknown as { __pp: Hooks; __ppSite?: { x: number; y: number; type: string } };
+    const building = state.__pp.frame()?.buildings?.find((b) => !b.done);
+    if (!building) return false;
+    state.__pp.speed(0);
+    state.__ppSite = { x: building.x + building.w / 2, y: building.y + building.h / 2, type: building.type };
+    return true;
   }, null, { timeout: 30_000 });
   const site = await page.evaluate(() => {
-    const hooks = window.__pp as Hooks & { camera: { viewW: number; viewH: number; zoomTo(scale: number, x: number, y: number): void; centerOn(x: number, y: number): void } };
-    const building = hooks.frame()!.buildings!.find((b) => !b.done)!;
-    const camera = hooks.camera;
+    const state = window as unknown as { __pp: Hooks & { camera: { viewW: number; viewH: number; zoomTo(scale: number, x: number, y: number): void } }; __ppSite: { x: number; y: number; type: string } };
+    const camera = state.__pp.camera;
     camera.zoomTo(32, camera.viewW / 2, camera.viewH / 2);
-    return { x: building.x + building.w / 2, y: building.y + building.h / 2 };
+    return state.__ppSite;
   });
   await page.waitForTimeout(700);
   await page.evaluate(({ x, y }) => (window.__pp as Hooks & { camera: { centerOn(x: number, y: number): void } }).camera.centerOn(x, y), site);
   const progress = page.locator("#construction .site-progress").first();
+  const names: Record<string, [string, string]> = {
+    hall: ["Town hall", "Ayuntamiento"], house: ["House", "Casa"], farm: ["Farm", "Granja"],
+    lumber: ["Lumber mill", "Aserradero"], well: ["Well", "Pozo"], temple: ["Temple", "Templo"],
+    mine: ["Mine", "Mina"], smithy: ["Smithy", "Herrería"], market: ["Market", "Mercado"],
+    library: ["Library", "Biblioteca"], tower: ["Watchtower", "Atalaya"],
+    barracks: ["Barracks", "Cuartel"], keep: ["Castle keep", "Torre del homenaje"],
+  };
   await expect(progress).toBeVisible();
-  await expect(progress).toHaveAttribute("aria-label", /percent complete$/);
+  await expect(progress).toHaveAttribute("aria-label", new RegExp(`^${names[site.type]![0]}, .+ percent complete$`));
   await progress.click();
   await expect(progress).toHaveAttribute("aria-expanded", "true");
   await expect(progress.getByRole("tooltip")).toBeVisible();
 
   await page.getByRole("button", { name: "ES" }).click();
-  await expect(progress).toHaveAttribute("aria-label", /por ciento terminado$/);
+  await expect(progress).toHaveAttribute("aria-label", new RegExp(`^${names[site.type]![1]}, .+ por ciento terminado$`));
   await expect(progress.locator(".tip")).toContainText("por ciento terminado");
 });
