@@ -1,6 +1,6 @@
 # Pocket Pantheon: Execution Plan
 
-**Owner:** Albeen ([albeen-sknight](https://github.com/albeen-sknight)) · **Repository:** [albeen-sknight/pocket-pantheon](https://github.com/albeen-sknight/pocket-pantheon) · **Live site:** https://albeen-sknight.github.io/pocket-pantheon/ · **Updated:** 13 October 2026 · **Status:** Phases 0 to 2 done, Phase 3 next
+**Owner:** Albeen ([albeen-sknight](https://github.com/albeen-sknight)) · **Repository:** [albeen-sknight/pocket-pantheon](https://github.com/albeen-sknight/pocket-pantheon) · **Live site:** https://albeen-sknight.github.io/pocket-pantheon/ · **Updated:** 13 October 2026 · **Status:** Phases 0 to 3 done, Phase 4 next
 
 Pocket Pantheon is a browser god game. A living pixel world runs itself, and you shape it, command it, bless it or wreck it. This file is the single source of truth for building it. The visual target is the concept preview in [`docs/preview.html`](preview.html).
 
@@ -758,6 +758,23 @@ Every phase ends in a playable build and is merged only when its gate passes.
 - [ ] The build deploys and runs at the live site.
 - [ ] The roadmap list on the landing page is updated.
 - [ ] This plan is updated if anything changed.
+
+**Phase 3 notes (what shipped and what moved)**
+
+- [x] Kingdoms: every independent band founds a kingdom with its own culture. The ruler is the best Charisma, Intelligence and Ambition score in the capital; the heir is the eldest grown child. Settlers stay vassals within 55 tiles and break away beyond it.
+- [x] Loyalty moves with food, distance from the capital, the ruler's Charisma, shared faith and the Director's pressure on big empires. Below 25 a town rebels and nearby unhappy towns join it. A 150 year test world founds 4 or more kingdoms and sees them split.
+- [x] Territory: towns claim land that grows with them. The map shows kingdom tints and bright borders like the preview, and clothes take the kingdom's colour through key colours swapped in the sprite shader.
+- [x] Culture: 2 of the 8 traits per kingdom, steering the planner, taxes, research, diplomacy and temples. Each culture has a generated language (20 to 30 syllables, endings) used for every person, town, kingdom, faith, subspecies and legendary weapon name, plus speech in the inspector with a translation. Trading kingdoms borrow syllables.
+- [x] Religion: prophets found faiths with 2 doctrines, temples convert people who pray there, priests preach and travel, kingdoms adopt a state faith, and faiths split into sects every 50 years.
+- [x] Diplomacy: opinions from minus 100 to 100 with trade pacts, alliances, embargoes and rivalries. War declarations arrive with armies in Phase 4.
+- [x] Economy and tech: stone and ore from mines, 13 resources in town stockpiles, taxes into kingdom gold, market trade between friendly towns, research from citizens, libraries and temples, and the 5 tech ages. New buildings: temple, mine, smithy, market, library.
+- [x] Gear: smiths craft weapons and armour of the best tier the age and stockpile allow, with quality from Poor to Legendary. Legendary weapons get names, count kills and pass to the eldest child. Combat uses the section 13 damage formula.
+- [x] Subspecies (moved from Phase 2): every 25 years an isolated kingdom whose genome has drifted becomes a named subspecies with its own skin tint. The Genetics tab can force a split.
+- [x] World Director with Off, Gentle, Normal and Dramatic modes and the "Let life return" toggle: lost races walk back in after 20 years, crowded worlds get sickness, big empires lose loyalty. Every Director entry carries a reason.
+- [x] Grace tab: rain, bless, heal, fertility, inspire, bounty, peace and miracle, each with a visible effect.
+- [x] The chronicle is recorded and the big moments show as toasts. The searchable chronicle panel and "Why did that happen?" link arrive with the Phase 6 data screens.
+- [x] Moved to Phase 4: the Director's "no war for 80 years" rule. Moved to Phase 5: the "nothing notable for 10 years" rule, which rolls a disaster.
+- [x] The Canvas2D fallback skips territory tints and cloth colours to stay fast.
 
 **Phase 2 notes (what shipped and what moved)**
 

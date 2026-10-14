@@ -119,3 +119,18 @@ test("spawning people from the Life tab adds to the population", async ({ page }
   await page.mouse.click(box.x + at!.x, box.y + at!.y);
   await expect.poll(pop).toBeGreaterThan(0);
 });
+
+test("kingdoms are counted and Grace powers answer a click", async ({ page }) => {
+  await page.goto("./play/?seed=4242&size=small");
+  await ready(page);
+  await expect(page.locator("#t-kin")).toHaveText(/^Kingdoms [1-9]/);
+  await page.locator("#tabs button[data-tab=grace]").click();
+  await page.locator("#shelf button", { hasText: "Bless" }).click();
+  await expect(page.locator("#shelf button", { hasText: "Bless" })).toHaveAttribute("aria-pressed", "true");
+  const box = (await page.locator("#world").boundingBox())!;
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  await page.waitForTimeout(500);
+  expect(errors).toEqual([]);
+});
