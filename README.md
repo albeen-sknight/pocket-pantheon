@@ -6,7 +6,7 @@ A tiny pixel world that lives on its own, until you decide it shouldn't. Pocket 
 
 The game is still being built, one playable phase at a time. The full plan lives in [docs/PLAN.md](docs/PLAN.md), and the look we're aiming for is in [docs/preview.html](docs/preview.html).
 
-Phase 7 is in progress. This build adds program generated app icons, a web app manifest, a game screenshot for share previews, construction progress bars and seed links. See the Phase 7 notes in the plan for the remaining acceptance work.
+Phase 7 is in progress. This build adds a replayable ten step tutorial, program generated app icons, a web app manifest, a game screenshot for share previews, construction progress bars and seed links. See the Phase 7 notes in the plan for the remaining acceptance work.
 
 ## Run it locally
 

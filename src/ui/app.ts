@@ -30,6 +30,7 @@ import { $, el, randomSeed, SAVE_SLOTS, toast, txt } from "./dom";
 import { bindLangSwitch, fmt, onLangChange, t, toggleLang, type PlayKey } from "./i18n";
 import { bindMapInput } from "./input";
 import { StatsPanel } from "./stats";
+import { Tutorial, type TutorialAction } from "./tutorial";
 import { armyCard, Command, type CmdTool } from "./command";
 import { chronicleText, kindName, tileCard, townCard, traitName, unitCard } from "./inspector";
 import { SimView } from "./simview";
@@ -112,6 +113,7 @@ export class App {
     meta: () => (this.world ? makeMeta(this.world, t("st_title"), this.view.frame?.year ?? 0) : null),
     openKingdom: (capital) => this.visitTown(capital),
   });
+  private tutorial!: Tutorial;
   // Canvas pixels per CSS pixel. Starts at the device ratio (capped) and steps
   // down while frames are slow, so weak phones draw fewer pixels instead.
   private res = Math.min(RES.max, window.devicePixelRatio || 1);
@@ -164,9 +166,11 @@ export class App {
     this.scene = new Scene(this.sprites);
     this.sim.onFrame = (f) => this.onFrame(f);
     bindLangSwitch("play");
+    this.tutorial = new Tutorial($("#tutorial"), (step) => this.prepareTutorialStep(step));
     onLangChange(() => {
       this.refreshText();
       this.stats.relabel();
+      this.tutorial.refresh();
     });
     this.buildTabs();
     this.buildSpeed();
@@ -174,7 +178,10 @@ export class App {
     this.bindInput();
     this.bindDialogs();
     this.resize();
-    window.addEventListener("resize", () => this.resize());
+    window.addEventListener("resize", () => {
+      this.resize();
+      this.tutorial.relayout();
+    });
     this.startAutosave();
     this.pauseWhenHidden();
     requestAnimationFrame((now) => this.frame(now, now));
@@ -195,7 +202,44 @@ export class App {
       this.openNewWorld();
       $("#nw-seed-error").hidden = false;
     }
+    if (!$<HTMLDialogElement>("#newworld").open) this.tutorial.autoStart();
     window.__pp = this.debug();
+  }
+
+  private prepareTutorialStep(step: number) {
+    if (step === 1) return this.selectTab("shape");
+    if (step === 2) {
+      this.selectTab("life");
+      this.spawnKind = RACES.indexOf("human");
+      return this.buildShelf();
+    }
+    if (step === 3) return this.selectTab("insp");
+    if (step === 4) {
+      this.selectTab("life");
+      this.spawnKind = RACES.indexOf("orc");
+      return this.buildShelf();
+    }
+    if (step === 5) {
+      this.selectTab("cmd");
+      this.cmd.tool = "move";
+      return this.buildShelf();
+    }
+    if (step === 6) {
+      this.selectTab("cmd");
+      this.cmd.tool = "possess";
+      return this.buildShelf();
+    }
+    if (step === 7) {
+      this.selectTab("wrath");
+      this.wrathPower = "lightning";
+      this.tool = "wrath";
+      return this.buildShelf();
+    }
+    if (step === 9) this.selectTab("world");
+  }
+
+  private tutorialAction(action: TutorialAction) {
+    this.tutorial.action(action);
   }
 
   private fallback(): Renderer {
@@ -334,6 +378,7 @@ export class App {
   }
 
   private startPossess(uid: number) {
+    this.tutorialAction("possess");
     this.possessedAt = performance.now();
     this.select(uid);
     this.following = true;
@@ -441,6 +486,7 @@ export class App {
     this.sim.command({ c: "stroke", stroke: { ...s } });
     if (!rect) return;
     this.markDirty(rect);
+    if (s.tool === "raise" || s.tool === "lower") this.tutorialAction("shape");
     if (this.inspected) this.renderInspector();
   }
 
@@ -462,6 +508,7 @@ export class App {
       },
       moved: () => {
         this.following = false;
+        this.tutorialAction("camera");
         this.cameraMoved();
       },
     });
@@ -481,6 +528,7 @@ export class App {
     switch (this.tool) {
       case "cmd": {
         const r = this.cmd.click(tx, ty);
+        if (["move", "attack", "recruit", "defend"].includes(this.cmd.tool)) this.tutorialAction("army");
         if (r.possess) this.startPossess(r.possess);
         if (r.town !== undefined) {
           this.select(0);
@@ -499,11 +547,14 @@ export class App {
         return;
       case "wrath":
         this.sim.command({ c: "wrath", power: this.wrathPower, x: tx, y: ty, radius: this.brush });
+        this.tutorialAction("disaster");
         return;
       case "spawn": {
         const civ = this.spawnKind < RACES.length;
         const count = civ ? Math.max(2, this.brush * 2) : this.brush;
         this.sim.command({ c: "spawn", kind: this.spawnKind, x: tx, y: ty, count });
+        if (RACES[this.spawnKind] === "human") this.tutorialAction("spawnHuman");
+        if (RACES[this.spawnKind] === "orc") this.tutorialAction("spawnRival");
         return;
       }
       default: {
@@ -558,7 +609,7 @@ export class App {
       "[": () => this.setBrush(this.brush - 1),
       "]": () => this.setBrush(this.brush + 1),
       l: () => toggleLang("play"),
-      h: () => void this.stats.open(),
+      h: () => this.openStats(),
       "+": () => this.cam.zoomStep(1, cx, cy),
       "=": () => this.cam.zoomStep(1, cx, cy),
       "-": () => this.cam.zoomStep(-1, cx, cy),
@@ -576,6 +627,7 @@ export class App {
     if (!act) return;
     e.preventDefault();
     act();
+    if (["+", "=", "-", "Home", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "a", "d", "w", "s"].includes(e.key)) this.tutorialAction("camera");
     this.cameraMoved();
   }
 
@@ -745,7 +797,9 @@ export class App {
       case "shape":
         shelf.append(panButton(), sep());
         for (const tool of ["raise", "lower", "flatten", "smooth", "paint"] as const) {
-          shelf.append(this.iconButton(tool, `tool_${tool}`, `tip_${tool}`, pick(tool), this.tool === tool));
+          const button = this.iconButton(tool, `tool_${tool}`, `tip_${tool}`, pick(tool), this.tool === tool);
+          if (tool === "raise") button.dataset.tutorial = "shape-raise";
+          shelf.append(button);
         }
         shelf.append(sep());
         for (const tool of ["island", "volcano", "range"] as const) {
@@ -773,6 +827,8 @@ export class App {
             this.tool = "spawn";
             this.buildShelf();
           }, this.tool === "spawn" && this.spawnKind === kind);
+          if (RACES[kind] === "human") b.dataset.tutorial = "spawn-human";
+          if (RACES[kind] === "orc") b.dataset.tutorial = "spawn-rival";
           shelf.append(b);
         });
         shelf.append(sep(), this.brushControl());
@@ -792,11 +848,13 @@ export class App {
         shelf.append(panButton(), sep());
         for (const power of WRATH) {
           const icon = this.atlasIcon(`fx.${WRATH_ICONS[power]}`);
-          shelf.append(this.toolButton(icon, txt(`wrath_${power}`), `tip_w_${power}`, () => {
+          const button = this.toolButton(icon, txt(`wrath_${power}`), `tip_w_${power}`, () => {
             this.wrathPower = power;
             this.tool = "wrath";
             this.buildShelf();
-          }, this.tool === "wrath" && this.wrathPower === power));
+          }, this.tool === "wrath" && this.wrathPower === power);
+          if (power === "lightning") button.dataset.tutorial = "disaster";
+          shelf.append(button);
         }
         shelf.append(sep(), this.brushControl());
         return;
@@ -816,11 +874,14 @@ export class App {
       case "cmd": {
         shelf.append(panButton(), sep());
         for (const tool of CMD_TOOLS) {
-          shelf.append(this.iconButton(CMD_ICONS[tool], `tool_${tool}`, tool === "peace" ? "tip_peace_k" : `tip_${tool}`, () => {
+          const button = this.iconButton(CMD_ICONS[tool], `tool_${tool}`, tool === "peace" ? "tip_peace_k" : `tip_${tool}`, () => {
             this.cmd.tool = tool;
             this.tool = "cmd";
             this.buildShelf();
-          }, this.tool === "cmd" && this.cmd.tool === tool));
+          }, this.tool === "cmd" && this.cmd.tool === tool);
+          if (["move", "attack", "recruit"].includes(tool)) button.dataset.tutorial = "army-command";
+          if (tool === "possess") button.dataset.tutorial = "possess-tool";
+          shelf.append(button);
           if (tool === "defend") {
             shelf.append(
               this.iconButton("flatten", "tool_hold", "tip_hold", () => this.cmd.order("hold")),
@@ -836,11 +897,15 @@ export class App {
       case "insp":
         shelf.append(panButton(), this.iconButton("fit", "tool_pick", "in_hint", pick("inspect"), this.tool === "inspect"));
         return;
-      case "world":
+      case "world": {
+        const replay = el("button", { type: "button", className: "tutorial-replay", onclick: () => this.tutorial.replay() }, txt("tut_replay"));
+        const saves = this.iconButton("saves", "w_saves", "tip_saves", () => this.openSaves());
+        saves.dataset.tutorial = "save-world";
         shelf.append(
+          replay,
           this.iconButton("new", "w_new", "tip_new", () => this.openNewWorld()),
-          this.iconButton("saves", "w_saves", "tip_saves", () => this.openSaves()),
-          this.iconButton("stats", "st_open", "st_open_a", () => void this.stats.open()),
+          saves,
+          this.iconButton("stats", "st_open", "st_open_a", () => this.openStats()),
           el("span", { className: "sep" }),
           el("span", { className: "seed", id: "w-seed", textContent: this.world ? t("seed", { n: String(this.world.options.seed) }) : "" }),
           this.iconButton("share", "w_share", "tip_share", () => this.shareSeed()),
@@ -856,6 +921,8 @@ export class App {
           this.directorControl(),
           this.frequencyControl(),
         );
+        return;
+      }
     }
   }
 
@@ -952,6 +1019,7 @@ export class App {
 
   private inspect(tx: number, ty: number) {
     if (!this.world) return;
+    this.tutorialAction("inspect");
     const uid = this.view.nearest(tx, ty, 1.5);
     if (uid) {
       this.inspected = null;
@@ -1024,6 +1092,7 @@ export class App {
     const r = this.mini.getBoundingClientRect();
     this.following = false;
     this.cam.centerOn(((e.clientX - r.left) / r.width) * this.world.w, ((e.clientY - r.top) / r.height) * this.world.h);
+    this.tutorialAction("camera");
     this.cameraMoved();
   }
 
@@ -1052,7 +1121,7 @@ export class App {
   // Dialogs, saves, files
 
   private bindDialogs() {
-    $("#stats-btn").onclick = () => void this.stats.open();
+    $("#stats-btn").onclick = () => this.openStats();
     const dlg = $<HTMLDialogElement>("#newworld");
     const out = (id: string) => {
       const input = $<HTMLInputElement>(id);
@@ -1068,7 +1137,7 @@ export class App {
     });
     dlg.addEventListener("close", () => {
       this.updateTitle();
-      if (dlg.returnValue !== "go") return;
+      if (dlg.returnValue !== "go") return this.tutorial.autoStart();
       const num = (id: string) => Number($<HTMLInputElement>(id).value);
       const chosen = [...races.querySelectorAll<HTMLInputElement>("input:checked")].map((i) => i.value as RaceKey);
       void this.generate({
@@ -1079,7 +1148,7 @@ export class App {
         temperature: num("#nw-temp"),
         moisture: num("#nw-moist"),
         magic: num("#nw-magic"),
-      }, chosen);
+      }, chosen).then(() => this.tutorial.autoStart());
     });
 
     $("#sv-close").onclick = () => $<HTMLDialogElement>("#saves").close();
@@ -1107,6 +1176,11 @@ export class App {
     $("#nw-races").querySelectorAll("span").forEach((s, k) => (s.textContent = kindName(k)));
     $<HTMLDialogElement>("#newworld").showModal();
     this.updateTitle();
+  }
+
+  private openStats() {
+    this.tutorialAction("stats");
+    void this.stats.open();
   }
 
   private async shareSeed() {
@@ -1171,6 +1245,7 @@ export class App {
       const snap = await this.snapshot();
       await saveSlot(slot, this.world, t("sv_slot", { n: slot }), this.view.frame?.year ?? 0, snap);
       toast(t("sv_saved", { n: slot }));
+      this.tutorialAction("save");
       void this.keepSaves();
       await this.openSaves();
     } catch {

@@ -158,8 +158,26 @@ button.link{background:none;border:0;color:var(--mut);text-decoration:underline;
 #loading .barwrap{height:14px;border:2px solid var(--acc);margin:12px 0 8px}
 #loading .barfill{height:100%;width:0;background:var(--acc);transition:width .1s}
 #help{left:8px;bottom:calc(84px + env(safe-area-inset-bottom,0px));max-width:260px;pointer-events:none;padding:6px 8px;font:13px Outfit,sans-serif;color:var(--mut)}
+#tutorial{position:fixed;inset:0;z-index:25;pointer-events:none}
+#tutorial[hidden]{display:none}
+.tutorial-card{position:fixed;left:60px;bottom:calc(104px + env(safe-area-inset-bottom,0px));width:min(340px,calc(100vw - 72px));max-height:calc(100vh - var(--below-top,64px) - 124px);overflow:auto;pointer-events:none;padding:12px 14px;background:var(--panel);border:3px solid var(--acc);box-shadow:6px 6px 0 rgba(0,0,0,.45);font:14px Outfit,sans-serif}
+.tutorial-card button{pointer-events:auto}
+.tutorial-card h2{font:700 20px 'Pixelify Sans',monospace;margin:0 38px 7px 0}
+.tutorial-card p{margin:0 0 9px;color:var(--ink)}
+.tutorial-card .tutorial-prompt{border-left:3px solid var(--acc);padding-left:8px;color:var(--mut)}
+.tutorial-card .tutorial-count{font:500 12px 'Pixelify Sans',monospace;color:var(--mut);margin:0 42px 5px 0}
+.tutorial-close{position:absolute;right:4px;top:4px;width:44px;height:44px;min-width:44px;min-height:44px;border:0;background:transparent;color:var(--ink);font-size:24px}
+.tutorial-checklist{display:grid;grid-template-columns:repeat(10,20px);gap:3px;list-style:none;padding:0;margin:8px 0 12px}
+.tutorial-check{display:grid;place-items:center;width:20px;height:20px;border:1px solid var(--line);border-radius:50%;color:var(--mut);font:11px 'Pixelify Sans',monospace}
+.tutorial-check[data-done="true"],.tutorial-check[data-current="true"]{border-color:var(--acc);color:var(--acc)}
+.tutorial-check[data-current="true"]{background:rgba(242,201,76,.14)}
+.tutorial-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.tutorial-actions .btn{min-height:44px}
+.tutorial-highlight{position:fixed;z-index:26;border:3px solid var(--acc);border-radius:5px;box-shadow:0 0 0 3px rgba(242,201,76,.18),0 0 18px rgba(242,201,76,.7);pointer-events:none;animation:tutorial-pulse 1.4s ease-in-out infinite}
+.tutorial-arrow{position:fixed;z-index:27;color:var(--acc);font:700 28px/1 Outfit,sans-serif;text-shadow:2px 2px 0 #13152b;pointer-events:none}
+@keyframes tutorial-pulse{50%{box-shadow:0 0 0 7px rgba(242,201,76,.08),0 0 9px rgba(242,201,76,.38)}}
 @media(max-width:760px){#tabs .lbl{display:none}#insp{display:none}#insp.open{display:block;left:8px;right:8px;width:auto;top:auto;bottom:100px}#help{display:none}#mini canvas{width:110px}#shelf{bottom:calc(8px + env(safe-area-inset-bottom,0px));left:8px;right:8px;transform:none;max-width:none}#mini{bottom:84px}#top{font-size:13px;gap:4px 10px}}
-@media(prefers-reduced-motion:reduce){#loading .barfill{transition:none}}
+@media(prefers-reduced-motion:reduce){#loading .barfill{transition:none}.tutorial-highlight{animation:none}}
 </style></head><body>
 <canvas id="world" data-ia="world_a" role="img"></canvas>
 <div id="construction" data-ia="buildings_under"></div>
@@ -170,6 +188,7 @@ button.link{background:none;border:0;color:var(--mut);text-decoration:underline;
 <div id="mini" class="hud" data-ia="minimap" role="button" tabindex="0"><canvas class="px"></canvas></div>
 <div id="help" class="hud" data-i="help"></div>
 <div id="toast" role="status" aria-live="polite"></div>
+<aside id="tutorial" class="tutorial-overlay" role="region" data-ia="tut_label" hidden aria-live="polite" aria-atomic="true"></aside>
 <div id="bubble" class="bub" hidden></div>
 <div id="flash"></div>
 <div id="possess" class="hud" hidden><p data-i="poss_hint"></p><div class="pad"><div class="stick"><div class="knob"></div></div><div class="pad-buttons"></div></div></div>

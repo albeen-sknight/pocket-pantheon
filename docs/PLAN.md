@@ -757,7 +757,8 @@ Every phase ends in a playable build and is merged only when its gate passes.
 - [x] Construction sites show localized progress bars and a name and progress tooltip.
 - [x] Shared seed links open the New World screen. Invalid seeds show an error after the world loads.
 - [x] Restart keeps the current seed and settings, and asks before discarding progress.
-- [ ] The current checkout does not contain the tutorial, Codex, achievements, sound system, phone controls, balance bot, or offline single file listed for this phase.
+- [x] The localized ten step tutorial starts on a first world, advances from player actions, and can be replayed from the World tab.
+- [ ] Codex, achievements, sound system, phone controls, balance bot, and offline single file remain outside this checkout.
 - [ ] The 5,000 unit performance target, full Phase 7 device matrix, and all section 1 acceptance checks still need verification.
 - [ ] Keep the landing roadmap in progress until the remaining features and the Phase 7 gate pass.
 
