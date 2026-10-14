@@ -3,8 +3,12 @@
 <html lang="en"><head><meta charset="utf-8">
 <meta name="generator" content="PocketPantheon-Core">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Pocket Pantheon: concept preview</title>
-<meta name="description" content="A tiny pixel world that lives on its own. Concept preview of Pocket Pantheon, a browser god game.">
+<title>Pocket Pantheon</title>
+<meta name="description" content="A tiny pixel world that lives on its own, until you decide it shouldn't.">
+<meta name="theme-color" content="#13152b">
+<meta property="og:type" content="website"><meta property="og:site_name" content="Pocket Pantheon"><meta property="og:title" content="Pocket Pantheon"><meta property="og:description" content="A tiny pixel world that lives on its own, until you decide it shouldn't."><meta property="og:image" content="https://albeen-sknight.github.io/pocket-pantheon/share-preview.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="A living pixel world from Pocket Pantheon">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Pocket Pantheon"><meta name="twitter:description" content="A tiny pixel world that lives on its own, until you decide it shouldn't."><meta name="twitter:image" content="https://albeen-sknight.github.io/pocket-pantheon/share-preview.png"><meta name="twitter:image:alt" content="A living pixel world from Pocket Pantheon">
+<link rel="icon" href="favicon.svg" type="image/svg+xml"><link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="manifest" href="manifest.webmanifest">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Outfit:wght@400;600&display=swap">
 <style>
@@ -84,6 +88,7 @@ kbd{display:inline-flex;justify-content:center;align-items:center;min-width:48px
 .road h3{font-size:18px}.road p{margin:2px 0 0;font-size:14px;color:var(--mut)}
 .st{font:500 13px 'Pixelify Sans',monospace;padding:3px 8px;border:2px solid var(--line);white-space:nowrap}
 .st.done{background:var(--ok);border-color:var(--ok);color:#fff}.st.next{border-color:var(--acc);color:var(--acc)}
+.st.active{border-color:var(--ok);color:var(--ok)}
 footer{max-width:1000px;margin:0 auto;padding:60px 20px 50px;color:var(--mut)}
 footer .row{margin-top:14px}
 @media(max-width:760px){.game,.pos{grid-template-columns:1fr}.bio{grid-template-columns:repeat(2,1fr)}.steps{grid-template-columns:1fr}.who{height:240px}}
@@ -293,7 +298,7 @@ for(let k=0;k<5;k++){const p=(t*.12+k*.2)%1,x0=304,y0=26+k*26,x1=230-k*12,y1=70+
 const whoFig=fig(OR,5);whoFig.setAttribute('aria-hidden','true');document.getElementById('who').append(whoFig);
 
 /* roadmap */
-const road=[["r0","done"],["r1","done"],["r2","done"],["r3","done"],["r4","done"],["r5","done"],["r6","done"],["r7","done"],["r8","next"]];
+const road=[["r0","done"],["r1","done"],["r2","done"],["r3","done"],["r4","done"],["r5","done"],["r6","done"],["r7","done"],["r8","active"]];
 road.forEach(([k,s],i)=>{const li=document.createElement('li');li.innerHTML='<span class="n">'+(i?i-1:'\u2713')+'</span><div><h3 data-i="'+k+'_n"></h3><p data-i="'+k+'_d"></p></div><span class="st '+s+'" data-i="'+s+'"></span>';document.getElementById('road').append(li)});
 
 document.querySelectorAll('#lang button').forEach(b=>b.onclick=()=>setLang(b.dataset.l));

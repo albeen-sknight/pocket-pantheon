@@ -29,5 +29,6 @@
     "hunger",
     "battle"
   ],
-  "refreshMs": 2000
+  "refreshMs": 2000,
+  "fewYears": 3
 }

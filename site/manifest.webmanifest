@@ -1,0 +1,14 @@
+{
+  "name": "Pocket Pantheon",
+  "short_name": "Pantheon",
+  "description": "A tiny pixel world that lives on its own, until you decide it shouldn't.",
+  "start_url": "./play/",
+  "scope": "./play/",
+  "display": "fullscreen",
+  "background_color": "#13152b",
+  "theme_color": "#13152b",
+  "icons": [
+    { "src": "./icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

@@ -16,6 +16,8 @@ const types = {
   ".json": "application/json",
   ".map": "application/json",
   ".css": "text/css",
+  ".svg": "image/svg+xml",
+  ".webmanifest": "application/manifest+json",
   ".png": "image/png",
   ".wasm": "application/wasm",
 };

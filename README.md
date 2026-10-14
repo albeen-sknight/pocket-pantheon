@@ -6,6 +6,8 @@ A tiny pixel world that lives on its own, until you decide it shouldn't. Pocket 
 
 The game is still being built, one playable phase at a time. The full plan lives in [docs/PLAN.md](docs/PLAN.md), and the look we're aiming for is in [docs/preview.html](docs/preview.html).
 
+Phase 7 is in progress. This build adds program generated app icons, a web app manifest, a game screenshot for share previews, construction progress bars and seed links. See the Phase 7 notes in the plan for the remaining acceptance work.
+
 ## Run it locally
 
 You need Node 20 or newer and Python 3.
@@ -20,8 +22,8 @@ Then open http://localhost:5173/.
 | Command | What it does |
 | --- | --- |
 | `npm run dev` | Local server that rebuilds when you save |
-| `npm run build` | Builds the site into `dist/` |
-| `npm test` | Type check, text lint and unit tests |
+| `npm run build` | Builds the site, app icons and manifest into `dist/` |
+| `npm test` | Type check, text and palette lint, and unit tests |
 | `npm run lint:text` | Checks every English and Spanish string |
 | `npm run test:e2e` | Browser tests with Playwright (run `npx playwright install chromium` once first) |
 
