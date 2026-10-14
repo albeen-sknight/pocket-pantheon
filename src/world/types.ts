@@ -17,6 +17,8 @@ export interface WorldOptions {
 // Tile flags
 export const RIVER = 1;
 export const LAKE = 2;
+export const ROAD = 4;
+export const FARM = 8;
 
 // Ore types, in rough order of rarity
 export const ORES = ["none", "stone", "copper", "tin", "coal", "iron", "gold", "mythril", "adamantine"] as const;

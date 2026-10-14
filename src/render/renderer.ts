@@ -1,13 +1,16 @@
 // Pocket Pantheon · Copyright (c) 2026 Albeen (albeen-sknight)
 import type { Rect } from "../world/edit";
 import type { World } from "../world/types";
+import type { Atlas } from "./atlas";
 import type { Camera } from "./camera";
+import type { Scene } from "./scene";
 
 export interface Renderer {
   kind: "webgl2" | "canvas2d";
   setWorld(world: World): void;
   update(world: World, rect: Rect): void;
-  draw(camera: Camera, time: number): void;
+  draw(camera: Camera, time: number, season: number): void;
+  drawSprites(scene: Scene, atlas: Atlas, camera: Camera): void;
 }
 
 // Packs one tile into the RGBA layout the terrain shader reads:

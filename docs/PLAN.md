@@ -1,6 +1,6 @@
 # Pocket Pantheon: Execution Plan
 
-**Owner:** Albeen ([albeen-sknight](https://github.com/albeen-sknight)) · **Repository:** [albeen-sknight/pocket-pantheon](https://github.com/albeen-sknight/pocket-pantheon) · **Live site:** https://albeen-sknight.github.io/pocket-pantheon/ · **Updated:** 13 October 2026 · **Status:** Phases 0 and 1 done, Phase 2 next
+**Owner:** Albeen ([albeen-sknight](https://github.com/albeen-sknight)) · **Repository:** [albeen-sknight/pocket-pantheon](https://github.com/albeen-sknight/pocket-pantheon) · **Live site:** https://albeen-sknight.github.io/pocket-pantheon/ · **Updated:** 13 October 2026 · **Status:** Phases 0 to 2 done, Phase 3 next
 
 Pocket Pantheon is a browser god game. A living pixel world runs itself, and you shape it, command it, bless it or wreck it. This file is the single source of truth for building it. The visual target is the concept preview in [`docs/preview.html`](preview.html).
 
@@ -759,10 +759,26 @@ Every phase ends in a playable build and is merged only when its gate passes.
 - [ ] The roadmap list on the landing page is updated.
 - [ ] This plan is updated if anything changed.
 
+**Phase 2 notes (what shipped and what moved)**
+
+- [x] Simulation worker at 20 ticks per second with speeds 1x, 2x, 4x and 8x and pause, a main thread fallback, frames with packed unit data, and smooth movement between ticks. It pauses while the tab is hidden.
+- [x] Time scale: 1 year is 120 ticks, so 6 seconds at 1x (`data/sim.json`). Need rates are per year, so they scale with it.
+- [x] 4 races and 15 animals from `data/creatures.json`. Animals graze, herd, hunt and flee, breed up to each biome's carrying capacity, and predators scavenge in lean times so food chains stay stable.
+- [x] Genes (24 per unit) with inheritance, 2% mutation (higher in Mushroom Wilds and Wasteland) and the 10 traits. The 134 weight brain is inherited with crossover and mutation and tilts the utility scores.
+- [x] Utility AI with 13 actions: eat, sleep, work, build, chat, pray, flee, fight, hunt, settle, wander, explore, idle. Needs: hunger, rest, safety, social, faith, purpose. Couples marry and have children.
+- [x] Villages: the town planner builds the town hall, houses, farm fields, lumber camps and wells from shortages, and hands out jobs (farmer, woodcutter, gatherer). Woodcutters clear forest, and elves plant trees instead. Roads appear where people walk often.
+- [x] Settlers: a full village sends a band out to found a new one. This was listed under section 11 and pulled forward, because it's what lets villages spread with no input.
+- [x] Life tab (spawn any race or animal, the brush sets how many), Genetics tab (mutate, add or remove a trait, clone), unit inspector with needs bars, stats, personality and traits, follow camera.
+- [x] Sprites from the preview's sprite maker in one atlas, drawn in one instanced call. Units and buildings switch to markers and icons below Town zoom.
+- [x] Saves are version 2 and include the whole simulation. Version 1 saves still load.
+- [x] Moved to Phase 3: subspecies (their names need culture languages) and the Genetics tab's force split.
+- [x] Pathfinding stays in TypeScript: a 500 year world peaks at about 5 ms per tick, far inside the 25 ms budget, so the WebAssembly port (section 24) waits until profiling asks for it.
+- [x] `npm run test:long` runs the section 22 soak (100 worlds for 500 years, about 2 hours). CI runs the fast suite; the PR for each phase reports a 20 world soak.
+
 **Phase 1 notes (what shipped and what moved)**
 
 - [x] Generator in a worker: layered noise with domain warping, 7 layout masks, droplet erosion, sea level from the land slider, lakes and rivers from a priority flood, wind driven moisture with rain shadows, the 21 biome lookup, magic patches, ore and fertility. A Large world takes about 0.35 s, far under the 4 s gate.
-- [x] Erosion runs as TypeScript, the planned twin of the C++ module (section 24). The C++ and WebAssembly port waits for pathfinding in Phase 2, where the speed gain matters more, and both share one Emscripten setup.
+- [x] Erosion runs as TypeScript, the planned twin of the C++ module (section 24). See the Phase 2 notes for why the WebAssembly port is still waiting.
 - [x] WebGL2 terrain in one full screen draw: palette tones picked from hillshade, clumped noise and dither, soft biome edges, animated water and foam, rivers and lakes, and trees, rocks and other decoration at Town zoom and closer. Canvas2D fallback when WebGL2 is missing. 60 fps at every zoom stop (`npm run bench`).
 - [x] Zoom stops 1, 2, 3, 4, 8, 12, 16, 32, 64, 96 and 128 pixels per tile. Art detail switches at 8 (Region) and 32 (Town).
 - [x] Shape tab: raise, lower, flatten, smooth, paint any of the 21 biomes, and the island, volcano and mountain range stamps. The ore placer, road and wall brushes wait for Phase 3, when towns can use roads and walls.

@@ -1,73 +1,97 @@
 // Pocket Pantheon · Copyright (c) 2026 Albeen (albeen-sknight)
 import config from "../../data/world.json";
+import simConfig from "../../data/sim.json";
+import { buildSprites, type SpriteSet } from "../render/atlas";
 import { Camera } from "../render/camera";
 import { createCanvasRenderer, paintTiles } from "../render/canvas2d";
 import type { Renderer } from "../render/renderer";
+import { Scene } from "../render/scene";
 import { mk, TAB_ICONS, TOOL_ICONS } from "../render/sprites";
 import { createWebGLRenderer } from "../render/webgl";
-import { exportFile, importFile, listSlots, loadSlot, saveSlot, type SlotId } from "../save/store";
+import { exportFile, importFile, listSlots, loadSlot, saveSlot, type Loaded, type SlotId } from "../save/store";
+import { SimClient } from "../sim/client";
+import type { Frame } from "../sim/protocol";
+import type { SimSnapshot } from "../sim/snapshot";
+import { RACES, SPECIES, TRAITS, type RaceKey } from "../sim/species";
 import { BIOMES } from "../world/biomes";
 import { generateAsync } from "../world/client";
 import { applyStroke, strokeTarget, type Rect, type ShapeTool, type Stroke } from "../world/edit";
-import { defaultOptions, LAKE, ORES, RIVER, type Layout, type SizeKey, type World, type WorldOptions } from "../world/types";
+import { defaultOptions, type Layout, type SizeKey, type World, type WorldOptions } from "../world/types";
 import { $, el, randomSeed, SAVE_SLOTS, toast, txt } from "./dom";
 import { bindLangSwitch, fmt, onLangChange, t, toggleLang, type PlayKey } from "./i18n";
 import { bindMapInput } from "./input";
+import { kindName, tileCard, traitName, unitCard } from "./inspector";
+import { SimView } from "./simview";
 
 type Tab = "shape" | "life" | "cmd" | "wrath" | "grace" | "gene" | "world" | "insp";
-type Tool = ShapeTool | "pan" | "inspect";
+type Tool = ShapeTool | "pan" | "inspect" | "spawn" | "pick";
 
 // Which phase brings each tab to life (PLAN section 21).
 const TABS: { key: Tab; phase: number }[] = [
   { key: "shape", phase: 1 }, { key: "life", phase: 2 }, { key: "cmd", phase: 4 }, { key: "wrath", phase: 5 },
   { key: "grace", phase: 3 }, { key: "gene", phase: 2 }, { key: "world", phase: 1 }, { key: "insp", phase: 1 },
 ];
-const READY_PHASE = 1;
+const READY_PHASE = 2;
 const CONTINUOUS: Tool[] = ["raise", "lower", "flatten", "smooth", "paint"];
 const BRUSH = config.brush;
+const SPEEDS = simConfig.speeds;
 
 export class App {
   private canvas = $<HTMLCanvasElement>("#world");
   private cam = new Camera();
   private renderer!: Renderer;
+  private sprites!: SpriteSet;
+  private scene!: Scene;
+  private sim = new SimClient();
+  private view = new SimView();
   private world: World | null = null;
-  private tab: Tab = "shape";
-  private tool: Tool = "raise";
+  private tab: Tab = "life";
+  private tool: Tool = "spawn";
   private brush = BRUSH.default;
   private paintBiome = BIOMES.findIndex((b) => b.key === "grassland");
+  private spawnKind = 0;
+  private trait = 0;
   private stroke: Stroke | null = null;
   private strokeSeed = 1;
   private dirty: Rect | null = null;
   private miniDirty = true;
-  private unsaved = false;
   private inspected: [number, number] | null = null;
+  private selected = 0;
+  private following = false;
+  private speed = 1;
   private frames: number[] = [];
   private genMs = 0;
   private mini = $<HTMLCanvasElement>("#mini canvas");
   private miniImg: ImageData | null = null;
   private brushRing = el("div");
+  private lastHover = { x: -1, y: -1 };
 
   async start() {
     this.renderer = createWebGLRenderer(this.canvas) ?? this.fallback();
+    this.sprites = buildSprites();
+    this.scene = new Scene(this.sprites);
+    this.sim.onFrame = (f) => this.onFrame(f);
     bindLangSwitch("play");
     onLangChange(() => this.refreshText());
     this.buildTabs();
-    this.selectTab("shape");
+    this.buildSpeed();
+    this.selectTab("life");
     this.bindInput();
     this.bindDialogs();
     this.resize();
     window.addEventListener("resize", () => this.resize());
     this.startAutosave();
+    this.pauseWhenHidden();
     requestAnimationFrame((now) => this.frame(now, now));
 
     const params = new URLSearchParams(location.search);
     const fromUrl = params.has("seed");
     const resumed = fromUrl ? null : await loadSlot("auto").catch(() => null);
     if (resumed) {
-      this.setWorld(resumed);
+      this.load(resumed);
       toast(t("resumed"));
     } else {
-      await this.generate(this.optionsFromUrl(params));
+      await this.generate(this.optionsFromUrl(params), this.racesFromUrl(params));
     }
     window.__pp = this.debug();
   }
@@ -92,9 +116,15 @@ export class App {
     return o;
   }
 
+  private racesFromUrl(p: URLSearchParams): RaceKey[] {
+    const races = p.get("races");
+    if (races === null) return [...RACES];
+    return races.split(",").filter((r): r is RaceKey => (RACES as string[]).includes(r));
+  }
+
   // World lifecycle
 
-  async generate(options: WorldOptions) {
+  async generate(options: WorldOptions, races: RaceKey[] = [...RACES]) {
     const box = $("#loading");
     const bar = $(".barfill", box);
     const stage = $(".stage", box);
@@ -107,11 +137,18 @@ export class App {
     box.hidden = true;
     this.genMs = performance.now() - started;
     this.setWorld(world);
-    this.unsaved = true;
+    this.sim.init(world, races);
+  }
+
+  private load(loaded: Loaded) {
+    this.setWorld(loaded.world);
+    this.sim.init(loaded.world, [], loaded.sim);
   }
 
   private setWorld(world: World) {
     this.world = world;
+    this.view = new SimView();
+    this.select(0);
     this.renderer.setWorld(world);
     this.cam.setWorld(world.w, world.h);
     this.mini.width = world.w;
@@ -123,6 +160,15 @@ export class App {
     this.refreshText();
   }
 
+  private onFrame(f: Frame) {
+    const rect = this.view.receive(f, this.world);
+    if (rect) this.markDirty(rect);
+    for (const e of f.events) if (e.t === "town") toast(t("ev_town", { name: e.name }));
+    if (f.selected === null && this.selected) this.select(0);
+    this.updateTopBar();
+    if (this.tab === "insp" || this.tab === "gene") this.renderInspector();
+  }
+
   // Frame loop
 
   private frame(now: number, last: number) {
@@ -130,7 +176,11 @@ export class App {
     this.frames.push(now);
     while (this.frames.length && this.frames[0]! < now - 1000) this.frames.shift();
 
-    if (this.cam.update(dt)) this.cameraMoved();
+    if (this.following && this.selected) {
+      const at = this.view.position(this.selected);
+      if (at) this.cam.centerOn(at[0], at[1]);
+    }
+    if (this.cam.update(dt) || this.following) this.cameraMoved();
     if (this.stroke && CONTINUOUS.includes(this.stroke.tool)) this.paintStroke(this.stroke);
     if (this.world && this.dirty) {
       this.renderer.update(this.world, this.dirty);
@@ -138,7 +188,12 @@ export class App {
       this.dirty = null;
       this.miniDirty = true;
     }
-    if (this.world) this.renderer.draw(this.cam, now / 400);
+    if (this.world) {
+      const year = this.view.frame ? (this.view.frame.tick % simConfig.ticksPerYear) / simConfig.ticksPerYear : 0;
+      this.renderer.draw(this.cam, now / 400, year);
+      this.scene.build(this.cam, this.view.units(now), this.view.count, this.view.buildings, this.view.towns, this.selected, now / 1000);
+      this.renderer.drawSprites(this.scene, this.sprites.atlas, this.cam);
+    }
     if (this.miniDirty) this.drawMinimap();
     requestAnimationFrame((next) => this.frame(next, now));
   }
@@ -160,32 +215,28 @@ export class App {
     this.updateBrushRing();
   }
 
+  private markDirty(rect: Rect) {
+    this.dirty = this.dirty
+      ? { x0: Math.min(this.dirty.x0, rect.x0), y0: Math.min(this.dirty.y0, rect.y0), x1: Math.max(this.dirty.x1, rect.x1), y1: Math.max(this.dirty.y1, rect.y1) }
+      : rect;
+  }
+
   // Tools
 
   private paintStroke(s: Stroke) {
     if (!this.world) return;
+    // Applied here for instant feedback, and in the sim, which owns the world.
     const rect = applyStroke(this.world, s);
+    this.sim.command({ c: "stroke", stroke: { ...s } });
     if (!rect) return;
-    this.unsaved = true;
-    this.dirty = this.dirty
-      ? { x0: Math.min(this.dirty.x0, rect.x0), y0: Math.min(this.dirty.y0, rect.y0), x1: Math.max(this.dirty.x1, rect.x1), y1: Math.max(this.dirty.y1, rect.y1) }
-      : rect;
+    this.markDirty(rect);
     if (this.inspected) this.renderInspector();
   }
 
   private bindInput() {
-    let hoverAt = { x: -1, y: -1 };
     bindMapInput(this.canvas, this.cam, {
       isPanTool: () => this.tool === "pan",
-      press: (tx, ty) => {
-        if (!this.world) return;
-        if (this.tool === "inspect") return this.inspect(tx, ty);
-        if (this.tool === "pan") return;
-        const s: Stroke = { tool: this.tool, x: tx, y: ty, radius: this.brush - 1, biome: this.paintBiome, seed: this.strokeSeed++ };
-        if (this.tool === "flatten") s.target = strokeTarget(this.world, tx, ty);
-        this.stroke = s;
-        this.paintStroke(s); // first touch shows up right away, well under 100 ms
-      },
+      press: (tx, ty) => this.press(tx, ty),
       hold: (tx, ty) => {
         if (this.tool === "inspect") return this.inspect(tx, ty);
         if (this.stroke) {
@@ -195,25 +246,50 @@ export class App {
       },
       release: () => (this.stroke = null),
       hover: (sx, sy) => {
-        hoverAt = { x: sx, y: sy };
-        this.updateBrushRing(hoverAt);
+        this.lastHover = { x: sx, y: sy };
+        this.updateBrushRing();
       },
-      moved: () => this.cameraMoved(),
+      moved: () => {
+        this.following = false;
+        this.cameraMoved();
+      },
     });
+    // The controls hint steps aside once you've started playing.
+    this.canvas.addEventListener("pointerdown", () => ($("#help").hidden = true), { once: true });
     this.brushRing.id = "brush";
-    Object.assign(this.brushRing.style, { position: "fixed", pointerEvents: "none", border: "2px solid #f4f0e8", borderRadius: "50%", display: "none", boxShadow: "0 0 0 1px #2b2233" });
     document.body.append(this.brushRing);
-    this.lastHover = () => hoverAt;
-
     this.mini.parentElement!.addEventListener("pointerdown", (e) => this.minimapJump(e));
     window.addEventListener("keydown", (e) => this.key(e));
   }
 
-  private lastHover = () => ({ x: -1, y: -1 });
+  private press(tx: number, ty: number) {
+    if (!this.world) return;
+    switch (this.tool) {
+      case "inspect":
+        return this.inspect(tx, ty);
+      case "pick":
+        return this.select(this.view.nearest(tx, ty, 1.5));
+      case "pan":
+        return;
+      case "spawn": {
+        const civ = this.spawnKind < RACES.length;
+        const count = civ ? Math.max(2, this.brush * 2) : this.brush;
+        this.sim.command({ c: "spawn", kind: this.spawnKind, x: tx, y: ty, count });
+        return;
+      }
+      default: {
+        const s: Stroke = { tool: this.tool, x: tx, y: ty, radius: this.brush - 1, biome: this.paintBiome, seed: this.strokeSeed++ };
+        if (this.tool === "flatten") s.target = strokeTarget(this.world, tx, ty);
+        this.stroke = s;
+        this.paintStroke(s); // first touch shows up right away, well under 100 ms
+      }
+    }
+  }
 
-  private updateBrushRing(at = this.lastHover()) {
-    const shaping = this.tab === "shape" && this.tool !== "pan";
-    if (!shaping || at.x < 0) {
+  private updateBrushRing() {
+    const at = this.lastHover;
+    const brushy = (this.tab === "shape" && this.tool !== "pan") || (this.tab === "life" && this.tool === "spawn");
+    if (!brushy || at.x < 0) {
       this.brushRing.style.display = "none";
       return;
     }
@@ -239,7 +315,12 @@ export class App {
     const cx = this.cam.viewW / 2;
     const cy = this.cam.viewH / 2;
     const step = 80 * (window.devicePixelRatio || 1);
+    const pan = (x: number, y: number) => () => {
+      this.following = false;
+      this.cam.pan(x, y);
+    };
     const actions: Record<string, () => void> = {
+      " ": () => this.setSpeed(this.speed ? 0 : 1),
       "[": () => this.setBrush(this.brush - 1),
       "]": () => this.setBrush(this.brush + 1),
       l: () => toggleLang("play"),
@@ -247,14 +328,14 @@ export class App {
       "=": () => this.cam.zoomStep(1, cx, cy),
       "-": () => this.cam.zoomStep(-1, cx, cy),
       Home: () => this.cam.fit(),
-      ArrowLeft: () => this.cam.pan(step, 0),
-      ArrowRight: () => this.cam.pan(-step, 0),
-      ArrowUp: () => this.cam.pan(0, step),
-      ArrowDown: () => this.cam.pan(0, -step),
-      a: () => this.cam.pan(step, 0),
-      d: () => this.cam.pan(-step, 0),
-      w: () => this.cam.pan(0, step),
-      s: () => this.cam.pan(0, -step),
+      ArrowLeft: pan(step, 0),
+      ArrowRight: pan(-step, 0),
+      ArrowUp: pan(0, step),
+      ArrowDown: pan(0, -step),
+      a: pan(step, 0),
+      d: pan(-step, 0),
+      w: pan(0, step),
+      s: pan(0, -step),
     };
     const act = actions[e.key] ?? actions[e.key.toLowerCase()];
     if (!act) return;
@@ -271,7 +352,42 @@ export class App {
     this.updateBrushRing();
   }
 
-  // Tabs and shelf
+  private setSpeed(speed: number) {
+    this.speed = speed;
+    this.sim.setSpeed(speed);
+    document.querySelectorAll<HTMLButtonElement>("#speed button").forEach((b) => b.setAttribute("aria-pressed", String(Number(b.dataset.speed) === speed)));
+  }
+
+  private select(uid: number) {
+    this.selected = uid;
+    if (!uid) this.following = false;
+    this.sim.select(uid);
+    this.view.selected = null;
+    this.renderInspector();
+  }
+
+  // Top bar, tabs and shelf
+
+  private buildSpeed() {
+    const box = el("div", { id: "speed", role: "group" });
+    box.dataset.ia = "tip_speed";
+    for (const s of SPEEDS) {
+      const b = el("button", { type: "button", onclick: () => this.setSpeed(s) });
+      b.dataset.speed = String(s);
+      if (s === 0) b.append(txt("speed_pause"));
+      else b.textContent = t("speed_n", { n: s });
+      b.setAttribute("aria-pressed", String(s === this.speed));
+      box.append(b);
+    }
+    $("#t-zoom").after(box);
+  }
+
+  private updateTopBar() {
+    const f = this.view.frame;
+    $("#t-year").textContent = t("year", { n: f?.year ?? 0 });
+    $("#t-pop").textContent = t("pop", { n: f?.pop ?? 0 });
+    $("#t-kin").textContent = t("kin", { n: 0 });
+  }
 
   private buildTabs() {
     const nav = $("#tabs");
@@ -279,7 +395,7 @@ export class App {
       const b = el("button", { type: "button" });
       b.setAttribute("role", "tab");
       b.dataset.tab = tab.key;
-      b.append(mk(14, 14, TAB_ICONS[tab.key === "world" ? "world" : tab.key]!, 2), Object.assign(txt(("tab_" + tab.key) as PlayKey), { className: "lbl" }));
+      b.append(mk(14, 14, TAB_ICONS[tab.key]!, 2), Object.assign(txt(("tab_" + tab.key) as PlayKey), { className: "lbl" }));
       if (tab.phase > READY_PHASE) {
         b.disabled = true;
         b.dataset.phase = String(tab.phase);
@@ -293,21 +409,27 @@ export class App {
   private selectTab(tab: Tab) {
     this.tab = tab;
     document.querySelectorAll<HTMLButtonElement>("#tabs button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === tab)));
-    if (tab === "shape" && (this.tool === "inspect" || this.tool === "pan")) this.tool = "raise";
-    if (tab === "insp") this.tool = "inspect";
-    if (tab === "world") this.tool = "pan";
+    const defaults: Partial<Record<Tab, Tool>> = { shape: "raise", life: "spawn", gene: "pick", insp: "inspect", world: "pan" };
+    const keep = (tab === "shape" && !["inspect", "pan", "spawn", "pick"].includes(this.tool)) || this.tool === "pan";
+    if (!keep || tab === "world") this.tool = defaults[tab] ?? "pan";
     this.buildShelf();
     this.renderInspector();
     this.refreshText();
   }
 
-  private toolButton(key: string, label: PlayKey, tip: PlayKey, onClick: () => void, pressed?: boolean) {
+  private toolButton(icon: HTMLCanvasElement, label: HTMLElement, tip: PlayKey | null, onClick: () => void, pressed?: boolean) {
     const b = el("button", { type: "button", onclick: onClick });
-    b.dataset.it = tip;
-    b.title = t(tip);
-    b.append(mk(12, 12, TOOL_ICONS[key]!, 2), txt(label));
+    if (tip) {
+      b.dataset.it = tip;
+      b.title = t(tip);
+    }
+    b.append(icon, label);
     if (pressed !== undefined) b.setAttribute("aria-pressed", String(pressed));
     return b;
+  }
+
+  private iconButton(key: string, label: PlayKey, tip: PlayKey, onClick: () => void, pressed?: boolean) {
+    return this.toolButton(mk(12, 12, TOOL_ICONS[key]!, 2), txt(label), tip, onClick, pressed);
   }
 
   private buildShelf() {
@@ -316,100 +438,136 @@ export class App {
     const pick = (tool: Tool) => () => {
       this.tool = tool;
       this.buildShelf();
+      this.updateBrushRing();
     };
+    const sep = () => el("span", { className: "sep" });
+    const panButton = () => this.iconButton("pan", "tool_pan", "tip_pan", pick("pan"), this.tool === "pan");
 
-    if (this.tab === "shape" || this.tab === "insp") {
-      shelf.append(this.toolButton("pan", "tool_pan", "tip_pan", pick("pan"), this.tool === "pan"));
+    switch (this.tab) {
+      case "shape":
+        shelf.append(panButton(), sep());
+        for (const tool of ["raise", "lower", "flatten", "smooth", "paint"] as const) {
+          shelf.append(this.iconButton(tool, `tool_${tool}`, `tip_${tool}`, pick(tool), this.tool === tool));
+        }
+        shelf.append(sep());
+        for (const tool of ["island", "volcano", "range"] as const) {
+          shelf.append(this.iconButton(tool, `tool_${tool}`, `tip_${tool}`, pick(tool), this.tool === tool));
+        }
+        shelf.append(sep(), this.brushControl());
+        if (this.tool === "paint") shelf.append(this.biomePicker());
+        return;
+      case "life":
+        shelf.append(panButton(), sep());
+        SPECIES.forEach((key, kind) => {
+          const sprite = this.sprites.atlas.sprites[this.sprites.unit(kind, 0, 0, 0)]!;
+          const icon = el("canvas", { width: 24, height: 24, className: "px" });
+          const ctx = icon.getContext("2d")!;
+          const k = Math.min(1, 24 / Math.max(sprite.w, sprite.h));
+          ctx.imageSmoothingEnabled = false;
+          const w = Math.round(sprite.w * k);
+          const h = Math.round(sprite.h * k);
+          ctx.drawImage(this.sprites.atlas.canvas, sprite.x, sprite.y, sprite.w, sprite.h, (24 - w) / 2, 24 - h, w, h);
+          icon.setAttribute("aria-hidden", "true");
+          const b = this.toolButton(icon, txt(("kind_" + key) as PlayKey), "tip_life", () => {
+            this.spawnKind = kind;
+            this.tool = "spawn";
+            this.buildShelf();
+          }, this.tool === "spawn" && this.spawnKind === kind);
+          shelf.append(b);
+        });
+        shelf.append(sep(), this.brushControl());
+        return;
+      case "gene":
+        shelf.append(panButton(), this.iconButton("fit", "tool_pick", "tip_pick", pick("pick"), this.tool === "pick"), sep());
+        shelf.append(
+          this.iconButton("new", "gene_mutate", "tip_mutate", () => this.gene({ c: "mutate", uid: this.selected })),
+          this.traitPicker(),
+          this.iconButton("raise", "gene_add", "gene_add", () => this.gene({ c: "trait", uid: this.selected, trait: this.trait, add: true })),
+          this.iconButton("lower", "gene_remove", "gene_remove", () => this.gene({ c: "trait", uid: this.selected, trait: this.trait, add: false })),
+          this.iconButton("saves", "gene_clone", "tip_clone", () => this.gene({ c: "clone", uid: this.selected })),
+        );
+        return;
+      case "insp":
+        shelf.append(panButton(), this.iconButton("fit", "tool_pick", "in_hint", pick("inspect"), this.tool === "inspect"));
+        return;
+      case "world":
+        shelf.append(
+          this.iconButton("new", "w_new", "tip_new", () => this.openNewWorld()),
+          this.iconButton("saves", "w_saves", "tip_saves", () => this.openSaves()),
+          this.iconButton("export", "w_export", "tip_export", () => this.exportWorld()),
+          this.iconButton("import", "w_import", "tip_import", () => $<HTMLInputElement>("#import").click()),
+          this.iconButton("fit", "w_fit", "tip_fit", () => {
+            this.following = false;
+            this.cam.fit();
+            this.cameraMoved();
+          }),
+        );
     }
-    if (this.tab === "insp") {
-      shelf.append(el("span", { className: "sep" }), el("label", {}, txt("in_hint")));
-      if (this.tool === "pan") shelf.lastElementChild!.remove();
-      return;
-    }
-    if (this.tab === "shape") {
-      shelf.append(el("span", { className: "sep" }));
-      for (const tool of ["raise", "lower", "flatten", "smooth", "paint"] as const) {
-        shelf.append(this.toolButton(tool, `tool_${tool}`, `tip_${tool}`, pick(tool), this.tool === tool));
-      }
-      shelf.append(el("span", { className: "sep" }));
-      for (const tool of ["island", "volcano", "range"] as const) {
-        shelf.append(this.toolButton(tool, `tool_${tool}`, `tip_${tool}`, pick(tool), this.tool === tool));
-      }
-      shelf.append(el("span", { className: "sep" }), this.brushControl());
-      if (this.tool === "paint") shelf.append(this.biomePicker());
-      return;
-    }
-    if (this.tab === "world") {
-      shelf.append(
-        this.toolButton("new", "w_new", "tip_new", () => this.openNewWorld()),
-        this.toolButton("saves", "w_saves", "tip_saves", () => this.openSaves()),
-        this.toolButton("export", "w_export", "tip_export", () => this.exportWorld()),
-        this.toolButton("import", "w_import", "tip_import", () => $<HTMLInputElement>("#import").click()),
-        this.toolButton("fit", "w_fit", "tip_fit", () => {
-          this.cam.fit();
-          this.cameraMoved();
-        }),
-      );
-    }
+  }
+
+  private gene(cmd: Parameters<SimClient["command"]>[0]) {
+    if (!this.selected) return toast(t("gene_none"));
+    this.sim.command(cmd);
   }
 
   private brushControl() {
     const input = el("input", { type: "range", id: "brush-size", min: String(BRUSH.min), max: String(BRUSH.max), value: String(this.brush) });
     input.oninput = () => this.setBrush(Number(input.value));
-    const label = el("label", { htmlFor: "brush-size" }, el("span", { id: "brush-label" }), input);
-    return label;
+    return el("label", { htmlFor: "brush-size" }, el("span", { id: "brush-label", textContent: t("brush", { n: this.brush }) }), input);
   }
 
   private biomePicker() {
     const select = el("select", { id: "paint-biome" });
-    BIOMES.forEach((b, i) => {
-      const opt = el("option", { value: String(i) }, txt(("biome_" + b.key) as PlayKey));
-      select.append(opt);
-    });
+    BIOMES.forEach((b, i) => select.append(el("option", { value: String(i) }, txt(("biome_" + b.key) as PlayKey))));
     select.value = String(this.paintBiome);
     select.onchange = () => (this.paintBiome = Number(select.value));
     return el("label", { htmlFor: "paint-biome" }, txt("pick_biome"), select);
+  }
+
+  private traitPicker() {
+    const select = el("select", { id: "gene-trait" });
+    TRAITS.forEach((_, i) => select.append(el("option", { value: String(i), textContent: traitName(i) })));
+    select.value = String(this.trait);
+    select.onchange = () => (this.trait = Number(select.value));
+    return el("label", { htmlFor: "gene-trait" }, txt("gene_trait"), select);
   }
 
   // Inspector
 
   private inspect(tx: number, ty: number) {
     if (!this.world) return;
+    const uid = this.view.nearest(tx, ty, 1.5);
+    if (uid) {
+      this.inspected = null;
+      return this.select(uid);
+    }
     const x = Math.floor(tx);
     const y = Math.floor(ty);
     if (x < 0 || y < 0 || x >= this.world.w || y >= this.world.h) return;
+    this.select(0);
     this.inspected = [x, y];
     this.renderInspector();
   }
 
   private renderInspector() {
     const box = $("#insp");
-    box.classList.toggle("open", this.tab === "insp" && !!this.inspected);
-    box.hidden = this.tab !== "insp";
-    if (box.hidden) return;
-    if (!this.world || !this.inspected) {
-      box.replaceChildren(el("h3", {}, txt("in_title")), el("p", {}, txt("in_hint")));
+    const show = this.tab === "insp" || this.tab === "gene";
+    box.hidden = !show;
+    box.classList.toggle("open", show && (!!this.inspected || !!this.selected));
+    if (!show) return;
+    const d = this.view.selected;
+    if (this.selected && d) {
+      box.replaceChildren(...unitCard(d, this.following, () => {
+        this.following = !this.following;
+        this.renderInspector();
+      }));
       return;
     }
-    const w = this.world;
-    const [x, y] = this.inspected;
-    const i = y * w.w + x;
-    const above = w.height[i]! - w.seaLevel;
-    const water = above < 0 ? t("water_sea") : w.flags[i]! & LAKE ? t("water_lake") : w.flags[i]! & RIVER ? t("water_river") : t("none");
-    const ore = ORES[w.ore[i]!] ?? "none";
-    const rows: [PlayKey, string][] = [
-      ["in_tile", `${fmt(x)}, ${fmt(y)}`],
-      ["in_biome", t(("biome_" + BIOMES[w.biome[i]!]!.key) as PlayKey)],
-      ["in_height", t("pct", { n: Math.round(w.height[i]! * 100) })],
-      ["in_water", water],
-      ["in_temp", t("deg", { n: Math.round(w.temperature[i]! * 50 - 15) })],
-      ["in_moist", t("pct", { n: Math.round(w.moisture[i]! * 100) })],
-      ["in_fert", t("pct", { n: Math.round((w.fertility[i]! / 255) * 100) })],
-      ["in_ore", ore === "none" ? t("none") : t(("ore_" + ore) as PlayKey)],
-    ];
-    const dl = el("dl");
-    for (const [k, v] of rows) dl.append(el("dt", {}, txt(k)), el("dd", { textContent: v }));
-    box.replaceChildren(el("h3", {}, txt("in_title")), dl);
+    if (this.world && this.inspected) {
+      box.replaceChildren(...tileCard(this.world, this.inspected[0], this.inspected[1]));
+      return;
+    }
+    box.replaceChildren(el("h3", {}, txt("in_title")), el("p", {}, txt(this.tab === "gene" ? "tip_pick" : "in_hint")));
   }
 
   // Minimap
@@ -429,6 +587,7 @@ export class App {
   private minimapJump(e: PointerEvent) {
     if (!this.world) return;
     const r = this.mini.getBoundingClientRect();
+    this.following = false;
     this.cam.centerOn(((e.clientX - r.left) / r.width) * this.world.w, ((e.clientY - r.top) / r.height) * this.world.h);
     this.cameraMoved();
   }
@@ -437,9 +596,7 @@ export class App {
 
   private refreshText() {
     const w = this.world;
-    $("#t-year").textContent = t("year", { n: 0 });
-    $("#t-pop").textContent = t("pop", { n: 0 });
-    $("#t-kin").textContent = t("kin", { n: 0 });
+    this.updateTopBar();
     $("#t-seed").textContent = w ? t("seed", { n: String(w.options.seed) }) : "";
     this.updateZoomLabel();
     const label = document.querySelector("#brush-label");
@@ -447,7 +604,8 @@ export class App {
     document.querySelectorAll<HTMLButtonElement>("#tabs button[data-phase]").forEach((b) => {
       b.title = t("soon_tab", { n: b.dataset.phase! });
     });
-    if (this.tab === "insp") this.renderInspector();
+    document.querySelectorAll<HTMLOptionElement>("#gene-trait option").forEach((o) => (o.textContent = traitName(Number(o.value))));
+    this.renderInspector();
   }
 
   private updateZoomLabel() {
@@ -465,9 +623,15 @@ export class App {
     };
     ["#nw-land", "#nw-temp", "#nw-moist", "#nw-magic"].forEach(out);
     $("#nw-roll").onclick = () => ($<HTMLInputElement>("#nw-seed").value = String(randomSeed()));
+    const races = $("#nw-races");
+    RACES.forEach((race, k) => {
+      const box = el("input", { type: "checkbox", checked: true, value: race, id: `nw-race-${race}` });
+      races.append(el("label", { htmlFor: box.id }, box, el("span", { textContent: kindName(k) })));
+    });
     dlg.addEventListener("close", () => {
       if (dlg.returnValue !== "go") return;
       const num = (id: string) => Number($<HTMLInputElement>(id).value);
+      const chosen = [...races.querySelectorAll<HTMLInputElement>("input:checked")].map((i) => i.value as RaceKey);
       void this.generate({
         seed: Math.max(1, Math.round(num("#nw-seed")) || randomSeed()),
         size: $<HTMLSelectElement>("#nw-size").value as SizeKey,
@@ -476,7 +640,7 @@ export class App {
         temperature: num("#nw-temp"),
         moisture: num("#nw-moist"),
         magic: num("#nw-magic"),
-      });
+      }, chosen);
     });
 
     $("#sv-close").onclick = () => $<HTMLDialogElement>("#saves").close();
@@ -500,6 +664,7 @@ export class App {
     set("#nw-temp", o.temperature);
     set("#nw-moist", o.moisture);
     set("#nw-magic", o.magic);
+    $("#nw-races").querySelectorAll("span").forEach((s, k) => (s.textContent = kindName(k)));
     $<HTMLDialogElement>("#newworld").showModal();
   }
 
@@ -513,7 +678,9 @@ export class App {
     for (const id of ids) {
       const meta = slots.get(id);
       const name = id === "auto" ? t("sv_auto") : t("sv_slot", { n: id });
-      const info = meta ? `${t("seed", { n: String(meta.seed) })} · ${t(("size_" + meta.size) as PlayKey)} · ${new Date(meta.created).toLocaleString(document.documentElement.lang)}` : t("sv_empty");
+      const info = meta
+        ? `${t("year", { n: meta.year })} · ${t("seed", { n: String(meta.seed) })} · ${t(("size_" + meta.size) as PlayKey)} · ${new Date(meta.created).toLocaleString(document.documentElement.lang)}`
+        : t("sv_empty");
       const load = el("button", { type: "button", textContent: t("sv_load"), disabled: !meta, onclick: () => this.loadFrom(id) });
       const save = el("button", { type: "button", textContent: t("sv_save"), onclick: () => this.saveTo(id) });
       if (id === "auto") save.hidden = true;
@@ -522,10 +689,15 @@ export class App {
     if (!dlg.open) dlg.showModal();
   }
 
+  private async snapshot(): Promise<SimSnapshot | undefined> {
+    return Promise.race([this.sim.snapshot(), new Promise<undefined>((r) => setTimeout(() => r(undefined), 3000))]);
+  }
+
   private async saveTo(slot: SlotId) {
     if (!this.world) return;
     try {
-      await saveSlot(slot, this.world, t("sv_slot", { n: slot }));
+      const snap = await this.snapshot();
+      await saveSlot(slot, this.world, t("sv_slot", { n: slot }), this.view.frame?.year ?? 0, snap);
       toast(t("sv_saved", { n: slot }));
       await this.openSaves();
     } catch {
@@ -535,9 +707,9 @@ export class App {
 
   private async loadFrom(slot: SlotId) {
     try {
-      const world = await loadSlot(slot);
-      if (!world) return;
-      this.setWorld(world);
+      const loaded = await loadSlot(slot);
+      if (!loaded) return;
+      this.load(loaded);
       $<HTMLDialogElement>("#saves").close();
       toast(t("sv_loaded"));
     } catch {
@@ -547,7 +719,7 @@ export class App {
 
   private async exportWorld() {
     if (!this.world) return;
-    const blob = await exportFile(this.world, `seed ${this.world.options.seed}`);
+    const blob = await exportFile(this.world, `seed ${this.world.options.seed}`, this.view.frame?.year ?? 0, await this.snapshot());
     const a = el("a", { href: URL.createObjectURL(blob), download: `pocket-pantheon-${this.world.options.seed}.ppworld` });
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
@@ -560,7 +732,7 @@ export class App {
     input.value = "";
     if (!file) return;
     try {
-      this.setWorld(await importFile(file));
+      this.load(await importFile(file));
       toast(t("sv_loaded"));
     } catch {
       toast(t("sv_bad_file"));
@@ -568,14 +740,18 @@ export class App {
   }
 
   private startAutosave() {
-    const save = () => {
-      if (!this.world || !this.unsaved) return;
-      this.unsaved = false;
-      saveSlot("auto", this.world, "auto").catch(() => (this.unsaved = true));
+    const save = async () => {
+      if (!this.world || !this.view.frame) return;
+      const snap = await this.snapshot();
+      saveSlot("auto", this.world, "auto", this.view.frame.year, snap).catch(() => {});
     };
     setInterval(save, config.autosaveSeconds * 1000);
-    document.addEventListener("visibilitychange", () => document.hidden && save());
-    window.addEventListener("pagehide", save);
+    document.addEventListener("visibilitychange", () => document.hidden && void save());
+  }
+
+  // Browsers slow hidden tabs down anyway, so the world waits for you (PLAN section 12).
+  private pauseWhenHidden() {
+    document.addEventListener("visibilitychange", () => this.sim.setSpeed(document.hidden ? 0 : this.speed));
   }
 
   // Read only hooks for the browser tests.
@@ -586,7 +762,11 @@ export class App {
       renderer: this.renderer.kind,
       fps: () => this.frames.length,
       genMs: () => this.genMs,
-      generate: (o: Partial<WorldOptions>) => this.generate({ ...defaultOptions(randomSeed()), ...o }),
+      frame: () => this.view.frame,
+      generate: (o: Partial<WorldOptions>, races?: RaceKey[]) => this.generate({ ...defaultOptions(randomSeed()), ...o }, races),
+      speed: (s: number) => this.setSpeed(s),
+      select: (uid: number) => this.select(uid),
+      fmt,
     };
   }
 }
