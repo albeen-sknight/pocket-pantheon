@@ -146,21 +146,31 @@ test("possessing someone lets the keyboard walk them around", async ({ page }) =
   await ready(page);
   await page.locator("#tabs button[data-tab=cmd]").click();
   await page.locator("#shelf button", { hasText: "Possess" }).click();
-  // aim at the first human on screen
-  const at = await page.evaluate(() => {
+  // pause so nobody walks away between aiming and clicking
+  await page.evaluate(() => (window as unknown as { __pp: { speed(s: number): void } }).__pp.speed(0));
+  await page.waitForTimeout(400);
+  const box = (await page.locator("#world").boundingBox())!;
+  // aim at the human nearest the middle of the screen
+  const at = await page.evaluate(([w, h]) => {
     const pp = (window as unknown as { __pp: { frame(): { units: Float32Array; count: number }; camera: { x: number; y: number; scale: number } } }).__pp;
     const f = pp.frame();
     const c = pp.camera;
+    let best: { x: number; y: number } | null = null;
+    let bestD = Infinity;
     for (let i = 0; i < f.count; i++) {
       if (f.units[i * 5 + 3] !== 0) continue;
-      return { x: ((f.units[i * 5 + 1]! - c.x) * c.scale) / devicePixelRatio, y: ((f.units[i * 5 + 2]! - 0.3 - c.y) * c.scale) / devicePixelRatio };
+      const x = ((f.units[i * 5 + 1]! - c.x) * c.scale) / devicePixelRatio;
+      const y = ((f.units[i * 5 + 2]! - 0.3 - c.y) * c.scale) / devicePixelRatio;
+      if (x < 20 || y < 20 || x > w - 20 || y > h - 20) continue;
+      const d = Math.hypot(x - w / 2, y - h / 2);
+      if (d < bestD) [best, bestD] = [{ x, y }, d];
     }
-    return null;
-  });
+    return best;
+  }, [box.width, box.height]);
   expect(at).not.toBeNull();
-  const box = (await page.locator("#world").boundingBox())!;
   await page.mouse.click(box.x + at!.x, box.y + at!.y);
   await expect(page.locator("#possess")).toBeVisible();
+  await page.evaluate(() => (window as unknown as { __pp: { speed(s: number): void } }).__pp.speed(1));
   const where = () => page.evaluate(() => (window as unknown as { __pp: { frame(): { possessed: number } } }).__pp.frame().possessed);
   await expect.poll(where).toBeGreaterThan(0);
   const pos = () =>
