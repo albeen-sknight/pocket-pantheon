@@ -11,6 +11,8 @@ export interface Renderer {
   update(world: World, rect: Rect): void;
   draw(camera: Camera, time: number, season: number): void;
   drawSprites(scene: Scene, atlas: Atlas, camera: Camera): void;
+  setOwner(owner: Uint16Array, w: number, h: number): void;
+  setKingdomColors(paletteIndexById: Uint8Array): void;
 }
 
 // Packs one tile into the RGBA layout the terrain shader reads:

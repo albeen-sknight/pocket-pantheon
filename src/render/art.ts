@@ -3,7 +3,7 @@
 // maker. The race figures and buildings are ported from the concept preview.
 import creatures from "../../data/creatures.json";
 import { RACES, type RaceKey } from "../sim/species";
-import type { Draw } from "./sprites";
+import { KEY, type Draw } from "./sprites";
 
 const K1 = "#2b2233";
 const WH = "#f4f0e8";
@@ -24,12 +24,12 @@ export interface Figure {
   long?: boolean; // longer hair
 }
 
-export function raceFigure(race: RaceKey, skin: number, female: boolean): Figure {
+export function raceFigure(race: RaceKey, skin: number, female: boolean, keyed = false): Figure {
   const r = creatures.races[race] as (typeof creatures.races)[RaceKey] & { ears?: boolean; tusks?: boolean; beard?: boolean; helm?: string };
   return {
     skin: r.skin[skin % r.skin.length]!,
     hair: r.hair[skin % r.hair.length],
-    cloth: r.cloth,
+    cloth: keyed ? KEY.base : r.cloth,
     pants: r.pants,
     weapon: female && race !== "dwarf" ? undefined : r.weapon,
     ears: r.ears,
@@ -320,6 +320,67 @@ export const BUILDING_ART: Record<string, { w: number; h: number; draw: (race: R
       R(11, 7, 2, 6, "#6b5a4a");
     };
   } },
+  // Temple, smithy and mine come from the concept preview.
+  temple: { w: 46, h: 40, draw: () => (R, E, P, T) => {
+    R(2, 34, 42, 4, "#c3d3de");
+    [6, 15, 25, 34].forEach((x) => R(x, 19, 4, 15, "#f4f0e8"));
+    R(4, 16, 38, 3, "#dfe9ef");
+    T(23, 5, 22, 11, "#f0d9a0");
+    R(21, 1, 4, 4, GOLD);
+    R(19, 24, 8, 10, "#3a2f55");
+  } },
+  smithy: { w: 40, h: 34, draw: (race) => {
+    const k = LOOK[race];
+    return (R, E, P, T) => {
+      R(29, 0, 5, 9, "#5a5f6b");
+      R(4, 14, 32, 18, "#8a8f9a");
+      T(20, 6, 20, 9, k.roof);
+      R(8, 22, 9, 9, "#f08a2c");
+      R(10, 24, 5, 5, GOLD);
+      R(24, 27, 9, 3, K1);
+      R(25, 24, 5, 3, "#5a5f6b");
+    };
+  } },
+  mine: { w: 42, h: 30, draw: () => (R, E, P) => {
+    E(21, 28, 20, 22, "#8a8f9a");
+    E(14, 12, 8, 5, "#aab0bc");
+    R(14, 18, 14, 12, K1);
+    R(12, 16, 18, 3, WOOD);
+    R(12, 18, 2, 12, WOOD);
+    R(28, 18, 2, 12, WOOD);
+    P(32, 14, "#5cc8e6");
+    P(8, 18, GOLD);
+    P(34, 20, GOLD);
+    R(18, 25, 7, 3, "#6c7482");
+  } },
+  market: { w: 44, h: 30, draw: (race) => {
+    const k = LOOK[race];
+    return (R) => {
+      for (const x of [2, 24]) {
+        R(x, 8, 18, 5, k.roof);
+        R(x, 13, 2, 14, WOOD);
+        R(x + 16, 13, 2, 14, WOOD);
+        R(x + 2, 20, 14, 7, k.trim);
+      }
+      R(6, 17, 4, 3, "#e8c46a");
+      R(12, 17, 3, 3, "#d9453d");
+      R(28, 17, 4, 3, "#5fbf4a");
+      R(34, 17, 4, 3, "#b38d55");
+    };
+  } },
+  library: { w: 42, h: 40, draw: (race) => {
+    const k = LOOK[race];
+    return (R, E, P, T) => {
+      R(4, 16, 34, 22, k.wall);
+      T(21, 2, 20, 15, k.roof);
+      R(18, 26, 6, 12, k.trim);
+      for (const x of [8, 28]) {
+        R(x, 20, 6, 6, "#5cc8e6");
+        R(x + 2, 20, 1, 6, k.trim);
+      }
+      R(19, 8, 4, 4, GOLD);
+    };
+  } },
   site: { w: 40, h: 30, draw: () => (R) => {
     R(2, 26, 36, 3, "#b38d55");
     R(4, 6, 2, 21, WOOD);
@@ -338,6 +399,13 @@ export const BUILDING_ICON: Record<string, (race: RaceKey) => Draw> = {
   lumber: () => (R) => { R(0, 3, 8, 2, WOOD); R(0, 6, 8, 2, WOOD); },
   well: () => (R) => { R(1, 4, 6, 4, "#8a8f9a"); R(2, 5, 4, 1, "#3b78d8"); },
   site: () => (R) => { R(0, 6, 8, 2, "#b38d55"); R(1, 1, 1, 6, WOOD); R(6, 1, 1, 6, WOOD); },
+};
+
+// Grace power effects, 7 x 7.
+export const FX_ICON: Record<string, Draw> = {
+  sparkle: (R) => { R(3, 0, 1, 7, GOLD); R(0, 3, 7, 1, GOLD); R(2, 2, 3, 3, WH); },
+  drop: (R) => { R(3, 0, 1, 2, "#5cc8e6"); R(2, 2, 3, 3, "#5cc8e6"); R(3, 5, 1, 1, "#3b78d8"); },
+  plus: (R) => { R(2, 0, 3, 7, "#5fbf4a"); R(0, 2, 7, 3, "#5fbf4a"); },
 };
 
 // Action icons above heads, 7 x 7.

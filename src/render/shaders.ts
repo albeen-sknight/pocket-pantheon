@@ -31,6 +31,8 @@ uniform uint uTrunkTones;   // its accent is the trunk brown
 uniform uint uRoad[3];      // base, light, dark
 uniform uint uFarm[3];      // soil, young crop, ripe crop
 uniform float uSeason;      // 0 to 1 through the year, ripens crops
+uniform highp usampler2D uOwner;    // kingdom id per tile, 0 for nobody
+uniform usampler2D uKingdoms;       // 256 x 1: palette index of each kingdom id % 256
 
 out vec4 outColor;
 
@@ -89,6 +91,27 @@ float smoothHeight(vec2 p) {
 
 vec4 pal(uint i) {
   return texelFetch(uPalette, ivec2(int(i), 0), 0);
+}
+
+uint ownerAt(ivec2 t) {
+  return texelFetch(uOwner, clamp(t, ivec2(0), uSize - 1), 0).r;
+}
+
+vec4 kingdomColor(uint id) {
+  return pal(texelFetch(uKingdoms, ivec2(int(id % 256u), 0), 0).r);
+}
+
+// Kingdom tint and bright border lines, like the continent view in the preview.
+vec4 territory(vec4 base, ivec2 home, vec2 wp) {
+  uint id = ownerAt(home);
+  if (id == 0u) return base;
+  vec2 f = fract(wp);
+  float edge = uArt >= 32.0 ? 2.0 / uArt : uArt >= 4.0 ? 1.0 / uArt : 1.0;
+  bool border =
+    (f.x < edge && ownerAt(home - ivec2(1, 0)) != id) || (f.x >= 1.0 - edge && ownerAt(home + ivec2(1, 0)) != id) ||
+    (f.y < edge && ownerAt(home - ivec2(0, 1)) != id) || (f.y >= 1.0 - edge && ownerAt(home + ivec2(0, 1)) != id);
+  if (border) return kingdomColor(id);
+  return mix(base, kingdomColor(id), uArt >= 32.0 ? 0.08 : 0.16);
 }
 
 uvec4 tones(uint biome) {
@@ -213,17 +236,17 @@ void main() {
 
   // Farms: rows of crops over dark soil, ripening through the year.
   if ((me.a & FARM) != 0u) {
-    if (uArt == 1.0) { outColor = pal(uFarm[1]); return; }
+    if (uArt == 1.0) { outColor = territory(pal(uFarm[1]), home, wp); return; }
     float row = mod(ap.y, uArt >= 32.0 ? 6.0 : 2.0);
     bool ripe = hash(vec2(home), 9u) * 0.4 + uSeason > 0.8;
     uint crop = ripe ? uFarm[2] : uFarm[1];
-    outColor = pal(row < (uArt >= 32.0 ? 2.0 : 1.0) ? uFarm[0] : crop);
+    outColor = territory(pal(row < (uArt >= 32.0 ? 2.0 : 1.0) ? uFarm[0] : crop), home, wp);
     return;
   }
 
   // Roads: a dirt band through the tile, joining neighbouring road tiles.
   if ((me.a & ROAD) != 0u) {
-    if (uArt == 1.0) { outColor = pal(uRoad[0]); return; }
+    if (uArt == 1.0) { outColor = territory(pal(uRoad[0]), home, wp); return; }
     vec2 f = fract(wp) - 0.5;
     float w = 0.24;
     bool on = max(abs(f.x), abs(f.y)) < w;
@@ -233,7 +256,7 @@ void main() {
     if ((tileAt(home - ivec2(0, 1)).a & ROAD) != 0u && f.y < 0.0 && abs(f.x) < w) on = true;
     if (on) {
       float rv = clump * 0.8 + dither;
-      outColor = pal(rv > 0.45 ? uRoad[1] : rv < -0.45 ? uRoad[2] : uRoad[0]);
+      outColor = territory(pal(rv > 0.45 ? uRoad[1] : rv < -0.45 ? uRoad[2] : uRoad[0]), home, wp);
       return;
     }
   }
@@ -266,6 +289,6 @@ void main() {
       }
     }
   }
-  outColor = pal(c);
+  outColor = territory(pal(c), home, wp);
 }
 `;

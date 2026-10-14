@@ -2,7 +2,10 @@
 // The town planner (PLAN section 10): looks at shortages and decides what to
 // build next, hands out jobs, and sends settlers off when a town fills up.
 import buildingData from "../../data/buildings.json";
+import civ from "../../data/civ.json";
 import config from "../../data/sim.json";
+import { hasTrait, kingdomOfTown } from "../civ/kingdoms";
+import { RES } from "../civ/types";
 import { B } from "../world/biomes";
 import type { BuildingType, Sim, Town } from "./sim";
 import { SPECIES_INFO } from "./species";
@@ -12,6 +15,7 @@ import { ACT, JOB } from "./units";
 const T = config.town;
 const STAGES = [0, T.villagePop, T.townPop, T.cityPop];
 const TREES = new Set([B.forest, B.jungle, B.taiga, B.grove]);
+const ROCK = new Set([B.hills, B.mountains, B.badlands, B.snowPeaks]);
 
 export function planTowns(sim: Sim) {
   const members = membersByTown(sim);
@@ -68,24 +72,21 @@ function updateStage(sim: Sim, town: Town) {
 function assignJobs(sim: Sim, town: Town, people: number[]) {
   const u = sim.units;
   const adults = people.filter((s) => u.age[s]! >= SPECIES_INFO[u.kind[s]!]!.adult);
-  const farms = sim.buildings.filter((b) => b.town === town.id && b.type === "farm" && b.done).length;
-  const want = {
-    farmer: Math.min(adults.length, farms * 2),
-    woodcutter: Math.max(1, Math.ceil(adults.length / (town.wood < 10 ? 3 : 6))),
-  };
-  let farmers = 0;
-  let cutters = 0;
-  for (const s of adults) {
-    if (farmers < want.farmer) {
-      u.job[s] = JOB.farmer;
-      farmers++;
-    } else if (cutters < want.woodcutter) {
-      u.job[s] = JOB.woodcutter;
-      cutters++;
-    } else {
-      u.job[s] = JOB.gatherer;
-    }
+  const has = (type: BuildingType) => sim.buildings.filter((b) => b.town === town.id && b.type === type && b.done).length;
+  // Jobs in priority order: food first, then the trades the town has room for.
+  const plan: [number, number][] = [
+    [JOB.farmer, Math.min(adults.length, has("farm") * 2)],
+    [JOB.woodcutter, Math.max(1, Math.ceil(adults.length / (town.wood < 10 ? 3 : 6)))],
+    [JOB.miner, has("mine") * 2],
+    [JOB.smith, has("smithy")],
+    [JOB.priest, has("temple") * 2],
+    [JOB.scholar, has("library") * 2],
+  ];
+  let i = 0;
+  for (const [job, n] of plan) {
+    for (let k = 0; k < n && i < adults.length; k++) u.job[adults[i++]!] = job;
   }
+  while (i < adults.length) u.job[adults[i++]!] = JOB.gatherer;
 }
 
 // Up to two constructions at a time, picked from the biggest shortage first.
@@ -94,27 +95,38 @@ function build(sim: Sim, town: Town) {
   const pending = sim.buildings.filter((b) => b.town === town.id && !b.done).length;
   if (pending >= 2) return;
   const count = (type: BuildingType) => sim.buildings.filter((b) => b.town === town.id && b.type === type).length;
-  for (const choice of wishes(town, count)) {
-    const cost = buildingData[choice].wood;
-    if (town.wood < cost) continue;
+  for (const choice of wishes(sim, town, count)) {
+    const { wood, stone } = buildingData[choice];
+    if (town.wood < wood || town.res[RES.stone!]! < stone) continue;
     const site = siteFor(sim, town, choice);
     if (!site) continue;
-    town.wood -= cost;
+    town.wood -= wood;
+    town.res[RES.stone!]! -= stone;
     sim.place(choice, site[0], site[1], town.id, town.race);
     return;
   }
 }
 
-function wishes(town: Town, count: (t: BuildingType) => number): BuildingType[] {
+function wishes(sim: Sim, town: Town, count: (t: BuildingType) => number): BuildingType[] {
   const out: BuildingType[] = [];
+  const k = kingdomOfTown(sim, town);
+  const age = k?.age ?? 0;
+  const unlocked = (type: BuildingType) => town.stage >= buildingData[type].stage && age >= buildingData[type].age;
   const farmsWanted = Math.ceil(town.pop / T.farmPerPeople);
   const hungry = town.food < town.pop * 4;
   if (hungry && count("farm") < farmsWanted) out.push("farm");
   if (town.housing - town.pop < 2) out.push("house");
   if (count("farm") < farmsWanted) out.push("farm");
   if (count("lumber") === 0) out.push("lumber");
-  if (town.stage >= 1 && count("well") === 0) out.push("well");
+  if (unlocked("mine") && count("mine") === 0) out.push("mine");
+  if (unlocked("temple") && count("temple") === 0 && (!k || !hasTrait(k, "nomadic"))) out.push("temple");
+  if (k && hasTrait(k, "devout") && unlocked("temple") && count("temple") < 2) out.push("temple");
+  if (unlocked("well") && count("well") === 0) out.push("well");
+  if (unlocked("smithy") && count("smithy") === 0) out.push("smithy");
+  if (unlocked("market") && count("market") === 0) out.push("market");
+  if (unlocked("library") && count("library") === 0) out.push("library");
   if (town.food > town.pop * 3 && town.wood > 20) out.push("house");
+  if (k && hasTrait(k, "builder") && town.wood > 30) out.push("house");
   return out;
 }
 
@@ -127,6 +139,9 @@ function siteFor(sim: Sim, town: Town, type: BuildingType): [number, number] | n
   }
   if (type === "lumber") {
     return sim.findSite(type, cx, cy, 3, 14, (x, y) => near(sim, x, y, 5, (i) => TREES.has(w.biome[i]!)));
+  }
+  if (type === "mine") {
+    return sim.findSite(type, cx, cy, 3, 16, (x, y) => near(sim, x, y, 4, (i) => ROCK.has(w.biome[i]!)));
   }
   return sim.findSite(type, cx, cy, 2, 14);
 }
@@ -181,6 +196,7 @@ function sendSettlers(sim: Sim, town: Town, people: number[]) {
   const band = adults.slice(-T.settleBand);
   if (band.length < T.foundMinPeople) return;
   town.lastSettle = sim.tick;
+  if (town.kingdom) sim.civ.settlements.push({ x: tx, y: ty, kingdom: town.kingdom, until: sim.tick + config.ticksPerYear * 15 });
   for (const s of band) {
     u.town[s] = -1;
     u.home[s] = -1;

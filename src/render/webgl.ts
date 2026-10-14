@@ -48,6 +48,8 @@ class WebGLTerrain implements Renderer {
   private size = { w: 1, h: 1 };
   private sea = 0.4;
   private sprites: SpriteGL | null = null;
+  private owner!: WebGLTexture;
+  private kingdoms!: WebGLTexture;
 
   constructor(private gl: WebGL2RenderingContext, private program: WebGLProgram) {
     gl.useProgram(program);
@@ -58,7 +60,7 @@ class WebGLTerrain implements Renderer {
     gl.enableVertexAttribArray(loc);
     gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
 
-    for (const name of ["uTiles", "uPalette", "uBiomes", "uOffset", "uScale", "uArt", "uViewH", "uSize", "uSea", "uTime", "uFresh", "uFoam", "uTreeTones", "uPineTones", "uTrunkTones", "uRoad", "uFarm", "uSeason"]) {
+    for (const name of ["uTiles", "uPalette", "uBiomes", "uOffset", "uScale", "uArt", "uViewH", "uSize", "uSea", "uTime", "uFresh", "uFoam", "uTreeTones", "uPineTones", "uTrunkTones", "uRoad", "uFarm", "uSeason", "uOwner", "uKingdoms"]) {
       this.uni[name] = gl.getUniformLocation(program, name);
     }
 
@@ -73,6 +75,10 @@ class WebGLTerrain implements Renderer {
     gl.uniform1ui(this.uni.uTreeTones!, B.forest);
     gl.uniform1ui(this.uni.uPineTones!, B.taiga);
     gl.uniform1ui(this.uni.uTrunkTones!, B.savanna);
+    this.owner = this.texture(4, "uOwner");
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.R16UI, 1, 1, 0, gl.RED_INTEGER, gl.UNSIGNED_SHORT, new Uint16Array(1));
+    this.kingdoms = this.texture(5, "uKingdoms");
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8UI, 256, 1, 0, gl.RGBA_INTEGER, gl.UNSIGNED_BYTE, new Uint8Array(256 * 4));
     gl.uniform1uiv(this.uni.uRoad!, ROAD_TONES);
     gl.uniform1uiv(this.uni.uFarm!, FARM_TONES);
   }
@@ -92,6 +98,7 @@ class WebGLTerrain implements Renderer {
 
   setWorld(world: World) {
     const gl = this.gl;
+    this.setOwner(new Uint16Array(world.w * world.h), world.w, world.h);
     this.size = { w: world.w, h: world.h };
     this.sea = world.seaLevel;
     const data = new Uint8Array(world.w * world.h * 4);
@@ -115,6 +122,10 @@ class WebGLTerrain implements Renderer {
     const gl = this.gl;
     const u = this.uni;
     gl.useProgram(this.program);
+    for (const [unit, tex] of [[0, this.tiles], [4, this.owner], [5, this.kingdoms]] as const) {
+      gl.activeTexture(gl.TEXTURE0 + unit);
+      gl.bindTexture(gl.TEXTURE_2D, tex);
+    }
     gl.uniform1f(u.uSeason!, season);
     gl.viewport(0, 0, cam.viewW, cam.viewH);
     gl.uniform2f(u.uOffset!, cam.x, cam.y);
@@ -125,6 +136,25 @@ class WebGLTerrain implements Renderer {
     gl.uniform1f(u.uSea!, this.sea);
     gl.uniform1f(u.uTime!, time);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
+  }
+
+  setOwner(owner: Uint16Array, w: number, h: number) {
+    const gl = this.gl;
+    gl.useProgram(this.program);
+    gl.activeTexture(gl.TEXTURE4);
+    gl.bindTexture(gl.TEXTURE_2D, this.owner);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 2);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.R16UI, w, h, 0, gl.RED_INTEGER, gl.UNSIGNED_SHORT, owner);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+  }
+
+  setKingdomColors(paletteIndexById: Uint8Array) {
+    const gl = this.gl;
+    const data = new Uint8Array(256 * 4);
+    for (let i = 0; i < 256; i++) data[i * 4] = paletteIndexById[i]!;
+    gl.activeTexture(gl.TEXTURE5);
+    gl.bindTexture(gl.TEXTURE_2D, this.kingdoms);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8UI, 256, 1, 0, gl.RGBA_INTEGER, gl.UNSIGNED_BYTE, data);
   }
 
   drawSprites(scene: Scene, atlas: Atlas, cam: Camera) {

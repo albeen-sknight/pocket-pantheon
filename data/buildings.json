@@ -1,7 +1,12 @@
 {
-  "hall": { "size": [2, 2], "wood": 0, "work": 40, "housing": 2, "stage": "camp" },
-  "house": { "size": [2, 2], "wood": 6, "work": 30, "housing": 4, "stage": "camp" },
-  "farm": { "size": [3, 3], "wood": 2, "work": 15, "housing": 0, "stage": "camp" },
-  "lumber": { "size": [2, 2], "wood": 4, "work": 20, "housing": 0, "stage": "camp" },
-  "well": { "size": [1, 1], "wood": 3, "work": 15, "housing": 0, "stage": "village" }
+  "hall": { "size": [2, 2], "wood": 0, "stone": 0, "work": 40, "housing": 2, "stage": 0, "age": 0 },
+  "house": { "size": [2, 2], "wood": 6, "stone": 0, "work": 30, "housing": 4, "stage": 0, "age": 0 },
+  "farm": { "size": [3, 3], "wood": 2, "stone": 0, "work": 15, "housing": 0, "stage": 0, "age": 0 },
+  "lumber": { "size": [2, 2], "wood": 4, "stone": 0, "work": 20, "housing": 0, "stage": 0, "age": 0 },
+  "well": { "size": [1, 1], "wood": 3, "stone": 2, "work": 15, "housing": 0, "stage": 1, "age": 0 },
+  "temple": { "size": [2, 2], "wood": 8, "stone": 8, "work": 50, "housing": 0, "stage": 1, "age": 0 },
+  "mine": { "size": [2, 2], "wood": 6, "stone": 0, "work": 30, "housing": 0, "stage": 1, "age": 0 },
+  "smithy": { "size": [2, 2], "wood": 8, "stone": 6, "work": 40, "housing": 0, "stage": 1, "age": 1 },
+  "market": { "size": [2, 2], "wood": 12, "stone": 4, "work": 40, "housing": 0, "stage": 2, "age": 0 },
+  "library": { "size": [2, 2], "wood": 10, "stone": 10, "work": 50, "housing": 0, "stage": 2, "age": 2 }
 }

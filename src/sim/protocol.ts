@@ -3,9 +3,13 @@
 // Commands go in with the tick they apply to; frames come out with packed
 // unit positions, tile changes and anything the UI needs.
 import buildingData from "../../data/buildings.json";
+import { culture, kingdom, townReligion } from "../civ/kingdoms";
+import { phrase } from "../civ/language";
+import { religion } from "../civ/religion";
+import { subspecies } from "../civ/subspecies";
 import type { World } from "../world/types";
 import { G, GENES, stat, traitList } from "./genes";
-import type { Command, Sim, SimEvent } from "./sim";
+import type { Command, Fx, Sim, SimEvent } from "./sim";
 import type { SimSnapshot } from "./snapshot";
 import { isCiv, SPECIES_INFO, type RaceKey } from "./species";
 import { ACT, NEEDS } from "./units";
@@ -13,6 +17,9 @@ import { ACT, NEEDS } from "./units";
 export const UNIT_STRIDE = 5; // uid, x, y, kind, flags
 
 export const F = { left: 1, child: 2, female: 4, moving: 8 } as const;
+// Bits 8 and 9 hold the skin variant, 10 to 13 the kingdom colour + 1, 14 a blessing.
+export const COLOR_SHIFT = 10;
+export const BLESSED = 1 << 14;
 export const ICON_SHIFT = 4;
 export const ICONS = ["none", "sleep", "love", "work", "build", "pray", "fight", "flee", "eat"] as const;
 
@@ -21,6 +28,7 @@ export type ToWorker =
   | { type: "cmd"; cmd: Command }
   | { type: "speed"; speed: number }
   | { type: "select"; uid: number }
+  | { type: "selectTown"; id: number }
   | { type: "save"; id: number };
 
 export interface BuildingView {
@@ -43,6 +51,46 @@ export interface TownView {
   y: number;
   pop: number;
   stage: number;
+  kingdom: number;
+}
+
+export interface KingdomView {
+  id: number;
+  name: string;
+  color: number;
+  race: number;
+  towns: number;
+  pop: number;
+  age: number;
+  capital: number;
+}
+
+export interface TownDetail {
+  id: number;
+  name: string;
+  race: number;
+  pop: number;
+  stage: number;
+  loyalty: number;
+  food: number;
+  wood: number;
+  res: number[];
+  faith: string;
+  kingdom: {
+    name: string;
+    color: number;
+    ruler: string;
+    capital: string;
+    age: number;
+    research: number;
+    gold: number;
+    traits: number[];
+    faith: string;
+    towns: number;
+    pop: number;
+    words: string;
+    relations: { name: string; opinion: number; state: string }[];
+  } | null;
 }
 
 export interface UnitDetail {
@@ -65,6 +113,16 @@ export interface UnitDetail {
   children: number;
   x: number;
   y: number;
+  kingdom: string;
+  faith: string;
+  subspecies: string;
+  weapon: number;
+  armor: number;
+  quality: number;
+  legend: string;
+  says: string;
+  topic: number;
+  blessed: boolean;
 }
 
 export interface Frame {
@@ -80,11 +138,21 @@ export interface Frame {
   townList?: TownView[];
   events: SimEvent[];
   selected?: UnitDetail | null;
+  kingdoms?: KingdomView[];
+  owner?: Uint16Array;
+  fx: Fx[];
+  town?: TownDetail | null;
 }
 
 export type FromWorker = Frame | { type: "saved"; id: number; snapshot: SimSnapshot };
 
-export function packFrame(sim: Sim, selected: number): Frame {
+export function packFrame(sim: Sim, selected: number, selectedTown = 0): Frame {
+  // Kingdom colour + 1 per town, so clothes can wear the banner colour.
+  const townColor = new Map<number, number>();
+  for (const t of sim.towns) {
+    const k = t.alive ? kingdom(sim, t.kingdom) : undefined;
+    if (k) townColor.set(t.id, k.color + 1);
+  }
   const u = sim.units;
   let n = 0;
   for (let s = 0; s < u.count; s++) if (u.alive[s]) n++;
@@ -99,6 +167,8 @@ export function packFrame(sim: Sim, selected: number): Frame {
     if (u.paths[s]) flags |= F.moving;
     flags |= iconFor(sim, s) << ICON_SHIFT;
     flags |= (u.genes[s * GENES + G.skin]! & 3) << 8;
+    flags |= (townColor.get(u.town[s]!) ?? 0) << COLOR_SHIFT;
+    if (u.blessed[s]! > 0) flags |= BLESSED;
     units[k++] = u.uid[s]!;
     units[k++] = u.x[s]!;
     units[k++] = u.y[s]!;
@@ -125,16 +195,24 @@ export function packFrame(sim: Sim, selected: number): Frame {
     units,
     tiles,
     events: sim.events,
+    fx: sim.fx,
   };
   sim.events = [];
+  sim.fx = [];
+  if (sim.civ.ownerChanged) {
+    sim.civ.ownerChanged = false;
+    frame.owner = sim.civ.owner.slice();
+  }
   if (sim.buildingsChanged || sim.tick % 20 === 0) {
     sim.buildingsChanged = false;
     frame.buildings = sim.buildings.map((b) => ({
       id: b.id, type: b.type, x: b.x, y: b.y, w: b.w, h: b.h, race: b.race, done: b.done,
       progress: Math.min(1, b.progress / buildingData[b.type].work),
     }));
-    frame.townList = sim.towns.filter((tw) => tw.alive).map((tw) => ({ id: tw.id, race: tw.race, name: tw.name, x: tw.x, y: tw.y, pop: tw.pop, stage: tw.stage }));
+    frame.townList = sim.towns.filter((tw) => tw.alive).map((tw) => ({ id: tw.id, race: tw.race, name: tw.name, x: tw.x, y: tw.y, pop: tw.pop, stage: tw.stage, kingdom: tw.kingdom }));
+    frame.kingdoms = sim.civ.kingdoms.filter((k) => k.alive).map((k) => ({ id: k.id, name: k.name, color: k.color, race: k.race, towns: k.towns, pop: k.pop, age: k.age, capital: k.capital }));
   }
+  if (selectedTown) frame.town = townDetail(sim, selectedTown);
   if (selected) frame.selected = detail(sim, selected);
   return frame;
 }
@@ -182,5 +260,72 @@ export function detail(sim: Sim, uid: number): UnitDetail | null {
     children,
     x: u.x[s]!,
     y: u.y[s]!,
+    kingdom: kingdom(sim, sim.town(u.town[s]!)?.kingdom ?? 0)?.name ?? "",
+    faith: religion(sim, u.religion[s]!)?.name ?? "",
+    subspecies: subspecies(sim, u.subspecies[s]!)?.name ?? "",
+    weapon: u.weapon[s]!,
+    armor: u.armor[s]!,
+    quality: u.gearQ[s]!,
+    legend: sim.civ.legends.find((l) => l.owner === uid)?.name ?? "",
+    says: isCiv(u.kind[s]!) ? phrase(sim.cultureFor(u.kind[s]!, u.town[s]!).lang, topicOf(sim, s)) : "",
+    topic: topicOf(sim, s),
+    blessed: u.blessed[s]! > 0,
+  };
+}
+
+// What someone would talk about right now: their most pressing need.
+export const TOPICS = ["hungry", "tired", "scared", "lonely", "faith", "bored", "happy"] as const;
+
+function topicOf(sim: Sim, s: number): number {
+  const u = sim.units;
+  let worst = -1;
+  let level = 0.6;
+  for (let n = 0; n < 6; n++) {
+    const v = u.needs[s * NEEDS + n]!;
+    if (v > level) {
+      level = v;
+      worst = n;
+    }
+  }
+  return worst < 0 ? 6 : worst;
+}
+
+export function townDetail(sim: Sim, id: number): TownDetail | null {
+  const t = sim.town(id);
+  if (!t) return null;
+  const k = kingdom(sim, t.kingdom);
+  const lang = k ? culture(sim, k.culture)!.lang : null;
+  return {
+    id: t.id,
+    name: t.name,
+    race: t.race,
+    pop: t.pop,
+    stage: t.stage,
+    loyalty: Math.round(t.loyalty),
+    food: Math.floor(t.food),
+    wood: Math.floor(t.wood),
+    res: t.res.map((v) => Math.floor(v)),
+    faith: religion(sim, townReligion(sim, t))?.name ?? "",
+    kingdom: k
+      ? {
+          name: k.name,
+          color: k.color,
+          ruler: k.rulerName,
+          capital: sim.town(k.capital)?.name ?? "",
+          age: k.age,
+          research: Math.floor(k.research),
+          gold: Math.floor(k.gold),
+          traits: k.traits,
+          faith: religion(sim, k.religion)?.name ?? "",
+          towns: k.towns,
+          pop: k.pop,
+          words: lang ? lang.syllables.slice(0, 6).join(" ") : "",
+          relations: [...sim.civ.relations.values()]
+            .filter((r) => (r.a === k.id || r.b === k.id) && kingdom(sim, r.a === k.id ? r.b : r.a))
+            .sort((a, b) => Math.abs(b.opinion) - Math.abs(a.opinion))
+            .slice(0, 4)
+            .map((r) => ({ name: kingdom(sim, r.a === k.id ? r.b : r.a)!.name, opinion: Math.round(r.opinion), state: r.state })),
+        }
+      : null,
   };
 }

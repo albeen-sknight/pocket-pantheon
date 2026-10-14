@@ -15,6 +15,7 @@ export class SimHost {
   private sim: Sim | null = null;
   private speed = 1;
   private selected = 0;
+  private selectedTown = 0;
   private timer: ReturnType<typeof setInterval> | null = null;
   private last = 0;
   private debt = 0;
@@ -40,6 +41,10 @@ export class SimHost {
         return;
       case "select":
         this.selected = msg.uid;
+        this.send();
+        return;
+      case "selectTown":
+        this.selectedTown = msg.id;
         this.send();
         return;
       case "save":
@@ -71,7 +76,9 @@ export class SimHost {
 
   private send() {
     if (!this.sim) return;
-    const frame = packFrame(this.sim, this.selected);
-    this.post(frame, [frame.units.buffer as ArrayBuffer, frame.tiles.buffer as ArrayBuffer]);
+    const frame = packFrame(this.sim, this.selected, this.selectedTown);
+    const transfer = [frame.units.buffer as ArrayBuffer, frame.tiles.buffer as ArrayBuffer];
+    if (frame.owner) transfer.push(frame.owner.buffer as ArrayBuffer);
+    this.post(frame, transfer);
   }
 }
