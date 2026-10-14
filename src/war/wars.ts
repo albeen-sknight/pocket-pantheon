@@ -26,6 +26,7 @@ export interface War {
   towns: [number, number]; // towns taken by each side
   startPop: [number, number];
   reason: string;
+  log?: { year: number; a: number; b: number }[]; // battle deaths per year, by side
 }
 
 export function sideOf(w: War, kid: number): 0 | 1 | -1 {

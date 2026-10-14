@@ -100,6 +100,44 @@ dialog .row{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;flex-
 .slots li{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;border:2px solid var(--line);padding:8px}
 .slots b{font-family:'Pixelify Sans',monospace}.slots small{display:block;color:var(--mut)}
 .slots button{min-height:40px;padding:6px 10px;border:2px solid var(--line);background:transparent}
+#stats-btn{font:500 13px 'Pixelify Sans',monospace;min-height:32px;border:2px solid var(--acc);background:transparent;color:var(--acc);padding:0 10px}
+dialog.wide{max-width:min(960px,calc(100vw - 16px));max-height:calc(100vh - 16px);overflow:auto;padding:14px 16px}
+.st-tabs{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px}
+.st-tabs button{font:500 14px 'Pixelify Sans',monospace;min-height:40px;padding:4px 10px;border:2px solid var(--line);background:transparent}
+.st-tabs button[aria-selected="true"]{border-color:var(--acc);background:rgba(242,201,76,.12)}
+.st-controls{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin-bottom:10px}
+.st-controls label{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--mut);white-space:nowrap}
+.st-controls select,.st-controls input{background:var(--bg);border:2px solid var(--line);padding:6px;min-height:40px}
+.st-controls input[type=search]{flex:1;min-width:180px}
+.btn.small{min-height:40px;padding:6px 12px;font-size:14px}
+.st-legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:13px;color:var(--mut);margin-bottom:6px;min-height:18px}
+.st-legend span{display:flex;align-items:center;gap:6px;color:var(--ink)}
+.st-legend i,.chart .tip i{display:inline-block;width:10px;height:10px;flex:none}
+.chart{position:relative;width:100%}
+.chart canvas{display:block;max-width:100%}
+.chart .tip{position:absolute;pointer-events:none;background:var(--bg);border:2px solid var(--line);padding:6px 8px;font-size:13px;min-width:140px;max-width:220px;z-index:2}
+.chart .tip b{display:block;font-family:'Pixelify Sans',monospace;margin-bottom:2px}
+.chart .tip div{display:flex;align-items:center;gap:6px}
+.chart .tip span{flex:1}.chart .tip em{font-style:normal;font-family:'Pixelify Sans',monospace}
+.st-extra h3,.st-leaders h3{font:700 16px 'Pixelify Sans',monospace;margin:14px 0 6px}
+.st-extra p{margin:0 0 6px;color:var(--mut);font-size:14px}
+.st-empty{color:var(--mut)}
+.st-table{max-height:320px;overflow:auto;border:2px solid var(--line)}
+.st-table table{border-collapse:collapse;width:100%;font-size:13px}
+.st-table th,.st-table td{padding:4px 8px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+.st-table th:first-child,.st-table td:first-child{text-align:left}
+.st-table th{position:sticky;top:0;background:var(--panel);color:var(--mut);font-weight:600}
+.st-chron{list-style:none;margin:0;padding:0;max-height:min(460px,60vh);overflow:auto}
+.st-chron li{display:grid;grid-template-columns:auto 1fr auto;gap:2px 10px;align-items:baseline;padding:6px 0;border-bottom:1px solid var(--line);font-size:14px}
+.st-chron small{color:var(--mut);font-family:'Pixelify Sans',monospace;white-space:nowrap}
+.st-chron .why{grid-column:2/4;margin:2px 0 0;color:var(--acc);font-size:13px}
+button.link{background:none;border:0;color:var(--mut);text-decoration:underline;font-size:13px;min-height:32px;padding:0 4px}
+.st-leaders{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:0 18px}
+.st-leaders ol{margin:0;padding-left:22px;font-size:14px}
+.st-leaders li{padding:3px 0}
+.st-leaders li span{display:inline-flex;flex-direction:column;vertical-align:top;width:calc(100% - 60px)}
+.st-leaders small{color:var(--mut)}
+.st-leaders em{float:right;font-style:normal;font-family:'Pixelify Sans',monospace}
 #loading{position:fixed;inset:0;display:grid;place-items:center;background:rgba(10,11,30,.82);z-index:30}
 #loading[hidden]{display:none}
 #loading div{width:min(360px,80vw);text-align:center;font-family:'Pixelify Sans',monospace}
@@ -111,7 +149,7 @@ dialog .row{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;flex-
 @media(prefers-reduced-motion:reduce){#loading .barfill{transition:none}}
 </style></head><body>
 <canvas id="world" data-ia="world_a" role="img"></canvas>
-<div id="top" class="hud"><span id="t-year"></span><span id="t-pop"></span><span id="t-kin"></span><span id="t-seed"></span><span id="t-zoom"></span><span class="spacer"></span><a href="../" data-i="back"></a><div id="lang" role="group" data-ia="lang"><button type="button" data-l="en" aria-pressed="true">EN</button><button type="button" data-l="es" aria-pressed="false">ES</button></div></div>
+<div id="top" class="hud"><span id="t-year"></span><span id="t-pop"></span><span id="t-kin"></span><span id="t-seed"></span><span id="t-zoom"></span><button type="button" id="stats-btn" data-i="st_open" data-it="st_open_a"></button><span class="spacer"></span><a href="../" data-i="back"></a><div id="lang" role="group" data-ia="lang"><button type="button" data-l="en" aria-pressed="true">EN</button><button type="button" data-l="es" aria-pressed="false">ES</button></div></div>
 <nav id="tabs" class="hud" role="tablist"></nav>
 <div id="shelf" class="hud" role="toolbar"></div>
 <aside id="insp" class="hud" aria-live="polite"></aside>
@@ -138,6 +176,7 @@ dialog .row{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;flex-
 
 <dialog id="saves"><h2 data-i="sv_title"></h2><ul class="slots"></ul>
 <div class="row"><button class="btn ghost" type="button" id="sv-close" data-i="close"></button></div></dialog>
+<dialog id="stats" class="wide" data-ia="st_title"></dialog>
 <input type="file" id="import" accept=".ppworld,application/octet-stream" hidden>
 
 <script src="__PP_MAIN__"></script>

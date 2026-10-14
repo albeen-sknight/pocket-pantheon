@@ -147,16 +147,22 @@ export function townCard(d: TownDetail): HTMLElement[] {
   return out;
 }
 
-// Turns a chronicle entry into a sentence in the current language.
+// Turns a chronicle entry into a sentence in the current language, followed
+// by the Director's reason when it had one.
 export function chronicleText(e: Chronicle): string {
+  const text = chronicleLine(e);
+  return e.why ? `${text} ${t(e.why as PlayKey)}` : text;
+}
+
+// The sentence alone, without the reason.
+export function chronicleLine(e: Chronicle): string {
   const vars: Record<string, string | number> = { ...e.text };
   if (typeof vars.race === "number") vars.race = t(("race_pl_" + RACES[vars.race]) as PlayKey);
   else if (typeof vars.race === "string") vars.race = t(("race_pl_" + vars.race) as PlayKey);
   if (typeof vars.age === "string") vars.age = t(("age_" + vars.age) as PlayKey);
   if (typeof vars.what === "string") vars.what = t(("wrath_" + vars.what) as PlayKey).toLowerCase();
   if (typeof vars.tier === "string") vars.tier = t(("gear_" + vars.tier) as PlayKey).toLowerCase();
-  const text = t(("ev_" + e.kind) as PlayKey, vars);
-  return e.why ? `${text} ${t(e.why as PlayKey)}` : text;
+  return t(("ev_" + e.kind) as PlayKey, vars);
 }
 
 export function tileCard(w: World, x: number, y: number): HTMLElement[] {

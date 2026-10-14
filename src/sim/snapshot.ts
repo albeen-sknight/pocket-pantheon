@@ -8,6 +8,7 @@ import type { LiveRelation } from "../civ/diplomacy";
 import type { DirectorMode } from "../director/director";
 import type { Army } from "../war/armies";
 import { rebuildWarPairs, type War } from "../war/wars";
+import type { HistoryJson } from "../stats/history";
 import { Sim, type Building, type Town } from "./sim";
 import { NEEDS, UNIT_ARRAYS } from "./units";
 import type { World } from "../world/types";
@@ -25,6 +26,7 @@ export interface SimSnapshot {
     towns: Town[];
     buildings: Building[];
     civ?: CivJson;
+    history?: HistoryJson;
     chaos?: { storms: Sim["storms"]; nextStorm: number; lastNotable: number; frequency: Sim["disasterFrequency"]; abducted: Sim["abducted"] };
   };
   arrays: Record<string, Arr>;
@@ -69,6 +71,7 @@ export function toSnapshot(sim: Sim): SimSnapshot {
   arrays["haz.kind"] = sim.hazards.kind.slice();
   arrays["haz.timer"] = sim.hazards.timer.slice();
   arrays["haz.before"] = sim.hazards.before.slice();
+  arrays["hist.fixed"] = sim.history.fixed.slice();
   const c = sim.civ;
   const ids = sim.ids();
   return {
@@ -81,6 +84,7 @@ export function toSnapshot(sim: Sim): SimSnapshot {
       names: u.names.slice(0, u.count),
       towns: sim.towns.map((t) => ({ ...t })),
       buildings: sim.buildings.map((b) => ({ ...b })),
+      history: structuredClone(sim.history.toJson()),
       chaos: structuredClone({ storms: sim.storms, nextStorm: sim.nextStorm, lastNotable: sim.lastNotable, frequency: sim.disasterFrequency, abducted: sim.abducted }),
       civ: structuredClone({
         cultures: c.cultures,
@@ -130,6 +134,8 @@ export function fromSnapshot(world: World, seed: number, snap: SimSnapshot): Sim
   if (snap.arrays.owner) sim.civ.owner.set(snap.arrays.owner as Uint16Array);
   if (snap.arrays.wallHp) sim.civ.wallHp.set(snap.arrays.wallHp as Uint8Array);
   restoreHazards(sim, snap);
+  const hist = snap.arrays["hist.fixed"];
+  if (hist && j.history) sim.history.restore(hist as Float32Array, j.history);
   if (j.chaos) {
     sim.storms = j.chaos.storms;
     sim.nextStorm = j.chaos.nextStorm;

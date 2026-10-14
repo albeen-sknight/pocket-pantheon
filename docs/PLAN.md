@@ -1,6 +1,6 @@
 # Pocket Pantheon: Execution Plan
 
-**Owner:** Albeen ([albeen-sknight](https://github.com/albeen-sknight)) · **Repository:** [albeen-sknight/pocket-pantheon](https://github.com/albeen-sknight/pocket-pantheon) · **Live site:** https://albeen-sknight.github.io/pocket-pantheon/ · **Updated:** 13 October 2026 · **Status:** Phases 0 to 5 done, Phase 6 next
+**Owner:** Albeen ([albeen-sknight](https://github.com/albeen-sknight)) · **Repository:** [albeen-sknight/pocket-pantheon](https://github.com/albeen-sknight/pocket-pantheon) · **Live site:** https://albeen-sknight.github.io/pocket-pantheon/ · **Updated:** 14 October 2026 · **Status:** Phases 0 to 6 done, Phase 7 next
 
 Pocket Pantheon is a browser god game. A living pixel world runs itself, and you shape it, command it, bless it or wreck it. This file is the single source of truth for building it. The visual target is the concept preview in [`docs/preview.html`](preview.html).
 
@@ -758,6 +758,15 @@ Every phase ends in a playable build and is merged only when its gate passes.
 - [ ] The build deploys and runs at the live site.
 - [ ] The roadmap list on the landing page is updated.
 - [ ] This plan is updated if anything changed.
+
+**Phase 6 notes (what shipped and what moved)**
+
+- [x] The world is sampled once a year into a 1,000 year ring buffer (`src/stats/history.ts`, numbers in `data/stats.json`): people, births, each race, and deaths by all 9 causes in a fixed table, plus kingdoms, faiths and subspecies as small id and count lists. It is saved with the world.
+- [x] The stats panel opens from the Stats button in the top bar, the World tab, or the H key. Tabs: Population (by race, kingdom, religion or subspecies), Ages (a pyramid split by sex, per race or per living kingdom), Deaths (stacked columns per decade), Wars (a timeline; click a war for its battle log of deaths per year on each side), Kingdoms (a family tree over time; each kingdom hangs under the one it split from, and clicking a living one flies to its capital), Chronicle (search, filters for war, rulers, religion, disasters and the Director, and a "Why did that happen?" button on every entry), and Leaders (top 10 strongest, oldest, most kills, smartest, richest kingdoms, largest armies).
+- [x] Charts are Canvas2D with a hover readout, a legend and direct labels, and every chart has a table view. Kingdoms and faiths wear their map colours and races their race colours. A line keeps its colour for life; past the 4 biggest, the rest fold into "Everyone else". Death causes show the 4 commonest kinds and fold the rest into "Other causes", with all 9 listed in a table under the chart.
+- [x] Save image downloads the chart as a PNG. Export stats downloads the whole report as JSON with the same engine, version and seed header as a save.
+- [x] Gate: a unit test fills 1,000 years with 60 kingdoms, 30 faiths and 40 subspecies every year and uses about 4 MB, well under 30 MB, and the long suite runs a real world for 1,000 years and checks the same.
+- [x] Moved to Phase 7: nothing. The chronicle's "Why did that happen?" button from section 18 shipped here.
 
 **Phase 5 notes (what shipped and what moved)**
 

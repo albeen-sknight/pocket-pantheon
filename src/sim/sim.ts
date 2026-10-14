@@ -18,6 +18,7 @@ import { directorYear, type DirectorMode } from "../director/director";
 import warData from "../../data/war.json";
 import { moraleHit, raiseArmy, updateArmies, type Army, type Stance } from "../war/armies";
 import { buildWalls, towersShoot, unitKingdom } from "../war/defense";
+import { History } from "../stats/history";
 import { NO_INPUT, possessTick, type PossessInput } from "../war/possess";
 import { activeWar, declareWar, endWar, sideOf, yearlyWars, type War } from "../war/wars";
 import { relation } from "../civ/diplomacy";
@@ -161,6 +162,7 @@ export class Sim {
   directorMode: DirectorMode = "normal";
   possessed = 0; // uid the player is driving
   readonly hazards: Hazards;
+  readonly history = new History();
   storms: Storm[] = [];
   nextStorm = 1;
   lastNotable = 0; // tick of the last disaster, for the Director's quiet rule
@@ -246,7 +248,13 @@ export class Sim {
     for (const w of this.civ.wars) {
       if (w.end) continue;
       const side = sideOf(w, kid);
-      if (side !== -1) w.casualties[side]++;
+      if (side === -1) continue;
+      w.casualties[side]++;
+      w.log ??= [];
+      let row = w.log.at(-1);
+      if (row?.year !== this.year) w.log.push((row = { year: this.year, a: 0, b: 0 }));
+      if (side === 0) row.a++;
+      else row.b++;
     }
   }
 
@@ -336,6 +344,7 @@ export class Sim {
     }
     u.hp[slot] = this.maxHp(slot);
     if (isCiv(kind)) u.names[slot] = this.makeName(kind, parents ? u.town[parents[0]]! : -1);
+    if (isCiv(kind) && parents) this.history.onBirth();
     this.speciesCount[kind]!++;
     return slot;
   }
@@ -352,6 +361,7 @@ export class Sim {
     const kind = u.kind[slot]!;
     if (isCiv(kind)) {
       this.events.push({ t: "death", uid: u.uid[slot]!, kind, cause, tick: this.tick, name: u.names[slot]! });
+      this.history.onDeath(cause);
       if (cause === DEATH.battle) this.countCasualty(slot);
       if (u.uid[slot] === this.possessed) this.possessed = 0;
       const graves = this.civ.graves;
@@ -758,6 +768,7 @@ export class Sim {
       yearlyHazards(this);
       naturalEvents(this);
       for (const t of this.towns) if (t.alive) buildWalls(this, t);
+      this.history.sample(this);
     }
   }
 

@@ -5,6 +5,7 @@ import config from "../../data/sim.json";
 import { packFrame, type FromWorker, type ToWorker } from "./protocol";
 import { Sim } from "./sim";
 import { fromSnapshot, toSnapshot } from "./snapshot";
+import { report } from "../stats/history";
 
 const STEP_MS = 1000 / config.ticksPerSecond;
 // Never fall further behind than this many ticks, so a slow device slows the
@@ -49,6 +50,9 @@ export class SimHost {
         return;
       case "save":
         if (this.sim) this.post({ type: "saved", id: msg.id, snapshot: toSnapshot(this.sim) });
+        return;
+      case "stats":
+        if (this.sim) this.post({ type: "stats", id: msg.id, report: report(this.sim) });
         return;
     }
   }

@@ -1,0 +1,33 @@
+{
+  "years": 1000,
+  "topSeries": 4,
+  "leaders": 10,
+  "chronicle": 1500,
+  "pyramidBands": 10,
+  "seriesColors": [
+    "#3b6fd4",
+    "#1f8f4a",
+    "#b06be0",
+    "#d9453d"
+  ],
+  "otherColor": "#6c7482",
+  "raceColors": {
+    "human": "#3b6fd4",
+    "elf": "#5fbf4a",
+    "orc": "#d9453d",
+    "dwarf": "#f2c94c"
+  },
+  "deathColors": [
+    "#3b6fd4",
+    "#1f8f4a",
+    "#b06be0",
+    "#d9453d"
+  ],
+  "deathShown": [
+    "age",
+    "disease",
+    "hunger",
+    "battle"
+  ],
+  "refreshMs": 2000
+}

@@ -175,6 +175,7 @@ export function updateKingdoms(sim: Sim) {
     k.pop = mine.reduce((n, t) => n + t.pop, 0);
     if (!mine.length) {
       k.alive = false;
+      k.fell = sim.tick;
       sim.chronicle("fallen", { name: k.name });
       continue;
     }
