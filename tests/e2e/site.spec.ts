@@ -151,7 +151,7 @@ test("possessing someone lets the keyboard walk them around", async ({ page }) =
   await page.waitForTimeout(400);
   const box = (await page.locator("#world").boundingBox())!;
   // aim at the human nearest the middle of the screen
-  const at = await page.evaluate(([w, h]) => {
+  const at = await page.evaluate(({ w, h }) => {
     const pp = (window as unknown as { __pp: { frame(): { units: Float32Array; count: number }; camera: { x: number; y: number; scale: number } } }).__pp;
     const f = pp.frame();
     const c = pp.camera;
@@ -166,7 +166,7 @@ test("possessing someone lets the keyboard walk them around", async ({ page }) =
       if (d < bestD) [best, bestD] = [{ x, y }, d];
     }
     return best;
-  }, [box.width, box.height]);
+  }, { w: box.width, h: box.height });
   expect(at).not.toBeNull();
   await page.mouse.click(box.x + at!.x, box.y + at!.y);
   await expect(page.locator("#possess")).toBeVisible();
