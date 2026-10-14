@@ -46,7 +46,7 @@ test("the game builds a world and switches language in place", async ({ page }) 
   await ready(page);
 
   await expect(page.locator("#t-seed")).toHaveText("Seed 4242");
-  await expect(page.locator("#tabs button[data-tab=wrath]")).toBeDisabled();
+  await expect(page.locator("#tabs button:disabled")).toHaveCount(0);
   await page.getByRole("button", { name: "ES" }).click();
   await expect(page.locator("#t-seed")).toHaveText("Semilla 4242");
   await expect(page.locator("#t-year")).toHaveText(/^Año [0-9]+$/);
@@ -179,4 +179,17 @@ test("possessing someone lets the keyboard walk them around", async ({ page }) =
   await page.keyboard.press("Escape");
   await expect(page.locator("#possess")).toBeHidden();
   await expect.poll(where).toBe(0);
+});
+
+test("a Wrath power lands on the map", async ({ page }) => {
+  await page.goto("./play/?seed=4242&size=small&races=");
+  await ready(page);
+  await page.locator("#tabs button[data-tab=wrath]").click();
+  await page.locator("#shelf button", { hasText: "Meteor" }).click();
+  const box = (await page.locator("#world").boundingBox())!;
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  // the falling rock shows up as a storm in the very next frames
+  await expect
+    .poll(() => page.evaluate(() => (window as unknown as { __pp: { frame(): { storms: unknown[] } } }).__pp.frame().storms.length))
+    .toBeGreaterThan(0);
 });
