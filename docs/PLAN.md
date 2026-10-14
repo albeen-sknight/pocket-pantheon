@@ -769,6 +769,7 @@ Every phase ends in a playable build and is merged only when its gate passes.
 - [x] Screen shake and flashes on the biggest hits, skipped when the system asks for reduced motion. A settings toggle arrives in Phase 7.
 - [x] Every power queues its effect in the tick it lands, and that tick's frame carries it to the screen: a unit test applies all 21 Wrath and Grace powers and checks each one in well under 100 ms.
 - [x] Loyalty now also falls by 3 for every town a kingdom holds past its fourth, so big kingdoms split more readily.
+- [x] The map draws at most 2 canvas pixels per screen pixel and steps down to as low as half while the game runs under 20 fps, keeping the same tiles on screen. Software WebGL at phone size went from 4 fps to over 30.
 - [x] Moved to Phase 7: siege engines (rams and catapults), which belong with the balance pass. The Ancient Guardian waking when a world wonder is attacked waits for world wonders, also Phase 7.
 
 **Phase 4 notes (what shipped and what moved)**

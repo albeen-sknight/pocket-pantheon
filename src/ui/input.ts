@@ -13,7 +13,8 @@ export interface MapHandlers {
 }
 
 export function bindMapInput(canvas: HTMLCanvasElement, cam: Camera, h: MapHandlers) {
-  const dpr = () => window.devicePixelRatio || 1;
+  // Canvas pixels per CSS pixel; the app may draw below the device ratio.
+  const dpr = () => canvas.width / (canvas.getBoundingClientRect().width || 1);
   const pointers = new Map<number, { x: number; y: number }>();
   let mode: "none" | "tool" | "pan" | "pinch" = "none";
   let pinchDist = 0;

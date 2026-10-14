@@ -41,6 +41,15 @@ export class Camera {
     this.fitted = true;
   }
 
+  // The canvas changed resolution by f: keep the same tiles around mid on screen.
+  rescale(f: number, mid: [number, number]) {
+    if (this.fitted) return;
+    const want = this.scale * f;
+    this.scale = this.target = ZOOM_STOPS.reduce((a, b) => (Math.abs(Math.log(b / want)) < Math.abs(Math.log(a / want)) ? b : a));
+    this.centerOn(mid[0], mid[1]);
+    this.snap();
+  }
+
   centerOn(tx: number, ty: number) {
     this.x = tx - this.viewW / this.scale / 2;
     this.y = ty - this.viewH / this.scale / 2;

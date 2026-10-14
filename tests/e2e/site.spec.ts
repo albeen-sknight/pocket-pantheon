@@ -5,6 +5,7 @@ type Hooks = {
   world(): { w: number; h: number; height: Float32Array; options: { seed: number } } | null;
   frame(): { pop: number; year: number } | null;
   renderer: string;
+  ratio(): number;
 };
 
 // The isolation service worker reloads the page once on a first visit, so
@@ -63,7 +64,7 @@ test("raise brush changes the land under the cursor", async ({ page }) => {
   const read = () =>
     page.evaluate(({ x, y }) => {
       const pp = (window as unknown as { __pp: Hooks & { camera: { toWorld(x: number, y: number): [number, number] } } }).__pp;
-      const [tx, ty] = pp.camera.toWorld(x * devicePixelRatio, y * devicePixelRatio);
+      const [tx, ty] = pp.camera.toWorld(x * pp.ratio(), y * pp.ratio());
       const w = pp.world()!;
       return w.height[Math.floor(ty) * w.w + Math.floor(tx)]!;
     }, at);
@@ -108,14 +109,14 @@ test("spawning people from the Life tab adds to the population", async ({ page }
   await page.locator("#shelf button", { hasText: "Human" }).click();
   // drop them on the first land tile near the middle of the view
   const at = await page.evaluate(() => {
-    const pp = (window as unknown as { __pp: Hooks & { camera: { x: number; y: number; scale: number } } }).__pp;
+    const pp = (window as unknown as { __pp: Hooks & { camera: { x: number; y: number; scale: number }; ratio(): number } }).__pp;
     const w = pp.world()!;
     const c = pp.camera;
     for (let r = 0; r < 60; r++) {
       for (let a = 0; a < 16; a++) {
         const tx = Math.floor(w.w / 2 + Math.cos(a) * r);
         const ty = Math.floor(w.h / 2 + Math.sin(a) * r);
-        if (w.height[ty * w.w + tx]! > 0.45) return { x: ((tx + 0.5 - c.x) * c.scale) / devicePixelRatio, y: ((ty + 0.5 - c.y) * c.scale) / devicePixelRatio };
+        if (w.height[ty * w.w + tx]! > 0.45) return { x: ((tx + 0.5 - c.x) * c.scale) / pp.ratio(), y: ((ty + 0.5 - c.y) * c.scale) / pp.ratio() };
       }
     }
     return null;
@@ -152,15 +153,15 @@ test("possessing someone lets the keyboard walk them around", async ({ page }) =
   const box = (await page.locator("#world").boundingBox())!;
   // aim at the human nearest the middle of the screen
   const at = await page.evaluate(({ w, h }) => {
-    const pp = (window as unknown as { __pp: { frame(): { units: Float32Array; count: number }; camera: { x: number; y: number; scale: number } } }).__pp;
+    const pp = (window as unknown as { __pp: { frame(): { units: Float32Array; count: number }; camera: { x: number; y: number; scale: number }; ratio(): number } }).__pp;
     const f = pp.frame();
     const c = pp.camera;
     let best: { x: number; y: number } | null = null;
     let bestD = Infinity;
     for (let i = 0; i < f.count; i++) {
       if (f.units[i * 5 + 3] !== 0) continue;
-      const x = ((f.units[i * 5 + 1]! - c.x) * c.scale) / devicePixelRatio;
-      const y = ((f.units[i * 5 + 2]! - 0.3 - c.y) * c.scale) / devicePixelRatio;
+      const x = ((f.units[i * 5 + 1]! - c.x) * c.scale) / pp.ratio();
+      const y = ((f.units[i * 5 + 2]! - 0.3 - c.y) * c.scale) / pp.ratio();
       if (x < 20 || y < 20 || x > w - 20 || y > h - 20) continue;
       const d = Math.hypot(x - w / 2, y - h / 2);
       if (d < bestD) [best, bestD] = [{ x, y }, d];

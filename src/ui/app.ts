@@ -59,6 +59,7 @@ const CMD_ICONS: Record<CmdTool, string> = {
 };
 const CONTINUOUS: Tool[] = ["raise", "lower", "flatten", "smooth", "paint"];
 const BRUSH = config.brush;
+const RES = config.pixelRatio;
 const SPEEDS = simConfig.speeds;
 
 export class App {
@@ -101,6 +102,10 @@ export class App {
   private following = false;
   private speed = 1;
   private frames: number[] = [];
+  // Canvas pixels per CSS pixel. Starts at the device ratio (capped) and steps
+  // down while frames are slow, so weak phones draw fewer pixels instead.
+  private res = Math.min(RES.max, window.devicePixelRatio || 1);
+  private resCheck = performance.now() + RES.checkMs * 2;
   private genMs = 0;
   private mini = $<HTMLCanvasElement>("#mini canvas");
   private miniImg: ImageData | null = null;
@@ -328,7 +333,7 @@ export class App {
       box.hidden = true;
       return;
     }
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = this.res;
     box.hidden = false;
     box.replaceChildren(el("b", { textContent: d.says }), el("small", { textContent: t(("say_" + TOPICS[d.topic]) as PlayKey) }));
     box.style.left = ((at[0] - this.cam.x) * this.cam.scale) / dpr + "px";
@@ -341,6 +346,7 @@ export class App {
     const dt = Math.min(0.1, (now - last) / 1000);
     this.frames.push(now);
     while (this.frames.length && this.frames[0]! < now - 1000) this.frames.shift();
+    this.adaptResolution(now);
 
     if (this.following && this.selected) {
       const at = this.view.position(this.selected);
@@ -368,11 +374,22 @@ export class App {
     requestAnimationFrame((next) => this.frame(next, now));
   }
 
+  private adaptResolution(now: number) {
+    if (now < this.resCheck || document.hidden) return;
+    this.resCheck = now + RES.checkMs;
+    if (!this.world || this.frames.length >= RES.slowFps || this.res <= RES.min) return;
+    this.res = Math.max(RES.min, this.res * RES.step);
+    this.resize();
+  }
+
   private resize() {
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = this.res;
+    const f = Math.round(innerWidth * dpr) / (this.canvas.width || 1);
+    const mid = this.cam.toWorld(this.cam.viewW / 2, this.cam.viewH / 2);
     this.canvas.width = Math.round(innerWidth * dpr);
     this.canvas.height = Math.round(innerHeight * dpr);
     this.cam.setView(this.canvas.width, this.canvas.height);
+    if (Math.abs(f - 1) > 0.01) this.cam.rescale(f, mid);
     // The top bar wraps on narrow screens, so side panels sit under its real height.
     const top = $("#top").getBoundingClientRect();
     document.documentElement.style.setProperty("--below-top", Math.ceil(top.bottom + 8) + "px");
@@ -481,7 +498,7 @@ export class App {
       this.brushRing.style.display = "none";
       return;
     }
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = this.res;
     const size = ((this.brush - 0.5) * 2 * this.cam.scale) / dpr;
     Object.assign(this.brushRing.style, {
       display: "block",
@@ -507,7 +524,7 @@ export class App {
     }
     const cx = this.cam.viewW / 2;
     const cy = this.cam.viewH / 2;
-    const step = 80 * (window.devicePixelRatio || 1);
+    const step = 80 * this.res;
     const pan = (x: number, y: number) => () => {
       this.following = false;
       this.cam.pan(x, y);
@@ -1085,6 +1102,7 @@ export class App {
       frame: () => this.view.frame,
       generate: (o: Partial<WorldOptions>, races?: RaceKey[]) => this.generate({ ...defaultOptions(randomSeed()), ...o }, races),
       speed: (s: number) => this.setSpeed(s),
+      ratio: () => this.res,
       command: (c: Parameters<SimClient["command"]>[0]) => this.sim.command(c),
       select: (uid: number) => this.select(uid),
       fmt,
