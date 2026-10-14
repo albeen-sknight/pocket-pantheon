@@ -33,6 +33,7 @@ const SURFACE = "#1d2044";
 const FONT = "13px Outfit, system-ui, sans-serif";
 const TITLE_FONT = "700 15px 'Pixelify Sans', monospace";
 const ROW = 22;
+const DOTS_UNDER = 12; // years shown before points get dots
 
 interface Box {
   x: number;
@@ -157,6 +158,8 @@ export class Chart {
       c.beginPath();
       line.values.forEach((v, i) => (i ? c.lineTo(x(i), y(v)) : c.moveTo(x(i), y(v))));
       c.stroke();
+      // with only a few years a line is too short to see, so mark each point
+      if (n <= DOTS_UNDER) line.values.forEach((v, i) => dot(c, x(i), y(v), line.color));
     }
     // direct labels at the line ends, nudged apart so they never overlap
     if (labels && n) {

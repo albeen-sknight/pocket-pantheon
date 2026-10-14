@@ -4,6 +4,7 @@ import { build } from "esbuild";
 import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { basename } from "node:path";
 import { fileURLToPath } from "node:url";
+import { writeIcons } from "./icons.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const out = root + "dist/";
@@ -52,6 +53,18 @@ export async function buildSite({ dev = false } = {}) {
   const [en, es] = await Promise.all([readText("en"), readText("es")]);
   await buildLanding(en, es);
   await buildGame(dev);
+  const iconBuild = await build({
+    entryPoints: [root + "src/render/appIcon.ts"],
+    bundle: true,
+    format: "esm",
+    platform: "node",
+    write: false,
+    logLevel: "warning",
+  });
+  const iconModule = await import(`data:text/javascript;base64,${Buffer.from(iconBuild.outputFiles[0].text).toString("base64")}`);
+  await writeIcons(out, iconModule.appIcon());
+  await cp(root + "site/manifest.webmanifest", out + "manifest.webmanifest");
+  await cp(root + "site/share-preview.png", out + "share-preview.png");
   await writeFile(out + ".nojekyll", "");
 }
 

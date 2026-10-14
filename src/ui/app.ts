@@ -18,7 +18,7 @@ import { createWebGLRenderer } from "../render/webgl";
 import { makeMeta } from "../save/format";
 import { exportFile, importFile, listSlots, loadSlot, saveSlot, type Loaded, type SlotId } from "../save/store";
 import { SimClient } from "../sim/client";
-import { TOPICS, type Frame } from "../sim/protocol";
+import { TOPICS, type BuildingView, type Frame } from "../sim/protocol";
 import type { Fx } from "../sim/sim";
 import type { SimSnapshot } from "../sim/snapshot";
 import { RACES, SPECIES, SPECIES_INFO, TRAITS, type RaceKey } from "../sim/species";
@@ -104,6 +104,8 @@ export class App {
   private following = false;
   private speed = 1;
   private frames: number[] = [];
+  private races: RaceKey[] = [...RACES];
+  private persistAsked = false;
   private stats = new StatsPanel({
     ask: () => this.sim.stats(),
     exportName: () => `pocket-pantheon-${this.world?.options.seed ?? 0}`,
@@ -116,6 +118,8 @@ export class App {
   private resCheck = performance.now() + RES.checkMs * 2;
   private genMs = 0;
   private mini = $<HTMLCanvasElement>("#mini canvas");
+  private construction = $("#construction");
+  private constructionSites = new Map<number, HTMLButtonElement>();
   private miniImg: ImageData | null = null;
   private brushRing = el("div");
   private lastHover = { x: -1, y: -1 };
@@ -176,13 +180,20 @@ export class App {
     requestAnimationFrame((now) => this.frame(now, now));
 
     const params = new URLSearchParams(location.search);
-    const fromUrl = params.has("seed");
-    const resumed = fromUrl ? null : await loadSlot("auto").catch(() => null);
+    const seed = seedFromUrl(params.get("seed"));
+    // A shared link carries only a seed: build it and offer the New World screen.
+    const shared = !!seed && !["size", "races", "layout"].some((k) => params.has(k));
+    const resumed = seed !== undefined ? null : await loadSlot("auto").catch(() => null);
     if (resumed) {
       this.load(resumed);
       toast(t("resumed"));
     } else {
-      await this.generate(this.optionsFromUrl(params), this.racesFromUrl(params));
+      await this.generate(this.optionsFromUrl(params, seed), this.racesFromUrl(params));
+    }
+    if (shared) this.openNewWorld(seed);
+    if (seed === null) {
+      this.openNewWorld();
+      $("#nw-seed-error").hidden = false;
     }
     window.__pp = this.debug();
   }
@@ -198,8 +209,8 @@ export class App {
     return createCanvasRenderer(fresh)!;
   }
 
-  private optionsFromUrl(p: URLSearchParams): WorldOptions {
-    const o = defaultOptions(Number(p.get("seed")) || randomSeed());
+  private optionsFromUrl(p: URLSearchParams, seed: number | null | undefined): WorldOptions {
+    const o = defaultOptions(seed || randomSeed());
     const size = p.get("size");
     if (size && size in config.sizes) o.size = size as SizeKey;
     const layout = p.get("layout");
@@ -216,6 +227,7 @@ export class App {
   // World lifecycle
 
   async generate(options: WorldOptions, races: RaceKey[] = [...RACES]) {
+    this.races = races;
     const box = $("#loading");
     const bar = $(".barfill", box);
     const stage = $(".stage", box);
@@ -381,6 +393,7 @@ export class App {
       this.scene.build(this.cam, this.view.units(now), this.view.count, this.view.buildings, this.view.towns, this.selected, now / 1000, this.fx, this.view.frame?.armies ?? [], this.cmd.army, this.view.frame?.storms ?? []);
       this.renderer.drawSprites(this.scene, this.sprites.atlas, this.cam);
     }
+    this.updateConstruction();
     if (this.miniDirty) this.drawMinimap();
     requestAnimationFrame((next) => this.frame(next, now));
   }
@@ -616,6 +629,62 @@ export class App {
     $("#t-year").textContent = t("year", { n: f?.year ?? 0 });
     $("#t-pop").textContent = t("pop", { n: f?.pop ?? 0 });
     $("#t-kin").textContent = t("kin", { n: this.kingdomCount });
+    this.updateTitle();
+  }
+
+  private updateTitle() {
+    const title = $<HTMLDialogElement>("#newworld").open ? t("title_new") : t("title_year", { n: this.view.frame?.year ?? 0 });
+    if (document.title !== title) document.title = title;
+  }
+
+  private updateConstruction() {
+    if (!this.world || this.cam.scale < 8) {
+      this.constructionSites.forEach((site) => (site.hidden = true));
+      return;
+    }
+    const rect = this.canvas.getBoundingClientRect();
+    const visible = new Set<number>();
+    for (const building of this.view.buildings) {
+      if (building.done) continue;
+      visible.add(building.id);
+      const site = this.constructionSites.get(building.id) ?? this.makeConstructionSite(building);
+      const percent = Math.round(building.progress * 100);
+      const name = t((building.type + "_n") as PlayKey);
+      const label = t("build_progress", { name, pct: percent });
+      site.setAttribute("aria-label", label);
+      site.querySelector<HTMLElement>(".tip")!.textContent = label;
+      site.querySelector<HTMLElement>(".bar i")!.style.width = `${percent}%`;
+      const x = rect.left + ((building.x + building.w / 2 - this.cam.x) * this.cam.scale) / this.res;
+      const y = rect.top + ((building.y - this.cam.y) * this.cam.scale) / this.res - 18;
+      const width = Math.max(44, Math.min(96, (building.w * this.cam.scale) / this.res));
+      Object.assign(site.style, { left: `${x}px`, top: `${y}px`, width: `${width}px` });
+      site.hidden = x < rect.left - width || x > rect.right + width || y < rect.top - 30 || y > rect.bottom;
+    }
+    for (const [id, site] of this.constructionSites) {
+      if (visible.has(id)) continue;
+      site.remove();
+      this.constructionSites.delete(id);
+    }
+  }
+
+  private makeConstructionSite(building: BuildingView) {
+    const site = el("button", { type: "button", className: "site-progress" });
+    site.id = `site-progress-${building.id}`;
+    site.setAttribute("aria-describedby", `${site.id}-tip`);
+    site.setAttribute("aria-expanded", "false");
+    const bar = el("span", { className: "bar" }, el("i"));
+    const tip = el("span", { className: "tip" });
+    tip.id = `${site.id}-tip`;
+    tip.setAttribute("role", "tooltip");
+    site.append(bar, tip);
+    site.onclick = () => {
+      const open = site.dataset.open !== "true";
+      site.dataset.open = String(open);
+      site.setAttribute("aria-expanded", String(open));
+    };
+    this.construction.append(site);
+    this.constructionSites.set(building.id, site);
+    return site;
   }
 
   private buildTabs() {
@@ -772,6 +841,10 @@ export class App {
           this.iconButton("new", "w_new", "tip_new", () => this.openNewWorld()),
           this.iconButton("saves", "w_saves", "tip_saves", () => this.openSaves()),
           this.iconButton("stats", "st_open", "st_open_a", () => void this.stats.open()),
+          el("span", { className: "sep" }),
+          el("span", { className: "seed", id: "w-seed", textContent: this.world ? t("seed", { n: String(this.world.options.seed) }) : "" }),
+          this.iconButton("share", "w_share", "tip_share", () => this.shareSeed()),
+          this.iconButton("restart", "w_restart", "tip_restart", () => void this.restartWorld()),
           this.iconButton("export", "w_export", "tip_export", () => this.exportWorld()),
           this.iconButton("import", "w_import", "tip_import", () => $<HTMLInputElement>("#import").click()),
           this.iconButton("fit", "w_fit", "tip_fit", () => {
@@ -960,6 +1033,8 @@ export class App {
     const w = this.world;
     this.updateTopBar();
     $("#t-seed").textContent = w ? t("seed", { n: String(w.options.seed) }) : "";
+    const shelfSeed = document.querySelector("#w-seed");
+    if (shelfSeed) shelfSeed.textContent = $("#t-seed").textContent;
     this.updateZoomLabel();
     const label = document.querySelector("#brush-label");
     if (label) label.textContent = t("brush", { n: this.brush });
@@ -992,6 +1067,7 @@ export class App {
       races.append(el("label", { htmlFor: box.id }, box, el("span", { textContent: kindName(k) })));
     });
     dlg.addEventListener("close", () => {
+      this.updateTitle();
       if (dlg.returnValue !== "go") return;
       const num = (id: string) => Number($<HTMLInputElement>(id).value);
       const chosen = [...races.querySelectorAll<HTMLInputElement>("input:checked")].map((i) => i.value as RaceKey);
@@ -1010,15 +1086,16 @@ export class App {
     $<HTMLInputElement>("#import").onchange = (e) => this.importWorld(e);
   }
 
-  private openNewWorld() {
+  private openNewWorld(seed?: number) {
     const o = this.world?.options ?? defaultOptions(randomSeed());
+    $("#nw-seed-error").hidden = true;
     const size = $<HTMLSelectElement>("#nw-size");
     const layout = $<HTMLSelectElement>("#nw-layout");
     size.replaceChildren(...Object.keys(config.sizes).map((k) => el("option", { value: k }, txt(("size_" + k) as PlayKey))));
     layout.replaceChildren(...config.layouts.map((k) => el("option", { value: k }, txt(("layout_" + k) as PlayKey))));
     size.value = o.size;
     layout.value = o.layout;
-    $<HTMLInputElement>("#nw-seed").value = String(randomSeed());
+    $<HTMLInputElement>("#nw-seed").value = String(seed ?? randomSeed());
     const set = (id: string, v: number) => {
       $<HTMLInputElement>(id).value = String(v);
       $(`output[for=${id.slice(1)}]`).textContent = String(v);
@@ -1029,6 +1106,38 @@ export class App {
     set("#nw-magic", o.magic);
     $("#nw-races").querySelectorAll("span").forEach((s, k) => (s.textContent = kindName(k)));
     $<HTMLDialogElement>("#newworld").showModal();
+    this.updateTitle();
+  }
+
+  private async shareSeed() {
+    if (!this.world) return;
+    const url = `${location.origin}${location.pathname}?seed=${this.world.options.seed}`;
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error("clipboard unavailable");
+      await navigator.clipboard.writeText(url);
+      toast(t("share_done", { url }));
+    } catch {
+      toast(t("share_fail", { url }));
+    }
+  }
+
+  private async restartWorld() {
+    if (!this.world) return;
+    const options = { ...this.world.options };
+    if (await confirmBox(t("restart_title"), t("restart_body", { n: options.seed }), t("restart_go"))) await this.generate(options, this.races);
+  }
+
+  // Asks the browser once to keep saves through storage clean ups.
+  private async keepSaves() {
+    if (this.persistAsked) return;
+    this.persistAsked = true;
+    try {
+      if (localStorage.getItem(PERSIST_KEY)) return;
+      localStorage.setItem(PERSIST_KEY, "1");
+      await navigator.storage?.persist?.();
+    } catch {
+      // refused or unavailable: saves still work, the browser just may clear them
+    }
   }
 
   private async openSaves() {
@@ -1062,6 +1171,7 @@ export class App {
       const snap = await this.snapshot();
       await saveSlot(slot, this.world, t("sv_slot", { n: slot }), this.view.frame?.year ?? 0, snap);
       toast(t("sv_saved", { n: slot }));
+      void this.keepSaves();
       await this.openSaves();
     } catch {
       toast(t("sv_fail"));
@@ -1106,7 +1216,8 @@ export class App {
     const save = async () => {
       if (!this.world || !this.view.frame) return;
       const snap = await this.snapshot();
-      saveSlot("auto", this.world, "auto", this.view.frame.year, snap).catch(() => {});
+      const saved = await saveSlot("auto", this.world, "auto", this.view.frame.year, snap).catch(() => null);
+      if (saved) void this.keepSaves();
     };
     setInterval(save, config.autosaveSeconds * 1000);
     document.addEventListener("visibilitychange", () => document.hidden && void save());
@@ -1146,4 +1257,25 @@ declare global {
   interface Window {
     __pp?: unknown;
   }
+}
+
+const PERSIST_KEY = "pp.persistAsked";
+
+// undefined: no seed in the link; null: a seed that isn't a whole number from 1 to 999999.
+function seedFromUrl(raw: string | null): number | null | undefined {
+  if (raw === null) return undefined;
+  if (!/^[0-9]{1,6}$/.test(raw.trim())) return null;
+  const n = Number(raw);
+  return n >= 1 ? n : null;
+}
+
+// A small yes or no dialog. Resolves true only on the confirm button.
+function confirmBox(title: string, body: string, yes: string): Promise<boolean> {
+  const dlg = $<HTMLDialogElement>("#confirm");
+  $("h2", dlg).textContent = title;
+  $("p", dlg).textContent = body;
+  $<HTMLButtonElement>("button[value=ok]", dlg).textContent = yes;
+  dlg.returnValue = "";
+  dlg.showModal();
+  return new Promise((resolve) => dlg.addEventListener("close", () => resolve(dlg.returnValue === "ok"), { once: true }));
 }

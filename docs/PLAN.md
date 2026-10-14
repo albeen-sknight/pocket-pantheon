@@ -1,6 +1,6 @@
 # Pocket Pantheon: Execution Plan
 
-**Owner:** Albeen ([albeen-sknight](https://github.com/albeen-sknight)) · **Repository:** [albeen-sknight/pocket-pantheon](https://github.com/albeen-sknight/pocket-pantheon) · **Live site:** https://albeen-sknight.github.io/pocket-pantheon/ · **Updated:** 14 October 2026 · **Status:** Phases 0 to 6 done, Phase 7 next
+**Owner:** Albeen ([albeen-sknight](https://github.com/albeen-sknight)) · **Repository:** [albeen-sknight/pocket-pantheon](https://github.com/albeen-sknight/pocket-pantheon) · **Live site:** https://albeen-sknight.github.io/pocket-pantheon/ · **Updated:** 14 October 2026 · **Status:** Phases 0 to 6 done, Phase 7 in progress
 
 Pocket Pantheon is a browser god game. A living pixel world runs itself, and you shape it, command it, bless it or wreck it. This file is the single source of truth for building it. The visual target is the concept preview in [`docs/preview.html`](preview.html).
 
@@ -748,6 +748,18 @@ Every phase ends in a playable build and is merged only when its gate passes.
 | 5 Chaos | Disasters, monsters, Clawzilla, UFOs, zombies, nukes | Every power shows its effect within 100 ms |
 | 6 Data | Charts, pyramids, war history, death stats, leaderboards, family tree | 1,000 years of history fit in 30 MB |
 | 7 Polish | Tutorial, Codex, achievements, sound, phone controls, balance, offline single file | 5,000 units at 60 fps on a mid range laptop, and every done item in section 1 passes |
+
+**Phase 7 progress, 14 October 2026**
+
+- [x] Program generated art exports the SVG favicon, 32 pixel icon, 180 pixel Apple touch icon, and 192 and 512 pixel install icons.
+- [x] The web app manifest sets the game name, colors, install icons, and play screen.
+- [x] Both pages point to a real 1,200 by 630 game image for share previews.
+- [x] Construction sites show localized progress bars and a name and progress tooltip.
+- [x] Shared seed links open the New World screen. Invalid seeds show an error after the world loads.
+- [x] Restart keeps the current seed and settings, and asks before discarding progress.
+- [ ] The current checkout does not contain the tutorial, Codex, achievements, sound system, phone controls, balance bot, or offline single file listed for this phase.
+- [ ] The 5,000 unit performance target, full Phase 7 device matrix, and all section 1 acceptance checks still need verification.
+- [ ] Keep the landing roadmap in progress until the remaining features and the Phase 7 gate pass.
 
 **Every gate also requires**
 

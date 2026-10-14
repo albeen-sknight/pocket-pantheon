@@ -3,7 +3,11 @@
 <html lang="en"><head><meta charset="utf-8">
 <meta name="generator" content="PocketPantheon-Core">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#13152b">
+<meta property="og:type" content="website"><meta property="og:site_name" content="Pocket Pantheon"><meta property="og:title" content="Pocket Pantheon"><meta property="og:description" content="A tiny pixel world that lives on its own, until you decide it shouldn't."><meta property="og:image" content="https://albeen-sknight.github.io/pocket-pantheon/share-preview.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="A living pixel world from Pocket Pantheon">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Pocket Pantheon"><meta name="twitter:description" content="A tiny pixel world that lives on its own, until you decide it shouldn't."><meta name="twitter:image" content="https://albeen-sknight.github.io/pocket-pantheon/share-preview.png"><meta name="twitter:image:alt" content="A living pixel world from Pocket Pantheon">
 <title>Pocket Pantheon</title>
+<link rel="icon" href="../favicon.svg" type="image/svg+xml"><link rel="icon" href="../favicon-32.png" sizes="32x32" type="image/png"><link rel="apple-touch-icon" href="../apple-touch-icon.png"><link rel="manifest" href="../manifest.webmanifest">
 <script src="coi-serviceworker.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Outfit:wght@400;600&display=swap" crossorigin>
@@ -96,6 +100,15 @@ dialog input[type=range]{width:100%;accent-color:var(--acc)}
 dialog .row{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
 .btn{font:600 15px Outfit,sans-serif;background:var(--btn);color:var(--btnt);border:0;padding:10px 16px;min-height:44px;box-shadow:4px 4px 0 var(--line)}
 .btn.ghost{background:transparent;color:var(--ink);border:2px solid var(--line);box-shadow:none}
+dialog p.note{margin:-6px 0 12px;color:var(--mut);font-size:14px}
+#confirm p{margin:0;font-size:15px}
+#shelf .seed{font:500 12px 'Pixelify Sans',monospace;color:var(--mut);padding:0 6px;white-space:nowrap}
+#construction{position:fixed;inset:0;z-index:4;pointer-events:none}
+.site-progress{position:absolute;display:block;transform:translateX(-50%);width:54px;height:30px;padding:4px;border:0;background:transparent;pointer-events:auto}
+.site-progress .bar{display:block;height:10px;padding:1px;border:1px solid #f4f0e8;background:#1d2044;box-shadow:0 1px 3px #13152b}
+.site-progress .bar i{display:block;height:100%;background:#f2c94c}
+.site-progress .tip{position:absolute;left:50%;bottom:calc(100% + 2px);display:none;transform:translateX(-50%);max-width:220px;padding:4px 7px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font:12px Outfit,system-ui,sans-serif;white-space:nowrap;box-shadow:2px 2px 0 #13152b}
+.site-progress:hover .tip,.site-progress:focus-visible .tip,.site-progress[data-open="true"] .tip{display:block}
 .slots{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
 .slots li{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;border:2px solid var(--line);padding:8px}
 .slots b{font-family:'Pixelify Sans',monospace}.slots small{display:block;color:var(--mut)}
@@ -149,6 +162,7 @@ button.link{background:none;border:0;color:var(--mut);text-decoration:underline;
 @media(prefers-reduced-motion:reduce){#loading .barfill{transition:none}}
 </style></head><body>
 <canvas id="world" data-ia="world_a" role="img"></canvas>
+<div id="construction" data-ia="buildings_under"></div>
 <div id="top" class="hud"><span id="t-year"></span><span id="t-pop"></span><span id="t-kin"></span><span id="t-seed"></span><span id="t-zoom"></span><button type="button" id="stats-btn" data-i="st_open" data-it="st_open_a"></button><span class="spacer"></span><a href="../" data-i="back"></a><div id="lang" role="group" data-ia="lang"><button type="button" data-l="en" aria-pressed="true">EN</button><button type="button" data-l="es" aria-pressed="false">ES</button></div></div>
 <nav id="tabs" class="hud" role="tablist"></nav>
 <div id="shelf" class="hud" role="toolbar"></div>
@@ -164,6 +178,7 @@ button.link{background:none;border:0;color:var(--mut);text-decoration:underline;
 <dialog id="newworld"><form method="dialog">
 <h2 data-i="nw_title"></h2>
 <div class="f"><label for="nw-seed" data-i="nw_seed"></label><input id="nw-seed" type="number" min="1" max="999999" required><button type="button" class="btn ghost" id="nw-roll" data-i="nw_random"></button></div>
+<p class="note" id="nw-seed-error" role="alert" hidden data-i="seed_bad"></p>
 <div class="f"><label for="nw-size" data-i="nw_size"></label><select id="nw-size"></select><span></span></div>
 <div class="f"><label for="nw-layout" data-i="nw_layout"></label><select id="nw-layout"></select><span></span></div>
 <div class="f"><label for="nw-land" data-i="nw_land"></label><input id="nw-land" type="range" min="15" max="80"><output for="nw-land"></output></div>
@@ -174,8 +189,9 @@ button.link{background:none;border:0;color:var(--mut);text-decoration:underline;
 <div class="row"><button class="btn ghost" value="cancel" data-i="cancel" formnovalidate></button><button class="btn" value="go" data-i="nw_go"></button></div>
 </form></dialog>
 
-<dialog id="saves"><h2 data-i="sv_title"></h2><ul class="slots"></ul>
+<dialog id="saves"><h2 data-i="sv_title"></h2><p class="note" data-i="sv_local"></p><ul class="slots"></ul>
 <div class="row"><button class="btn ghost" type="button" id="sv-close" data-i="close"></button></div></dialog>
+<dialog id="confirm"><form method="dialog"><h2></h2><p></p><div class="row"><button class="btn ghost" value="cancel" data-i="cancel"></button><button class="btn" value="ok"></button></div></form></dialog>
 <dialog id="stats" class="wide" data-ia="st_title"></dialog>
 <input type="file" id="import" accept=".ppworld,application/octet-stream" hidden>
 

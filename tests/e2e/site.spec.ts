@@ -3,7 +3,8 @@ import { expect, test, type Page } from "@playwright/test";
 
 type Hooks = {
   world(): { w: number; h: number; height: Float32Array; options: { seed: number } } | null;
-  frame(): { pop: number; year: number } | null;
+  frame(): { pop: number; year: number; buildings?: { id: number; type: string; done: boolean; progress: number; x: number; y: number; w: number; h: number }[] } | null;
+  speed(s: number): void;
   renderer: string;
   ratio(): number;
 };
@@ -242,4 +243,133 @@ test("the stats panel charts the world and exports its history", async ({ page }
   await page.getByRole("button", { name: "ES" }).click();
   await page.keyboard.press("h");
   await expect(dlg.getByRole("heading", { name: "Historia del mundo" })).toBeVisible();
+});
+
+test("icons, manifest and share preview load on both pages", async ({ page }) => {
+  const check = async (path: string) => {
+    await page.goto(path);
+    const favicon = page.locator('link[rel="icon"][type="image/svg+xml"]');
+    const pngIcon = page.locator('link[rel="icon"][sizes="32x32"]');
+    const appleIcon = page.locator('link[rel="apple-touch-icon"]');
+    const manifestLink = page.locator('link[rel="manifest"]');
+    const image = page.locator('meta[property="og:image"]');
+    for (const link of [favicon, pngIcon, appleIcon, manifestLink]) await expect(link).toHaveCount(1);
+
+    const svgResponse = await page.request.get(new URL((await favicon.getAttribute("href"))!, page.url()).href);
+    expect(svgResponse.ok()).toBe(true);
+    expect(await svgResponse.text()).toContain("<svg");
+    for (const [link, dimensions] of [[pngIcon, 32], [appleIcon, 180]] as const) {
+      const response = await page.request.get(new URL((await link.getAttribute("href"))!, page.url()).href);
+      expect(response.ok()).toBe(true);
+      const png = await response.body();
+      expect(png.readUInt32BE(16)).toBe(dimensions);
+      expect(png.readUInt32BE(20)).toBe(dimensions);
+    }
+
+    const manifestUrl = new URL((await manifestLink.getAttribute("href"))!, page.url());
+    const manifestResponse = await page.request.get(manifestUrl.href);
+    expect(manifestResponse.ok()).toBe(true);
+    const manifest = await manifestResponse.json();
+    expect(manifest).toMatchObject({ name: "Pocket Pantheon", short_name: "Pantheon", display: "fullscreen", theme_color: "#13152b" });
+    expect(manifest.icons.map((icon: { sizes: string }) => icon.sizes)).toEqual(["192x192", "512x512"]);
+    for (const icon of manifest.icons) expect((await page.request.get(new URL(icon.src, manifestUrl).href)).ok()).toBe(true);
+
+    expect(await image.getAttribute("content")).toBe("https://albeen-sknight.github.io/pocket-pantheon/share-preview.png");
+    const previewUrl = new URL("../share-preview.png", page.url());
+    const previewResponse = await page.request.get(previewUrl.href);
+    expect(previewResponse.ok()).toBe(true);
+    const preview = await previewResponse.body();
+    expect(preview.readUInt32BE(16)).toBe(1200);
+    expect(preview.readUInt32BE(20)).toBe(630);
+    if (path === "./") await expect(page).toHaveTitle("Pocket Pantheon");
+  };
+
+  await check("./");
+  await check("./play/?seed=4242&size=small&races=");
+});
+
+test("shared seed, language switch and tab title stay in sync", async ({ page }) => {
+  await page.goto("./play/?seed=4242");
+  await ready(page);
+  await expect(page.locator("#newworld")).toBeVisible();
+  await expect(page.locator("#nw-seed")).toHaveValue("4242");
+  await expect(page).toHaveTitle("New world · Pocket Pantheon");
+  await page.locator('#newworld button[value="cancel"]').click();
+  await expect.poll(() => page.title()).toMatch(/^Year [0-9]+ · Pocket Pantheon$/);
+
+  await page.getByRole("button", { name: "ES" }).click();
+  await expect(page).toHaveTitle(/^Año [0-9]+ · Pocket Pantheon$/);
+  await page.locator('#tabs button[data-tab="world"]').click();
+  await page.locator("#shelf button", { hasText: "Mundo nuevo" }).click();
+  await expect(page.locator("#newworld")).toBeVisible();
+  await expect(page).toHaveTitle("Mundo nuevo · Pocket Pantheon");
+
+  await page.locator('#newworld button[value="cancel"]').click();
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.locator("#shelf button", { hasText: "Compartir semilla" }).click();
+  await expect(page.locator("#toast")).toContainText("Enlace copiado:");
+  const link = await page.evaluate(() => navigator.clipboard.readText());
+  const shared = new URL(link);
+  expect(shared.pathname).toMatch(/\/play\/$/);
+  expect(shared.searchParams.get("seed")).toBe("4242");
+});
+
+test("invalid seed is reported and the restart action asks first", async ({ page }) => {
+  await page.goto("./play/?seed=abc&size=small");
+  await ready(page);
+  await expect(page.locator("#newworld")).toBeVisible();
+  await expect(page.locator("#nw-seed-error")).toContainText("invalid seed");
+  await page.locator('#newworld button[value="cancel"]').click();
+  await expect(page.locator("#t-seed")).toHaveText(/^Seed [1-9][0-9]*$/);
+
+  await page.locator('#tabs button[data-tab="world"]').click();
+  await page.locator("#shelf button", { hasText: "Restart world" }).click();
+  await expect(page.locator("#confirm")).toBeVisible();
+  await expect(page.locator("#confirm p")).toContainText("Anything you haven't saved will be lost.");
+  await page.locator('#confirm button[value="cancel"]').click();
+  await expect(page.locator("#confirm")).toBeHidden();
+  const seed = await page.evaluate(() => (window as unknown as { __pp: Hooks }).__pp.world()!.options.seed);
+
+  await page.locator("#shelf button", { hasText: "Restart world" }).click();
+  await page.locator('#confirm button[value="ok"]').click();
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __pp: Hooks }).__pp.world()!.options.seed)).toBe(seed);
+  await expect(page.locator("#loading")).toBeHidden();
+});
+
+test("construction sites show localized progress on hover and tap", async ({ page }) => {
+  await page.goto("./play/?seed=4242&size=small");
+  await ready(page);
+  await page.waitForFunction(() => {
+    const state = window as unknown as { __pp: Hooks; __ppSite?: { x: number; y: number; type: string } };
+    const building = state.__pp.frame()?.buildings?.find((b) => !b.done);
+    if (!building) return false;
+    state.__pp.speed(0);
+    state.__ppSite = { x: building.x + building.w / 2, y: building.y + building.h / 2, type: building.type };
+    return true;
+  }, null, { timeout: 30_000 });
+  const site = await page.evaluate(() => {
+    const state = window as unknown as { __pp: Hooks & { camera: { viewW: number; viewH: number; zoomTo(scale: number, x: number, y: number): void } }; __ppSite: { x: number; y: number; type: string } };
+    const camera = state.__pp.camera;
+    camera.zoomTo(32, camera.viewW / 2, camera.viewH / 2);
+    return state.__ppSite;
+  });
+  await page.waitForTimeout(700);
+  await page.evaluate(({ x, y }) => (window.__pp as Hooks & { camera: { centerOn(x: number, y: number): void } }).camera.centerOn(x, y), site);
+  const progress = page.locator("#construction .site-progress").first();
+  const names: Record<string, [string, string]> = {
+    hall: ["Town hall", "Ayuntamiento"], house: ["House", "Casa"], farm: ["Farm", "Granja"],
+    lumber: ["Lumber mill", "Aserradero"], well: ["Well", "Pozo"], temple: ["Temple", "Templo"],
+    mine: ["Mine", "Mina"], smithy: ["Smithy", "Herrería"], market: ["Market", "Mercado"],
+    library: ["Library", "Biblioteca"], tower: ["Watchtower", "Atalaya"],
+    barracks: ["Barracks", "Cuartel"], keep: ["Castle keep", "Torre del homenaje"],
+  };
+  await expect(progress).toBeVisible();
+  await expect(progress).toHaveAttribute("aria-label", new RegExp(`^${names[site.type]![0]}, .+ percent complete$`));
+  await progress.click();
+  await expect(progress).toHaveAttribute("aria-expanded", "true");
+  await expect(progress.getByRole("tooltip")).toBeVisible();
+
+  await page.getByRole("button", { name: "ES" }).click();
+  await expect(progress).toHaveAttribute("aria-label", new RegExp(`^${names[site.type]![1]}, .+ por ciento terminado$`));
+  await expect(progress.locator(".tip")).toContainText("por ciento terminado");
 });
