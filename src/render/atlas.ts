@@ -4,7 +4,7 @@
 import { ANIMALS, RACES, RACE_COUNT } from "../sim/species";
 import civ from "../../data/civ.json";
 import creatures from "../../data/creatures.json";
-import { ACTION_ICON, ANIMAL_ART, BUILDING_ART, BUILDING_ICON, child, figure, FX_ICON, RACE_COLORS, raceFigure, skinCount } from "./art";
+import { ACTION_ICON, ANIMAL_ART, BANNER, BUILDING_ART, BUILDING_ICON, child, figure, FX_ICON, RACE_COLORS, raceFigure, skinCount } from "./art";
 import { paletteIndex } from "./palette";
 import { mk, shade, snap, type Draw } from "./sprites";
 
@@ -93,6 +93,7 @@ export interface SpriteSet {
   fx(name: string): number;
   ring: number;
   aura: number;
+  banner: number;
   keyed: boolean;
 }
 
@@ -138,6 +139,7 @@ export function buildSprites(keyed = true): SpriteSet {
   for (const [name, draw] of Object.entries(ACTION_ICON)) atlas.add(`act.${name}`, 7, 7, draw);
   atlas.add("ring", 18, 6, (R, E) => E(9, 3, 8.5, 2.5, "#f4f0e8"));
   atlas.add("aura", 20, 7, (R, E) => E(10, 3.5, 9.5, 3, "#f2c94c"));
+  atlas.add("banner", 9, 16, BANNER);
   for (const [name, draw] of Object.entries(FX_ICON)) atlas.add(`fx.${name}`, 7, 7, draw);
   atlas.pack();
 
@@ -185,6 +187,7 @@ export function buildSprites(keyed = true): SpriteSet {
     fx: (name) => atlas.id(`fx.${name}`),
     ring: atlas.id("ring"),
     aura: atlas.id("aura"),
+    banner: atlas.id("banner"),
     keyed,
   };
 }

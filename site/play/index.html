@@ -71,6 +71,16 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 #insp .swatch{display:inline-block;width:12px;height:12px;border:2px solid var(--ink)}
 #shelf .director{display:flex;flex-direction:column;gap:2px;font-size:12px;padding:0 6px}
 #shelf .director label{flex-direction:row;gap:6px}
+.bub{position:fixed;transform:translateX(-50%);background:#f4f0e8;color:#1b1e3a;border:3px solid #1b1e3a;padding:6px 10px;font-size:13px;box-shadow:4px 4px 0 rgba(0,0,0,.25);pointer-events:none;z-index:15;max-width:240px;text-align:center}
+.bub b{display:block;font:700 15px 'Pixelify Sans',monospace}.bub small{color:#4d5478}
+.bub:after{content:"";position:absolute;left:50%;bottom:-10px;width:10px;height:10px;background:#f4f0e8;border-right:3px solid #1b1e3a;border-bottom:3px solid #1b1e3a;transform:translateX(-50%) rotate(45deg)}
+#possess{left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));padding:8px 12px;max-width:calc(100% - 16px);font-family:Outfit,sans-serif}
+#possess p{margin:0 0 6px;font-size:13px;color:var(--mut)}
+#possess .pad{display:flex;align-items:center;gap:12px}
+#possess .pad-buttons{display:flex;flex-wrap:wrap;gap:6px}
+#possess .stick{display:none;position:relative;width:96px;height:96px;border:2px solid var(--line);border-radius:50%;touch-action:none}
+#possess .knob{position:absolute;left:30px;top:30px;width:36px;height:36px;border-radius:50%;background:var(--acc)}
+@media(pointer:coarse){#possess .stick{display:block}#possess p{display:none}}
 #toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none;z-index:20}
 #toast div{background:var(--panel);border:2px solid var(--acc);padding:8px 14px;box-shadow:4px 4px 0 rgba(0,0,0,.4);max-width:90vw}
 dialog{background:var(--panel);color:var(--ink);border:3px solid var(--acc);box-shadow:6px 6px 0 rgba(0,0,0,.5);padding:18px 20px;max-width:min(440px,calc(100vw - 32px));width:100%}
@@ -105,6 +115,8 @@ dialog .row{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;flex-
 <div id="mini" class="hud" data-ia="minimap" role="button" tabindex="0"><canvas class="px"></canvas></div>
 <div id="help" class="hud" data-i="help"></div>
 <div id="toast" role="status" aria-live="polite"></div>
+<div id="bubble" class="bub" hidden></div>
+<div id="possess" class="hud" hidden><p data-i="poss_hint"></p><div class="pad"><div class="stick"><div class="knob"></div></div><div class="pad-buttons"></div></div></div>
 <div id="loading" hidden><div><h2 data-i="load_title"></h2><div class="barwrap"><div class="barfill"></div></div><span class="stage"></span></div></div>
 
 <dialog id="newworld"><form method="dialog">

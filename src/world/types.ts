@@ -19,6 +19,8 @@ export const RIVER = 1;
 export const LAKE = 2;
 export const ROAD = 4;
 export const FARM = 8;
+export const WALL = 16;
+export const STONE_WALL = 32; // set with WALL from the Iron Age on
 
 // Ore types, in rough order of rarity
 export const ORES = ["none", "stone", "copper", "tin", "coal", "iron", "gold", "mythril", "adamantine"] as const;

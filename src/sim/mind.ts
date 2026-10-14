@@ -9,6 +9,9 @@ import { count } from "../civ/economy";
 import { craft, gearBonus } from "../civ/gear";
 import { kingdomOfTown } from "../civ/kingdoms";
 import { prayAtTemple, preach } from "../civ/religion";
+import war from "../../data/war.json";
+import { hitWall, unitKingdom, wallCover } from "../war/defense";
+import { atWar } from "../war/wars";
 import { ORES } from "../world/types";
 import { RES } from "../civ/types";
 import { B } from "../world/biomes";
@@ -37,7 +40,7 @@ export function thinkAll(sim: Sim) {
   const u = sim.units;
   const phase = sim.tick % EVERY;
   for (let s = phase; s < u.count; s += EVERY) {
-    if (!u.alive[s]) continue;
+    if (!u.alive[s] || u.uid[s] === sim.possessed) continue;
     if (isCiv(u.kind[s]!)) thinkCiv(sim, s);
     else thinkAnimal(sim, s);
   }
@@ -77,6 +80,24 @@ function findThreat(sim: Sim, s: number, r: number): number {
   return threat;
 }
 
+// The nearest unit from a kingdom we're at war with, within r tiles.
+function findEnemy(sim: Sim, s: number, r: number): number {
+  const kid = unitKingdom(sim, s);
+  if (!kid || !sim.civ.warPairs.size) return -1;
+  const u = sim.units;
+  let best = -1;
+  let d = r;
+  sim.grid.query(u.x[s]!, u.y[s]!, r, (o) => {
+    if (u.kind[o]! >= 4 || !atWar(sim, kid, unitKingdom(sim, o))) return;
+    const od = Math.hypot(u.x[o]! - u.x[s]!, u.y[o]! - u.y[s]!);
+    if (od < d) {
+      d = od;
+      best = o;
+    }
+  });
+  return best;
+}
+
 function countNear(sim: Sim, s: number, r: number, same: boolean): number {
   const u = sim.units;
   const kind = u.kind[s]!;
@@ -92,11 +113,17 @@ function countNear(sim: Sim, s: number, r: number, same: boolean): number {
 function thinkCiv(sim: Sim, s: number) {
   const u = sim.units;
   riseNeeds(sim, s);
-  const threat = findThreat(sim, s, 6);
+  const enemy = findEnemy(sim, s, war.army.engageRange);
+  const threat = enemy >= 0 ? enemy : findThreat(sim, s, 6);
   if (threat >= 0) u.setNeed(s, NEED.safety, 1);
+  // Soldiers engage on sight, unless their army is holding position.
+  if (u.army[s] && enemy >= 0 && u.act[s] !== ACT.fight) {
+    return start(sim, s, ACT.fight, enemy, undefined, undefined);
+  }
   const busy = u.act[s] !== ACT.idle;
   if (busy && threat < 0) return;
   if (busy && (u.act[s] === ACT.flee || u.act[s] === ACT.fight)) return;
+  if (u.army[s] && u.act[s] === ACT.march) return;
 
   const g = u.genesOf(s);
   const o = s * NEEDS;
@@ -322,7 +349,8 @@ function go(sim: Sim, s: number, x: number, y: number, ticks: number) {
   const gy = Math.min(w.h - 1, Math.max(0, Math.floor(y)));
   const from = Math.floor(u.y[s]!) * w.w + Math.floor(u.x[s]!);
   const kind = u.kind[s]!;
-  const path = sim.paths.find(from, gy * w.w + gx, (i) => sim.moveCost(kind, i), Math.hypot(gx - u.x[s]!, gy - u.y[s]!) > 20 ? 6000 : 1500);
+  const kid = kind < 4 ? unitKingdom(sim, s) : 0;
+  const path = sim.paths.find(from, gy * w.w + gx, (i) => sim.moveCost(kind, i, kid), Math.hypot(gx - u.x[s]!, gy - u.y[s]!) > 20 ? 6000 : 1500);
   u.tx[s] = gx + 0.5;
   u.ty[s] = gy + 0.5;
   u.paths[s] = path && path.length ? path : null;
@@ -401,7 +429,7 @@ function findPrey(sim: Sim, s: number, r: number): number {
 export function moveAll(sim: Sim) {
   const u = sim.units;
   for (let s = 0; s < u.count; s++) {
-    if (!u.alive[s]) continue;
+    if (!u.alive[s] || u.uid[s] === sim.possessed) continue;
     if (u.act[s] === ACT.fight || u.act[s] === ACT.hunt) {
       chase(sim, s);
       continue;
@@ -464,6 +492,14 @@ function chase(sim: Sim, s: number) {
   u.actT[s]!--;
   const d = Math.hypot(u.x[t]! - u.x[s]!, u.y[t]! - u.y[s]!);
   if (d > 24) return idle(u, s);
+  if (u.weapon[s] && isArcher(sim, s) && d < war.army.archerRange) {
+    u.paths[s] = null;
+    if ((sim.tick + s) % 12 === 0) {
+      sim.fx.push({ kind: "arrow", x: u.x[s]!, y: u.y[s]! - 0.6, r: 0, tx: u.x[t]!, ty: u.y[t]! - 0.5 });
+      strike(sim, s, t);
+    }
+    return;
+  }
   if (d < 1.1) {
     u.paths[s] = null;
     if ((sim.tick + s) % 10 === 0) strike(sim, s, t);
@@ -479,6 +515,12 @@ function chase(sim: Sim, s: number) {
     go(sim, s, u.x[t]!, u.y[t]!, keep);
   }
   if (u.paths[s]) walk(sim, s, u.paths[s]!);
+  // No way through means a wall is in the way: break it down.
+  else if ((sim.tick + s) % 10 === 0) hitWall(sim, s);
+}
+
+function isArcher(sim: Sim, s: number): boolean {
+  return SPECIES_INFO[sim.units.kind[s]!]!.key === "elf";
 }
 
 // Moves straight toward a point if the next tile is passable.
@@ -506,7 +548,7 @@ function strike(sim: Sim, s: number, t: number) {
   const u = sim.units;
   const g = u.genesOf(s);
   const info = SPECIES_INFO[u.kind[s]!]!;
-  const armour = 1 - Math.min(0.9, traitEffect(u.genesOf(t), "armor") + gearBonus(u.armor[t]!).armor * 0.6);
+  const armour = 1 - Math.min(0.9, traitEffect(u.genesOf(t), "armor") + gearBonus(u.armor[t]!).armor * 0.6 + wallCover(sim, t));
   const dodge = sim.rng.mind.chance(stat(u.genesOf(t), STAT.agility) / 80);
   if (dodge) return;
   // PLAN section 13: weapon damage x (1 + Strength / 40) x (1 + gear bonus)
@@ -688,4 +730,4 @@ export function join(sim: Sim, s: number, t: Town) {
   t.pop++;
 }
 
-export { go as walkTo };
+export { go as walkTo, strike as strikeAt };

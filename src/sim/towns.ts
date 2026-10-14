@@ -125,6 +125,11 @@ function wishes(sim: Sim, town: Town, count: (t: BuildingType) => number): Build
   if (unlocked("smithy") && count("smithy") === 0) out.push("smithy");
   if (unlocked("market") && count("market") === 0) out.push("market");
   if (unlocked("library") && count("library") === 0) out.push("library");
+  const atWar = !!k && sim.civ.wars.some((w) => !w.end && (w.a === k.id || w.b === k.id));
+  const hawk = !!k && hasTrait(k, "militaristic");
+  if (unlocked("tower") && count("tower") < (atWar || hawk ? 2 : 1)) out.push("tower");
+  if (unlocked("barracks") && (atWar || hawk) && count("barracks") === 0) out.push("barracks");
+  if (unlocked("keep") && k?.capital === town.id && count("keep") === 0) out.push("keep");
   if (town.food > town.pop * 3 && town.wood > 20) out.push("house");
   if (k && hasTrait(k, "builder") && town.wood > 30) out.push("house");
   return out;

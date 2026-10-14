@@ -28,6 +28,7 @@ uniform uint uFoam;
 uniform uint uTreeTones;   // biome whose tones colour round trees
 uniform uint uPineTones;
 uniform uint uTrunkTones;   // its accent is the trunk brown
+uniform uint uRockTones;    // stone walls use this biome's greys
 uniform uint uRoad[3];      // base, light, dark
 uniform uint uFarm[3];      // soil, young crop, ripe crop
 uniform float uSeason;      // 0 to 1 through the year, ripens crops
@@ -40,6 +41,8 @@ const uint RIVER = 1u;
 const uint LAKE = 2u;
 const uint ROAD = 4u;
 const uint FARM = 8u;
+const uint WALL = 16u;
+const uint STONE_WALL = 32u;
 
 // Integer hash of a cell and a salt, in [0, 1). No visible grid patterns.
 float hash(vec2 p, uint salt) {
@@ -241,6 +244,20 @@ void main() {
     bool ripe = hash(vec2(home), 9u) * 0.4 + uSeason > 0.8;
     uint crop = ripe ? uFarm[2] : uFarm[1];
     outColor = territory(pal(row < (uArt >= 32.0 ? 2.0 : 1.0) ? uFarm[0] : crop), home, wp);
+    return;
+  }
+
+  // Walls: stakes for a palisade, blocks with crenels for stone.
+  if ((me.a & WALL) != 0u) {
+    bool stone = (me.a & STONE_WALL) != 0u;
+    if (uArt == 1.0) { outColor = pal(stone ? tones(uRockTones).g : uRoad[2]); return; }
+    vec2 f = fract(wp);
+    float q = uArt >= 32.0 ? 8.0 : 2.0;
+    vec2 cell = floor(f * q);
+    bool dark = stone ? mod(cell.x + floor(cell.y / 2.0) * 0.5, 2.0) < 0.2 || mod(f.y * q, 1.0) < 0.15 : mod(f.x * q * 2.0, 1.0) < 0.2;
+    uvec4 rock = tones(uRockTones);
+    uint c = stone ? (dark ? rock.b : f.y < 0.25 ? rock.g : rock.r) : (dark ? uRoad[2] : f.y < 0.2 ? uRoad[1] : uRoad[0]);
+    outColor = territory(pal(c), home, wp);
     return;
   }
 

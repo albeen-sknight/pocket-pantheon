@@ -1,6 +1,6 @@
 # Pocket Pantheon: Execution Plan
 
-**Owner:** Albeen ([albeen-sknight](https://github.com/albeen-sknight)) · **Repository:** [albeen-sknight/pocket-pantheon](https://github.com/albeen-sknight/pocket-pantheon) · **Live site:** https://albeen-sknight.github.io/pocket-pantheon/ · **Updated:** 13 October 2026 · **Status:** Phases 0 to 3 done, Phase 4 next
+**Owner:** Albeen ([albeen-sknight](https://github.com/albeen-sknight)) · **Repository:** [albeen-sknight/pocket-pantheon](https://github.com/albeen-sknight/pocket-pantheon) · **Live site:** https://albeen-sknight.github.io/pocket-pantheon/ · **Updated:** 13 October 2026 · **Status:** Phases 0 to 4 done, Phase 5 next
 
 Pocket Pantheon is a browser god game. A living pixel world runs itself, and you shape it, command it, bless it or wreck it. This file is the single source of truth for building it. The visual target is the concept preview in [`docs/preview.html`](preview.html).
 
@@ -758,6 +758,19 @@ Every phase ends in a playable build and is merged only when its gate passes.
 - [ ] The build deploys and runs at the live site.
 - [ ] The roadmap list on the landing page is updated.
 - [ ] This plan is updated if anything changed.
+
+**Phase 4 notes (what shipped and what moved)**
+
+- [x] Wars are checked yearly between kingdoms in range: rivalry below minus 50, holy wars when a faith preaches conquest, and ambitious rulers with a bigger army and a shared border. Allies join by opinion. Numbers live in `data/war.json`.
+- [x] Armies form from a town's best fighters (Strength plus Agility) under a general, march on the nearest enemy town, besiege it, and retreat below 30% morale or half strength. A town falls when no defender is left near its hall for 3 seconds of game time: conquest, or razing (more likely from orcs, and only of another race's town).
+- [x] Wars end in conquest or razing when a side loses every town, or in a truce after 12 years or when a side has lost 45% of its people. A 40 year old test world always ends a forced war one of these three ways.
+- [x] Combat uses the section 13 formula with gear, armour, dodge and blessings. Elves shoot from range. Every battle death counts for the war and dents the army's morale.
+- [x] Defence: watchtowers and castle keeps shoot arrows at enemies and predators. Towns of Town size at war from the Bronze Age ring themselves with walls (palisade, then stone) that only their own kingdom can walk through; roads stay open as gates. Enemies hack through walls; defenders beside their walls get 30% armour.
+- [x] New buildings: watchtower, barracks, castle keep, and the missing art for temple, mine, smithy, market and library.
+- [x] Command tab: select, move, attack, defend, hold, retreat, stance, recruit (10 food and 5 gold), possess, declare war, make peace, alliance. Army banners in kingdom colours show at every zoom, with an army card in the inspector.
+- [x] Possess: WASD or arrows, Space to hop a one tile gap, J or a click to attack, T to talk with a speech bubble in their language, E to chop, pray or eat, Esc to let go. The camera follows at 2x. Phones get a joystick and buttons.
+- [x] The Director's "no war for 80 years" rule now raises friction between the two biggest neighbours.
+- [x] Moved to Phase 5: siege engines (rams and catapults) arrive with the other big effects. Cavalry waits for horses to be tamed in Phase 7 balance work.
 
 **Phase 3 notes (what shipped and what moved)**
 
