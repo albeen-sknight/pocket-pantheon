@@ -35,6 +35,14 @@ export const FRESH_WATER = biomes.freshWater.map(paletteIndex);
 export const FOAM = paletteIndex("#f4f0e8");
 export const ROAD_TONES = ["#b38d55", "#d4a94e", "#8a5a36"].map(paletteIndex);
 export const FARM_TONES = ["#8a5a36", "#7bc24a", "#e8c46a"].map(paletteIndex);
+// fire x3, lava x3, ash x3, acid, snow x2
+export const HAZARD_TONES = [
+  "#d9453d", "#f08a2c", "#f2c94c",
+  "#f08a2c", "#5a2a30", "#f2c94c",
+  "#5a5f6b", "#6c7482", "#2b2233",
+  "#8fd14f",
+  "#f4f0e8", "#dfe9ef",
+].map(paletteIndex);
 
 // 32 x 2 table: row 0 holds each biome's 4 tones as palette indices, row 1
 // its decoration shape and density.

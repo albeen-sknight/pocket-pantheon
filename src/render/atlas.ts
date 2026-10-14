@@ -1,10 +1,10 @@
 // Pocket Pantheon · Copyright (c) 2026 Albeen (albeen-sknight)
 // Draws every sprite once at load and packs them into one atlas canvas, padded
 // so edges never bleed (PLAN section 6.2).
-import { ANIMALS, RACES, RACE_COUNT } from "../sim/species";
+import { RACES, RACE_COUNT, SPECIES } from "../sim/species";
 import civ from "../../data/civ.json";
 import creatures from "../../data/creatures.json";
-import { ACTION_ICON, ANIMAL_ART, BANNER, BUILDING_ART, BUILDING_ICON, child, figure, FX_ICON, RACE_COLORS, raceFigure, skinCount } from "./art";
+import { ACTION_ICON, ANIMAL_ART, BANNER, BUILDING_ART, BUILDING_ICON, CHAOS_FX, child, figure, FX_ICON, MONSTER_ART, RACE_COLORS, raceFigure, skinCount } from "./art";
 import { paletteIndex } from "./palette";
 import { mk, shade, snap, type Draw } from "./sprites";
 
@@ -131,10 +131,12 @@ export function buildSprites(keyed = true): SpriteSet {
       atlas.add(`i.${type}.${race}`, 8, 8, BUILDING_ICON[type]!(race));
     }
   });
-  for (const animal of ANIMALS) {
-    const art = ANIMAL_ART[animal]!;
-    for (const f of [0, 1]) atlas.add(`${animal}.${f}`, art.w, art.h, art.draw(f));
+  const wild = SPECIES.slice(RACE_COUNT);
+  for (const kind of wild) {
+    const art = ANIMAL_ART[kind] ?? MONSTER_ART[kind]!;
+    for (const f of [0, 1]) atlas.add(`${kind}.${f}`, art.w, art.h, art.draw(f));
   }
+  for (const [name, fx] of Object.entries(CHAOS_FX)) atlas.add(`fx.${name}`, fx.w, fx.h, fx.draw);
   atlas.addDot("dot.animal", "#f0d9a0", 2);
   for (const [name, draw] of Object.entries(ACTION_ICON)) atlas.add(`act.${name}`, 7, 7, draw);
   atlas.add("ring", 18, 6, (R, E) => E(9, 3, 8.5, 2.5, "#f4f0e8"));
@@ -157,7 +159,7 @@ export function buildSprites(keyed = true): SpriteSet {
     }
     unitTable.push(rows);
   }
-  const animalTable = ANIMALS.map((a) => [atlas.id(`${a}.0`), atlas.id(`${a}.1`)]);
+  const animalTable = wild.map((a) => [atlas.id(`${a}.0`), atlas.id(`${a}.1`)]);
   const dots = RACES.map((r) => atlas.id(`dot.${r}`));
   const animalDot = atlas.id("dot.animal");
   const towns = RACES.map((r) => atlas.id(`town.${r}`));

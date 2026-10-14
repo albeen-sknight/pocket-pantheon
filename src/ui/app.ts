@@ -2,6 +2,8 @@
 import civConfig from "../../data/civ.json";
 import config from "../../data/world.json";
 import simConfig from "../../data/sim.json";
+import disConfig from "../../data/disasters.json";
+import { WRATH, type FrequencyKey, type WrathPower } from "../chaos/disasters";
 import { GRACE, type GracePower } from "../civ/grace";
 import type { DirectorMode } from "../director/director";
 import { paletteIndex } from "../render/palette";
@@ -18,7 +20,7 @@ import { SimClient } from "../sim/client";
 import { TOPICS, type Frame } from "../sim/protocol";
 import type { Fx } from "../sim/sim";
 import type { SimSnapshot } from "../sim/snapshot";
-import { RACES, SPECIES, TRAITS, type RaceKey } from "../sim/species";
+import { RACES, SPECIES, SPECIES_INFO, TRAITS, type RaceKey } from "../sim/species";
 import { BIOMES } from "../world/biomes";
 import { generateAsync } from "../world/client";
 import { applyStroke, strokeTarget, type Rect, type ShapeTool, type Stroke } from "../world/edit";
@@ -31,25 +33,33 @@ import { chronicleText, kindName, tileCard, townCard, traitName, unitCard } from
 import { SimView } from "./simview";
 
 type Tab = "shape" | "life" | "cmd" | "wrath" | "grace" | "gene" | "world" | "insp";
-type Tool = ShapeTool | "pan" | "inspect" | "spawn" | "pick" | "grace" | "cmd";
+type Tool = ShapeTool | "pan" | "inspect" | "spawn" | "pick" | "grace" | "cmd" | "wrath";
 
 // Which phase brings each tab to life (PLAN section 21).
 const TABS: { key: Tab; phase: number }[] = [
   { key: "shape", phase: 1 }, { key: "life", phase: 2 }, { key: "cmd", phase: 4 }, { key: "wrath", phase: 5 },
   { key: "grace", phase: 3 }, { key: "gene", phase: 2 }, { key: "world", phase: 1 }, { key: "insp", phase: 1 },
 ];
-const READY_PHASE = 4;
+const READY_PHASE = 5;
 // Chronicle entries big enough to pop up as a toast.
 const TOASTS = new Set([
   "kingdom", "rebellion", "independence", "fallen", "age", "faith", "sect", "alliance", "rivals", "subspecies", "legend", "revive", "sickness",
   "war", "war_truce", "war_peace", "war_won", "conquered", "razed", "friction",
+  "nuke", "plague", "natural", "dragon", "abducted", "returned",
 ]);
+const SHAKE = new Set(["earthquake", "boom", "stomp"]);
+const FLASH = new Set(["lightning", "mushroom"]);
+const WRATH_ICONS: Record<WrathPower, string> = {
+  lightning: "bolt", fire: "flame", tornado: "tornado", earthquake: "dust", meteor: "meteor", acid: "acid", plague: "germ",
+  zombie: "germ", volcano: "puff", flood: "drop", blizzard: "snow", drought: "dust", nuke: "ring",
+};
 const CMD_TOOLS: CmdTool[] = ["select", "move", "attack", "defend", "recruit", "possess", "war", "peace", "ally"];
 const CMD_ICONS: Record<CmdTool, string> = {
   select: "fit", move: "pan", attack: "volcano", defend: "saves", recruit: "new", possess: "raise", war: "range", peace: "island", ally: "paint",
 };
 const CONTINUOUS: Tool[] = ["raise", "lower", "flatten", "smooth", "paint"];
 const BRUSH = config.brush;
+const RES = config.pixelRatio;
 const SPEEDS = simConfig.speeds;
 
 export class App {
@@ -67,6 +77,14 @@ export class App {
   private paintBiome = BIOMES.findIndex((b) => b.key === "grassland");
   private spawnKind = 0;
   private gracePower: GracePower = "bless";
+  private wrathPower: WrathPower = "lightning";
+  private frequency: FrequencyKey = "normal";
+  private hazards: Uint8Array = new Uint8Array(0);
+  private owner: Uint16Array = new Uint16Array(0);
+  private ownerHaz: Uint16Array = new Uint16Array(0);
+  private ownerDirty = false;
+  private ownerSent = 0;
+  private shakeUntil = 0;
   private selectedTown = 0;
   private fx: { fx: Fx; at: number }[] = [];
   private kingdomCount = 0;
@@ -84,6 +102,10 @@ export class App {
   private following = false;
   private speed = 1;
   private frames: number[] = [];
+  // Canvas pixels per CSS pixel. Starts at the device ratio (capped) and steps
+  // down while frames are slow, so weak phones draw fewer pixels instead.
+  private res = Math.min(RES.max, window.devicePixelRatio || 1);
+  private resCheck = performance.now() + RES.checkMs * 2;
   private genMs = 0;
   private mini = $<HTMLCanvasElement>("#mini canvas");
   private miniImg: ImageData | null = null;
@@ -205,6 +227,9 @@ export class App {
 
   private setWorld(world: World) {
     this.world = world;
+    this.hazards = new Uint8Array(world.w * world.h);
+    this.owner = new Uint16Array(world.w * world.h);
+    this.ownerDirty = true;
     this.view = new SimView();
     this.select(0);
     this.renderer.setWorld(world);
@@ -221,7 +246,12 @@ export class App {
   private onFrame(f: Frame) {
     const rect = this.view.receive(f, this.world);
     if (rect) this.markDirty(rect);
-    if (f.owner && this.world) this.renderer.setOwner(f.owner, this.world.w, this.world.h);
+    if (f.owner) {
+      this.owner = f.owner;
+      this.ownerDirty = true;
+    }
+    for (let k = 0; k < f.hazards.length; k += 2) this.hazards[f.hazards[k]!] = f.hazards[k + 1]!;
+    if (f.hazards.length) this.ownerDirty = true;
     if (f.kingdoms) {
       this.kingdomCount = f.kingdoms.length;
       const colors = new Uint8Array(256);
@@ -230,6 +260,7 @@ export class App {
     }
     const now = performance.now() / 1000;
     for (const fx of f.fx) this.fx.push({ fx, at: now });
+    this.feel(f.fx);
     this.fx = this.fx.filter((e) => now - e.at < 2);
     for (const e of f.events) {
       if (e.t === "chronicle" && TOASTS.has(e.entry.kind)) toast(chronicleText(e.entry));
@@ -241,11 +272,43 @@ export class App {
       this.endPossess();
     }
     if (f.fx.some((x) => x.kind === "talk")) this.bubbleUntil = performance.now() + 2500;
+    // Giants have their own moves, so they get their own hint.
+    const driving = this.cmd.possessed && this.view.selected?.uid === this.cmd.possessed ? this.view.selected : null;
+    if (driving) $("#possess p").textContent = t(SPECIES_INFO[driving.kind]!.giant ? "poss_giant" : "poss_hint");
     this.updateTopBar();
     if (this.tab === "insp" || this.tab === "gene" || this.tab === "cmd") this.renderInspector();
   }
 
   private possessedAt = 0;
+
+  // Territory and hazards share one texture: kingdom id below, hazard on top.
+  // Uploads at most a dozen times a second.
+  private uploadTerritory(now: number) {
+    if (!this.ownerDirty || !this.world || now - this.ownerSent < 80) return;
+    const n = this.world.w * this.world.h;
+    if (this.ownerHaz.length !== n) this.ownerHaz = new Uint16Array(n);
+    for (let i = 0; i < n; i++) this.ownerHaz[i] = ((this.owner[i] ?? 0) & 4095) | ((this.hazards[i] ?? 0) << 12);
+    this.renderer.setOwner(this.ownerHaz, this.world.w, this.world.h);
+    this.ownerDirty = false;
+    this.ownerSent = now;
+  }
+
+  // Big hits shake the screen and flash; both respect reduced motion.
+  private feel(fx: Fx[]) {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (fx.some((f) => SHAKE.has(f.kind))) this.shakeUntil = performance.now() + 450;
+    if (fx.some((f) => FLASH.has(f.kind))) {
+      const flash = $("#flash");
+      flash.classList.remove("on");
+      void flash.offsetWidth;
+      flash.classList.add("on");
+    }
+  }
+
+  private shake(now: number) {
+    const left = this.shakeUntil - now;
+    this.canvas.style.transform = left > 0 ? `translate(${(Math.random() - 0.5) * left * 0.04}px, ${(Math.random() - 0.5) * left * 0.04}px)` : "";
+  }
 
   private startPossess(uid: number) {
     this.possessedAt = performance.now();
@@ -270,7 +333,7 @@ export class App {
       box.hidden = true;
       return;
     }
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = this.res;
     box.hidden = false;
     box.replaceChildren(el("b", { textContent: d.says }), el("small", { textContent: t(("say_" + TOPICS[d.topic]) as PlayKey) }));
     box.style.left = ((at[0] - this.cam.x) * this.cam.scale) / dpr + "px";
@@ -283,6 +346,7 @@ export class App {
     const dt = Math.min(0.1, (now - last) / 1000);
     this.frames.push(now);
     while (this.frames.length && this.frames[0]! < now - 1000) this.frames.shift();
+    this.adaptResolution(now);
 
     if (this.following && this.selected) {
       const at = this.view.position(this.selected);
@@ -292,6 +356,8 @@ export class App {
     if (this.stroke && CONTINUOUS.includes(this.stroke.tool)) this.paintStroke(this.stroke);
     this.cmd.pump(now);
     this.drawBubble();
+    this.uploadTerritory(now);
+    this.shake(now);
     if (this.world && this.dirty) {
       this.renderer.update(this.world, this.dirty);
       if (this.miniImg) paintTiles(this.world, this.miniImg, this.dirty);
@@ -301,18 +367,29 @@ export class App {
     if (this.world) {
       const year = this.view.frame ? (this.view.frame.tick % simConfig.ticksPerYear) / simConfig.ticksPerYear : 0;
       this.renderer.draw(this.cam, now / 400, year);
-      this.scene.build(this.cam, this.view.units(now), this.view.count, this.view.buildings, this.view.towns, this.selected, now / 1000, this.fx, this.view.frame?.armies ?? [], this.cmd.army);
+      this.scene.build(this.cam, this.view.units(now), this.view.count, this.view.buildings, this.view.towns, this.selected, now / 1000, this.fx, this.view.frame?.armies ?? [], this.cmd.army, this.view.frame?.storms ?? []);
       this.renderer.drawSprites(this.scene, this.sprites.atlas, this.cam);
     }
     if (this.miniDirty) this.drawMinimap();
     requestAnimationFrame((next) => this.frame(next, now));
   }
 
+  private adaptResolution(now: number) {
+    if (now < this.resCheck || document.hidden) return;
+    this.resCheck = now + RES.checkMs;
+    if (!this.world || this.frames.length >= RES.slowFps || this.res <= RES.min) return;
+    this.res = Math.max(RES.min, this.res * RES.step);
+    this.resize();
+  }
+
   private resize() {
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = this.res;
+    const f = Math.round(innerWidth * dpr) / (this.canvas.width || 1);
+    const mid = this.cam.toWorld(this.cam.viewW / 2, this.cam.viewH / 2);
     this.canvas.width = Math.round(innerWidth * dpr);
     this.canvas.height = Math.round(innerHeight * dpr);
     this.cam.setView(this.canvas.width, this.canvas.height);
+    if (Math.abs(f - 1) > 0.01) this.cam.rescale(f, mid);
     // The top bar wraps on narrow screens, so side panels sit under its real height.
     const top = $("#top").getBoundingClientRect();
     document.documentElement.style.setProperty("--below-top", Math.ceil(top.bottom + 8) + "px");
@@ -396,6 +473,9 @@ export class App {
       case "grace":
         this.sim.command({ c: "grace", power: this.gracePower, x: tx, y: ty, radius: this.brush });
         return;
+      case "wrath":
+        this.sim.command({ c: "wrath", power: this.wrathPower, x: tx, y: ty, radius: this.brush });
+        return;
       case "spawn": {
         const civ = this.spawnKind < RACES.length;
         const count = civ ? Math.max(2, this.brush * 2) : this.brush;
@@ -413,12 +493,12 @@ export class App {
 
   private updateBrushRing() {
     const at = this.lastHover;
-    const brushy = (this.tab === "shape" && this.tool !== "pan") || (this.tab === "life" && this.tool === "spawn") || (this.tab === "grace" && this.tool === "grace");
+    const brushy = (this.tab === "shape" && this.tool !== "pan") || (this.tab === "life" && this.tool === "spawn") || (this.tab === "grace" && this.tool === "grace") || (this.tab === "wrath" && this.tool === "wrath");
     if (!brushy || at.x < 0) {
       this.brushRing.style.display = "none";
       return;
     }
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = this.res;
     const size = ((this.brush - 0.5) * 2 * this.cam.scale) / dpr;
     Object.assign(this.brushRing.style, {
       display: "block",
@@ -444,7 +524,7 @@ export class App {
     }
     const cx = this.cam.viewW / 2;
     const cy = this.cam.viewH / 2;
-    const step = 80 * (window.devicePixelRatio || 1);
+    const step = 80 * this.res;
     const pan = (x: number, y: number) => () => {
       this.following = false;
       this.cam.pan(x, y);
@@ -546,8 +626,8 @@ export class App {
   private selectTab(tab: Tab) {
     this.tab = tab;
     document.querySelectorAll<HTMLButtonElement>("#tabs button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === tab)));
-    const defaults: Partial<Record<Tab, Tool>> = { shape: "raise", life: "spawn", gene: "pick", insp: "inspect", world: "pan", grace: "grace", cmd: "cmd" };
-    const keep = (tab === "shape" && !["inspect", "pan", "spawn", "pick", "grace", "cmd"].includes(this.tool)) || this.tool === "pan";
+    const defaults: Partial<Record<Tab, Tool>> = { shape: "raise", life: "spawn", gene: "pick", insp: "inspect", world: "pan", grace: "grace", cmd: "cmd", wrath: "wrath" };
+    const keep = (tab === "shape" && !["inspect", "pan", "spawn", "pick", "grace", "cmd", "wrath"].includes(this.tool)) || this.tool === "pan";
     if (!keep || tab === "world") this.tool = defaults[tab] ?? "pan";
     this.buildShelf();
     this.renderInspector();
@@ -627,6 +707,18 @@ export class App {
           this.iconButton("range", "gene_split", "tip_split", () => this.gene({ c: "split", uid: this.selected })),
         );
         return;
+      case "wrath":
+        shelf.append(panButton(), sep());
+        for (const power of WRATH) {
+          const icon = this.atlasIcon(`fx.${WRATH_ICONS[power]}`);
+          shelf.append(this.toolButton(icon, txt(`wrath_${power}`), `tip_w_${power}`, () => {
+            this.wrathPower = power;
+            this.tool = "wrath";
+            this.buildShelf();
+          }, this.tool === "wrath" && this.wrathPower === power));
+        }
+        shelf.append(sep(), this.brushControl());
+        return;
       case "grace":
         shelf.append(panButton(), sep());
         for (const power of GRACE) {
@@ -676,6 +768,7 @@ export class App {
           }),
           el("span", { className: "sep" }),
           this.directorControl(),
+          this.frequencyControl(),
         );
     }
   }
@@ -683,6 +776,31 @@ export class App {
   private gene(cmd: Parameters<SimClient["command"]>[0]) {
     if (!this.selected) return toast(t("gene_none"));
     this.sim.command(cmd);
+  }
+
+  // A small canvas icon cut from the sprite atlas.
+  private atlasIcon(name: string) {
+    const sp = this.sprites.atlas.sprites[this.sprites.atlas.id(name)]!;
+    const icon = el("canvas", { width: 24, height: 24, className: "px" });
+    const ctx = icon.getContext("2d")!;
+    const k = Math.min(2, 24 / Math.max(sp.w, sp.h));
+    ctx.imageSmoothingEnabled = false;
+    const w = Math.round(sp.w * k);
+    const h = Math.round(sp.h * k);
+    ctx.drawImage(this.sprites.atlas.canvas, sp.x, sp.y, sp.w, sp.h, (24 - w) / 2, (24 - h) / 2, w, h);
+    icon.setAttribute("aria-hidden", "true");
+    return icon;
+  }
+
+  private frequencyControl() {
+    const select = el("select", { id: "frequency" });
+    for (const f of Object.keys(disConfig.frequency)) select.append(el("option", { value: f }, txt(("freq_" + f) as PlayKey)));
+    select.value = this.frequency;
+    select.onchange = () => {
+      this.frequency = select.value as FrequencyKey;
+      this.sim.command({ c: "frequency", value: this.frequency });
+    };
+    return el("label", { htmlFor: "frequency", title: t("tip_frequency") }, txt("w_frequency"), select);
   }
 
   private stancePicker() {
@@ -984,6 +1102,7 @@ export class App {
       frame: () => this.view.frame,
       generate: (o: Partial<WorldOptions>, races?: RaceKey[]) => this.generate({ ...defaultOptions(randomSeed()), ...o }, races),
       speed: (s: number) => this.setSpeed(s),
+      ratio: () => this.res,
       command: (c: Parameters<SimClient["command"]>[0]) => this.sim.command(c),
       select: (uid: number) => this.select(uid),
       fmt,

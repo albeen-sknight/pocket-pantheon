@@ -5,6 +5,7 @@ import civ from "../../data/civ.json";
 import type { Sim } from "../sim/sim";
 import { RACE_COUNT } from "../sim/species";
 import { NEED, NEEDS } from "../sim/units";
+import { HAZ } from "../chaos/hazards";
 import { improve } from "./diplomacy";
 import { kingdom } from "./kingdoms";
 
@@ -56,10 +57,13 @@ function eachUnit(sim: Sim, x: number, y: number, r: number, fn: (s: number) => 
 
 function rain(sim: Sim, x: number, y: number, r: number) {
   const w = sim.world;
+  const h = sim.hazards;
   for (let ty = Math.floor(y - r); ty <= y + r; ty++) {
     for (let tx = Math.floor(x - r); tx <= x + r; tx++) {
       if (tx < 0 || ty < 0 || tx >= w.w || ty >= w.h || Math.hypot(tx - x, ty - y) > r) continue;
       const i = ty * w.w + tx;
+      // Rain puts out fires and breaks droughts.
+      if (h.kind[i] === HAZ.fire || h.kind[i] === HAZ.drought) h.clear(i);
       w.moisture[i] = Math.min(1, w.moisture[i]! + 0.1);
       if (w.fertility[i]! > 0) w.fertility[i] = Math.min(255, w.fertility[i]! + C.rainFertility);
     }

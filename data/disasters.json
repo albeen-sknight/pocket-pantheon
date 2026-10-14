@@ -1,0 +1,122 @@
+{
+  "lightning": {
+    "radius": 1,
+    "damage": 60,
+    "fireChance": 0.5
+  },
+  "fire": {
+    "spreadEvery": 10,
+    "spread": 0.07,
+    "burnTicks": 80,
+    "damagePerTick": 0.2,
+    "buildingBurn": 0.02,
+    "regrowYears": [
+      5,
+      10
+    ],
+    "rainPutsOut": true
+  },
+  "tornado": {
+    "radius": 3,
+    "ticks": 400,
+    "speed": 0.12,
+    "damage": 15,
+    "throw": 4,
+    "roofChance": 0.02
+  },
+  "earthquake": {
+    "radius": 12,
+    "collapse": 0.3,
+    "crack": 0.015,
+    "ventChance": 0.4
+  },
+  "meteor": {
+    "radius": 6,
+    "depth": 0.12,
+    "ironChance": 0.5,
+    "fallTicks": 12
+  },
+  "acid": {
+    "radius": 10,
+    "ticks": 600,
+    "damagePerTick": 0.15,
+    "buildingDamage": 0.003,
+    "fertility": -60,
+    "infertileYears": 10
+  },
+  "plague": {
+    "years": 2,
+    "death": 0.3,
+    "spread": 0.25,
+    "radius": 1.5,
+    "immuneChance": 0.5
+  },
+  "zombie": {
+    "seed": 1
+  },
+  "volcano": {
+    "radius": 3,
+    "eruptTicks": 1200,
+    "lavaEvery": 6,
+    "lavaTicks": 400,
+    "infernalRadius": 7
+  },
+  "flood": {
+    "radius": 14,
+    "ticks": 800,
+    "rise": 0.03,
+    "siltYears": 5,
+    "silt": 40
+  },
+  "blizzard": {
+    "radius": 15,
+    "years": 1,
+    "slow": 0.5,
+    "cold": 0.05
+  },
+  "drought": {
+    "radius": 25,
+    "years": 3,
+    "cropFactor": 0.5,
+    "fireChance": 0.0004,
+    "fertility": -20
+  },
+  "nuke": {
+    "radius": 20,
+    "fallout": 30,
+    "healYears": 200,
+    "falloutDamage": 0.2,
+    "mutants": 6
+  },
+  "frequency": {
+    "off": 0,
+    "rare": 0.5,
+    "normal": 1,
+    "frequent": 2
+  },
+  "natural": {
+    "perYear": 0.08,
+    "quietYears": 10
+  },
+  "ufo": {
+    "abductYears": [
+      2,
+      6
+    ],
+    "returnMutated": 0.5
+  },
+  "dragon": {
+    "raidHunger": 0.6,
+    "breathEvery": 30,
+    "breathRange": 5
+  },
+  "giant": {
+    "stompRadius": 3,
+    "stompDamage": 60,
+    "sweepRadius": 2.5,
+    "sweepDamage": 45,
+    "laserRange": 20,
+    "laserDamage": 30,
+    "wreckChance": 0.1
+  }
+}

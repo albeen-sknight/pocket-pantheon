@@ -65,7 +65,9 @@
     "rebelMinPop": 6,
     "joinBelow": 40,
     "joinRange": 30,
-    "vassalRange": 55
+    "vassalRange": 55,
+    "perTownOver": -3,
+    "comfortTowns": 4
   },
   "cultureTraits": [
     "militaristic",

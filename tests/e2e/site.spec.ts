@@ -5,16 +5,19 @@ type Hooks = {
   world(): { w: number; h: number; height: Float32Array; options: { seed: number } } | null;
   frame(): { pop: number; year: number } | null;
   renderer: string;
+  ratio(): number;
 };
 
 // The isolation service worker reloads the page once on a first visit, so
 // wait for that before touching anything.
+const ready = (page: Page) =>
+  page.waitForFunction(() => window.crossOriginIsolated && (window as unknown as { __pp?: Hooks }).__pp?.frame(), null, { timeout: 45_000 });
+
 // Page errors are printed so a CI failure says what broke, not just that it timed out.
-const ready = (page: Page) => {
-  page.on("pageerror", (e) => console.log("page error:", e.message));
-  page.on("console", (m) => m.type() === "error" && console.log("console error:", m.text()));
-  return page.waitForFunction(() => window.crossOriginIsolated && (window as unknown as { __pp?: Hooks }).__pp?.frame(), null, { timeout: 45_000 });
-};
+test.beforeEach(({ page }) => {
+  page.on("pageerror", (e) => console.log("page error:", e.message, e.stack?.slice(0, 400)));
+  page.on("console", (m) => (m.type() === "error" || m.type() === "warning") && console.log(`console ${m.type()}:`, m.text().slice(0, 300)));
+});
 
 test("landing page renders, switches language and links to the game", async ({ page }) => {
   const logs: string[] = [];
@@ -44,7 +47,7 @@ test("the game builds a world and switches language in place", async ({ page }) 
   await ready(page);
 
   await expect(page.locator("#t-seed")).toHaveText("Seed 4242");
-  await expect(page.locator("#tabs button[data-tab=wrath]")).toBeDisabled();
+  await expect(page.locator("#tabs button:disabled")).toHaveCount(0);
   await page.getByRole("button", { name: "ES" }).click();
   await expect(page.locator("#t-seed")).toHaveText("Semilla 4242");
   await expect(page.locator("#t-year")).toHaveText(/^Año [0-9]+$/);
@@ -61,7 +64,7 @@ test("raise brush changes the land under the cursor", async ({ page }) => {
   const read = () =>
     page.evaluate(({ x, y }) => {
       const pp = (window as unknown as { __pp: Hooks & { camera: { toWorld(x: number, y: number): [number, number] } } }).__pp;
-      const [tx, ty] = pp.camera.toWorld(x * devicePixelRatio, y * devicePixelRatio);
+      const [tx, ty] = pp.camera.toWorld(x * pp.ratio(), y * pp.ratio());
       const w = pp.world()!;
       return w.height[Math.floor(ty) * w.w + Math.floor(tx)]!;
     }, at);
@@ -106,14 +109,14 @@ test("spawning people from the Life tab adds to the population", async ({ page }
   await page.locator("#shelf button", { hasText: "Human" }).click();
   // drop them on the first land tile near the middle of the view
   const at = await page.evaluate(() => {
-    const pp = (window as unknown as { __pp: Hooks & { camera: { x: number; y: number; scale: number } } }).__pp;
+    const pp = (window as unknown as { __pp: Hooks & { camera: { x: number; y: number; scale: number }; ratio(): number } }).__pp;
     const w = pp.world()!;
     const c = pp.camera;
     for (let r = 0; r < 60; r++) {
       for (let a = 0; a < 16; a++) {
         const tx = Math.floor(w.w / 2 + Math.cos(a) * r);
         const ty = Math.floor(w.h / 2 + Math.sin(a) * r);
-        if (w.height[ty * w.w + tx]! > 0.45) return { x: ((tx + 0.5 - c.x) * c.scale) / devicePixelRatio, y: ((ty + 0.5 - c.y) * c.scale) / devicePixelRatio };
+        if (w.height[ty * w.w + tx]! > 0.45) return { x: ((tx + 0.5 - c.x) * c.scale) / pp.ratio(), y: ((ty + 0.5 - c.y) * c.scale) / pp.ratio() };
       }
     }
     return null;
@@ -144,21 +147,31 @@ test("possessing someone lets the keyboard walk them around", async ({ page }) =
   await ready(page);
   await page.locator("#tabs button[data-tab=cmd]").click();
   await page.locator("#shelf button", { hasText: "Possess" }).click();
-  // aim at the first human on screen
-  const at = await page.evaluate(() => {
-    const pp = (window as unknown as { __pp: { frame(): { units: Float32Array; count: number }; camera: { x: number; y: number; scale: number } } }).__pp;
+  // pause so nobody walks away between aiming and clicking
+  await page.evaluate(() => (window as unknown as { __pp: { speed(s: number): void } }).__pp.speed(0));
+  await page.waitForTimeout(400);
+  const box = (await page.locator("#world").boundingBox())!;
+  // aim at the human nearest the middle of the screen
+  const at = await page.evaluate(({ w, h }) => {
+    const pp = (window as unknown as { __pp: { frame(): { units: Float32Array; count: number }; camera: { x: number; y: number; scale: number }; ratio(): number } }).__pp;
     const f = pp.frame();
     const c = pp.camera;
+    let best: { x: number; y: number } | null = null;
+    let bestD = Infinity;
     for (let i = 0; i < f.count; i++) {
       if (f.units[i * 5 + 3] !== 0) continue;
-      return { x: ((f.units[i * 5 + 1]! - c.x) * c.scale) / devicePixelRatio, y: ((f.units[i * 5 + 2]! - 0.3 - c.y) * c.scale) / devicePixelRatio };
+      const x = ((f.units[i * 5 + 1]! - c.x) * c.scale) / pp.ratio();
+      const y = ((f.units[i * 5 + 2]! - 0.3 - c.y) * c.scale) / pp.ratio();
+      if (x < 20 || y < 20 || x > w - 20 || y > h - 20) continue;
+      const d = Math.hypot(x - w / 2, y - h / 2);
+      if (d < bestD) [best, bestD] = [{ x, y }, d];
     }
-    return null;
-  });
+    return best;
+  }, { w: box.width, h: box.height });
   expect(at).not.toBeNull();
-  const box = (await page.locator("#world").boundingBox())!;
   await page.mouse.click(box.x + at!.x, box.y + at!.y);
   await expect(page.locator("#possess")).toBeVisible();
+  await page.evaluate(() => (window as unknown as { __pp: { speed(s: number): void } }).__pp.speed(1));
   const where = () => page.evaluate(() => (window as unknown as { __pp: { frame(): { possessed: number } } }).__pp.frame().possessed);
   await expect.poll(where).toBeGreaterThan(0);
   const pos = () =>
@@ -177,4 +190,17 @@ test("possessing someone lets the keyboard walk them around", async ({ page }) =
   await page.keyboard.press("Escape");
   await expect(page.locator("#possess")).toBeHidden();
   await expect.poll(where).toBe(0);
+});
+
+test("a Wrath power lands on the map", async ({ page }) => {
+  await page.goto("./play/?seed=4242&size=small&races=");
+  await ready(page);
+  await page.locator("#tabs button[data-tab=wrath]").click();
+  await page.locator("#shelf button", { hasText: "Meteor" }).click();
+  const box = (await page.locator("#world").boundingBox())!;
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  // the falling rock shows up as a storm in the very next frames
+  await expect
+    .poll(() => page.evaluate(() => (window as unknown as { __pp: { frame(): { storms: unknown[] } } }).__pp.frame().storms.length))
+    .toBeGreaterThan(0);
 });

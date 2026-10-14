@@ -12,6 +12,7 @@ const YEAR = 120;
 function settled(years = 40) {
   const world = generateWorld({ ...defaultOptions(4242), size: "medium" });
   const sim = new Sim(world, 4242);
+  sim.disasterFrequency = "off";
   sim.populate([...RACES]);
   for (let k = 0; k < years * YEAR; k++) sim.step();
   return sim;

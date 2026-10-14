@@ -1,6 +1,6 @@
 # Pocket Pantheon: Execution Plan
 
-**Owner:** Albeen ([albeen-sknight](https://github.com/albeen-sknight)) · **Repository:** [albeen-sknight/pocket-pantheon](https://github.com/albeen-sknight/pocket-pantheon) · **Live site:** https://albeen-sknight.github.io/pocket-pantheon/ · **Updated:** 13 October 2026 · **Status:** Phases 0 to 4 done, Phase 5 next
+**Owner:** Albeen ([albeen-sknight](https://github.com/albeen-sknight)) · **Repository:** [albeen-sknight/pocket-pantheon](https://github.com/albeen-sknight/pocket-pantheon) · **Live site:** https://albeen-sknight.github.io/pocket-pantheon/ · **Updated:** 13 October 2026 · **Status:** Phases 0 to 5 done, Phase 6 next
 
 Pocket Pantheon is a browser god game. A living pixel world runs itself, and you shape it, command it, bless it or wreck it. This file is the single source of truth for building it. The visual target is the concept preview in [`docs/preview.html`](preview.html).
 
@@ -758,6 +758,19 @@ Every phase ends in a playable build and is merged only when its gate passes.
 - [ ] The build deploys and runs at the live site.
 - [ ] The roadmap list on the landing page is updated.
 - [ ] This plan is updated if anything changed.
+
+**Phase 5 notes (what shipped and what moved)**
+
+- [x] All 13 disasters from section 16 on the Wrath tab, tuned in `data/disasters.json`. Fire spreads through grass, trees and wooden buildings, leaves ash that regrows in 5 to 10 years, and rain puts it out. Lava runs downhill, lights what it touches, turns to rock in water and cools into Infernal ground. Floods leave richer soil. Acid rain leaves infertile land and a Wasteland heart. Blizzards slow everyone and freeze crops; droughts halve crops and feed wildfires. Plague spreads by contact and leaves some survivors immune; zombie bites make zombies; zombies burn easily. The atomic bomb leaves Wasteland and fallout that heal over 200 years, and mutants.
+- [x] A hazard layer sits on top of the tiles and travels to the renderer in the high 4 bits of the territory texture, so fire, lava, floods, acid, ash, snow, drought and fallout draw in the same single terrain pass.
+- [x] Monsters and specials join the roster, making the 32 creatures of section 8: dragons raid towns and breathe fire, skeletons rise at night and crumble at dawn, ghosts scare people off, demons spread Infernal ground, fairies heal, slimes split when hit, ice golems freeze what they hit, sea serpents hunt the coasts, mutants roam the Wasteland. Clawzilla wrecks what it walks through, UFOs abduct people and bring them back mutated or wiser, and the Ancient Guardian strikes anything hostile near it.
+- [x] Possessing Clawzilla gives its own moves: Space to stomp, J to sweep its claws, E for the eye laser.
+- [x] Disaster frequency (off, rare, normal, frequent) in the World tab. The Director's "nothing notable for 10 years" rule rolls a disaster that suits the land.
+- [x] Screen shake and flashes on the biggest hits, skipped when the system asks for reduced motion. A settings toggle arrives in Phase 7.
+- [x] Every power queues its effect in the tick it lands, and that tick's frame carries it to the screen: a unit test applies all 21 Wrath and Grace powers and checks each one in well under 100 ms.
+- [x] Loyalty now also falls by 3 for every town a kingdom holds past its fourth, so big kingdoms split more readily.
+- [x] The map draws at most 2 canvas pixels per screen pixel and steps down to as low as half while the game runs under 20 fps, keeping the same tiles on screen. Software WebGL at phone size went from 4 fps to over 30.
+- [x] Moved to Phase 7: siege engines (rams and catapults), which belong with the balance pass. The Ancient Guardian waking when a world wonder is attacked waits for world wonders, also Phase 7.
 
 **Phase 4 notes (what shipped and what moved)**
 

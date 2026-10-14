@@ -23,14 +23,18 @@ import { activeWar, declareWar, endWar, sideOf, yearlyWars, type War } from "../
 import { relation } from "../civ/diplomacy";
 import { createRng, type Rng } from "../core/rng";
 import { B, BIOMES, isWaterBiome } from "../world/biomes";
-import { applyStroke, type Rect, type Stroke } from "../world/edit";
+import { applyStroke, reclassify, type Rect, type Stroke } from "../world/edit";
+import { naturalEvents, tickPlague, tickStorms, wrath, type FrequencyKey, type Storm, type WrathPower } from "../chaos/disasters";
+import { Hazards, tickHazards, yearlyHazards } from "../chaos/hazards";
+import { returnAbductees, spawnMonsters } from "../chaos/monsters";
+import { walkTo } from "./mind";
 import { FARM, LAKE, RIVER, ROAD, WALL, type World } from "../world/types";
 import { inheritBrain, randomBrain } from "./brain";
 import { addTrait, G, inheritGenes, mutate, randomGenes, removeTrait, STAT, stat } from "./genes";
 import { thinkAll, moveAll } from "./mind";
 import { Pathfinder } from "./path";
 import { SpatialGrid } from "./spatial";
-import { ANIMALS, isCiv, RACE_COUNT, RACES, SPECIES, SPECIES_INFO, type RaceKey } from "./species";
+import { isCiv, RACE_COUNT, RACES, SPECIES, SPECIES_INFO, WILD, type RaceKey } from "./species";
 import { planTowns, updateTownStats } from "./towns";
 import { DEATH, Units } from "./units";
 
@@ -138,7 +142,9 @@ export type Command =
   | { c: "recruit"; town: number }
   | { c: "possess"; uid: number }
   | { c: "release" }
-  | { c: "input"; input: PossessInput };
+  | { c: "input"; input: PossessInput }
+  | { c: "wrath"; power: WrathPower; x: number; y: number; radius: number }
+  | { c: "frequency"; value: FrequencyKey };
 
 export class Sim {
   tick = 0;
@@ -150,10 +156,16 @@ export class Sim {
   readonly chops: Uint8Array; // trees cut per tile
   readonly grid: SpatialGrid;
   readonly paths: Pathfinder;
-  readonly rng: { life: Rng; mind: Rng; genes: Rng; towns: Rng; spawn: Rng; civ: Rng };
+  readonly rng: { life: Rng; mind: Rng; genes: Rng; towns: Rng; spawn: Rng; civ: Rng; chaos: Rng };
   readonly civ: CivState;
   directorMode: DirectorMode = "normal";
   possessed = 0; // uid the player is driving
+  readonly hazards: Hazards;
+  storms: Storm[] = [];
+  nextStorm = 1;
+  lastNotable = 0; // tick of the last disaster, for the Director's quiet rule
+  disasterFrequency: FrequencyKey = "normal";
+  abducted: { kind: number; genes: number[]; name: string; town: number; back: number }[] = [];
   input: PossessInput = { ...NO_INPUT };
   jump = 0; // ticks left in the air
   lifeReturns = true;
@@ -181,7 +193,9 @@ export class Sim {
       towns: createRng(seed * 7 + 4),
       spawn: createRng(seed * 7 + 5),
       civ: createRng(seed * 7 + 6),
+      chaos: createRng(seed * 7 + 7),
     };
+    this.hazards = new Hazards(n);
     this.civ = new CivState(n);
     for (let race = 0; race < RACE_COUNT; race++) {
       this.civ.raceCulture[race] = newCulture(this, race).id;
@@ -209,7 +223,7 @@ export class Sim {
   // starting race on land it likes.
   populate(startRaces: RaceKey[]) {
     const r = this.rng.spawn;
-    for (let a = 0; a < ANIMALS.length; a++) {
+    for (let a = 0; a < WILD.length; a++) {
       const kind = RACE_COUNT + a;
       const want = Math.floor(this.speciesCap[kind]! * config.life.animalStartShare);
       for (let n = 0; n < want; n++) {
@@ -584,6 +598,12 @@ export class Sim {
         else removeTrait(u.genesOf(s), cmd.trait + 1);
         return null;
       }
+      case "wrath":
+        wrath(this, cmd.power, cmd.x, cmd.y, cmd.radius);
+        return null;
+      case "frequency":
+        this.disasterFrequency = cmd.value;
+        return null;
       case "grace":
         grace(this, cmd.power, cmd.x, cmd.y, cmd.radius);
         return null;
@@ -714,6 +734,11 @@ export class Sim {
     thinkAll(this);
     moveAll(this);
     if (this.possessed) possessTick(this);
+    tickHazards(this);
+    tickStorms(this);
+    tickPlague(this);
+    if (this.tick % 30 === 0) spawnMonsters(this);
+    if (this.abducted.length) returnAbductees(this);
     towersShoot(this);
     if (this.tick % warData.army.orderEvery === 0) updateArmies(this);
     this.yearly();
@@ -730,6 +755,8 @@ export class Sim {
       checkSubspecies(this);
       directorYear(this);
       yearlyWars(this);
+      yearlyHazards(this);
+      naturalEvents(this);
       for (const t of this.towns) if (t.alive) buildWalls(this, t);
     }
   }
@@ -811,6 +838,27 @@ export class Sim {
       this.events.push({ t: "marry", a: u.uid[s]!, b: u.uid[o]!, tick: this.tick });
       return;
     }
+  }
+
+  // Plans a walk for a unit; monsters and the UI use this.
+  goTo(s: number, x: number, y: number, ticks: number) {
+    walkTo(this, s, x, y, ticks);
+  }
+
+  // After the sim reshapes land itself (craters, quakes), redo biomes and tell the renderer.
+  reclassify(x: number, y: number, r: number) {
+    const w = this.world;
+    const rect = reclassify(w, {
+      x0: Math.max(0, Math.floor(x - r)),
+      y0: Math.max(0, Math.floor(y - r)),
+      x1: Math.min(w.w, Math.ceil(x + r) + 1),
+      y1: Math.min(w.h, Math.ceil(y + r) + 1),
+    });
+    for (let ty = rect.y0; ty < rect.y1; ty++) for (let tx = rect.x0; tx < rect.x1; tx++) this.changed.add(ty * w.w + tx);
+  }
+
+  markAll(x: number, y: number, r: number) {
+    this.reclassify(x, y, r);
   }
 
   private updateCaps() {

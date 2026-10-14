@@ -4,7 +4,7 @@ import type { Rect } from "../world/edit";
 import type { World } from "../world/types";
 import type { Camera } from "./camera";
 import type { Atlas } from "./atlas";
-import { biomeTable, FARM_TONES, FOAM, FRESH_WATER, paletteRGBA, ROAD_TONES } from "./palette";
+import { biomeTable, FARM_TONES, FOAM, FRESH_WATER, HAZARD_TONES, paletteRGBA, ROAD_TONES } from "./palette";
 import { packTiles, type Renderer } from "./renderer";
 import type { Scene } from "./scene";
 import { TERRAIN_FRAG, TERRAIN_VERT } from "./shaders";
@@ -60,7 +60,7 @@ class WebGLTerrain implements Renderer {
     gl.enableVertexAttribArray(loc);
     gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
 
-    for (const name of ["uTiles", "uPalette", "uBiomes", "uOffset", "uScale", "uArt", "uViewH", "uSize", "uSea", "uTime", "uFresh", "uFoam", "uTreeTones", "uPineTones", "uTrunkTones", "uRoad", "uFarm", "uSeason", "uOwner", "uKingdoms", "uRockTones"]) {
+    for (const name of ["uTiles", "uPalette", "uBiomes", "uOffset", "uScale", "uArt", "uViewH", "uSize", "uSea", "uTime", "uFresh", "uFoam", "uTreeTones", "uPineTones", "uTrunkTones", "uRoad", "uFarm", "uSeason", "uOwner", "uKingdoms", "uRockTones", "uHaz"]) {
       this.uni[name] = gl.getUniformLocation(program, name);
     }
 
@@ -76,6 +76,7 @@ class WebGLTerrain implements Renderer {
     gl.uniform1ui(this.uni.uPineTones!, B.taiga);
     gl.uniform1ui(this.uni.uTrunkTones!, B.savanna);
     gl.uniform1ui(this.uni.uRockTones!, B.mountains);
+    gl.uniform1uiv(this.uni.uHaz!, HAZARD_TONES);
     this.owner = this.texture(4, "uOwner");
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.R16UI, 1, 1, 0, gl.RED_INTEGER, gl.UNSIGNED_SHORT, new Uint16Array(1));
     this.kingdoms = this.texture(5, "uKingdoms");

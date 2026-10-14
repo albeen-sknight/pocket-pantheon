@@ -25,6 +25,7 @@ export interface SimSnapshot {
     towns: Town[];
     buildings: Building[];
     civ?: CivJson;
+    chaos?: { storms: Sim["storms"]; nextStorm: number; lastNotable: number; frequency: Sim["disasterFrequency"]; abducted: Sim["abducted"] };
   };
   arrays: Record<string, Arr>;
 }
@@ -65,6 +66,9 @@ export function toSnapshot(sim: Sim): SimSnapshot {
   arrays.chops = sim.chops.slice();
   arrays.owner = sim.civ.owner.slice();
   arrays.wallHp = sim.civ.wallHp.slice();
+  arrays["haz.kind"] = sim.hazards.kind.slice();
+  arrays["haz.timer"] = sim.hazards.timer.slice();
+  arrays["haz.before"] = sim.hazards.before.slice();
   const c = sim.civ;
   const ids = sim.ids();
   return {
@@ -77,6 +81,7 @@ export function toSnapshot(sim: Sim): SimSnapshot {
       names: u.names.slice(0, u.count),
       towns: sim.towns.map((t) => ({ ...t })),
       buildings: sim.buildings.map((b) => ({ ...b })),
+      chaos: structuredClone({ storms: sim.storms, nextStorm: sim.nextStorm, lastNotable: sim.lastNotable, frequency: sim.disasterFrequency, abducted: sim.abducted }),
       civ: structuredClone({
         cultures: c.cultures,
         raceCulture: c.raceCulture,
@@ -124,10 +129,27 @@ export function fromSnapshot(world: World, seed: number, snap: SimSnapshot): Sim
   if (snap.arrays.chops) sim.chops.set(snap.arrays.chops as Uint8Array);
   if (snap.arrays.owner) sim.civ.owner.set(snap.arrays.owner as Uint16Array);
   if (snap.arrays.wallHp) sim.civ.wallHp.set(snap.arrays.wallHp as Uint8Array);
+  restoreHazards(sim, snap);
+  if (j.chaos) {
+    sim.storms = j.chaos.storms;
+    sim.nextStorm = j.chaos.nextStorm;
+    sim.lastNotable = j.chaos.lastNotable;
+    sim.disasterFrequency = j.chaos.frequency;
+    sim.abducted = j.chaos.abducted;
+  }
   sim.recount();
   if (j.civ) restoreCiv(sim, j.civ);
   else upgradeCiv(sim);
   return sim;
+}
+
+function restoreHazards(sim: Sim, snap: SimSnapshot) {
+  const h = sim.hazards;
+  const kind = snap.arrays["haz.kind"] as Uint8Array | undefined;
+  if (!kind) return;
+  h.timer.set(snap.arrays["haz.timer"] as Uint16Array);
+  h.before.set(snap.arrays["haz.before"] as Uint8Array);
+  for (let i = 0; i < kind.length; i++) if (kind[i]) h.set(i, kind[i]!, h.timer[i]!);
 }
 
 function restoreCiv(sim: Sim, c: CivJson) {

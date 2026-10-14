@@ -12,6 +12,7 @@ const YEAR = 120;
 function makeSim(seed: number, races: RaceKey[], size: SizeKey = "small") {
   const world = generateWorld({ ...defaultOptions(seed), size });
   const sim = new Sim(world, seed);
+  sim.disasterFrequency = "off";
   sim.populate(races);
   return sim;
 }

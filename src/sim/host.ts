@@ -77,7 +77,7 @@ export class SimHost {
   private send() {
     if (!this.sim) return;
     const frame = packFrame(this.sim, this.selected, this.selectedTown);
-    const transfer = [frame.units.buffer as ArrayBuffer, frame.tiles.buffer as ArrayBuffer];
+    const transfer = [frame.units.buffer as ArrayBuffer, frame.tiles.buffer as ArrayBuffer, frame.hazards.buffer as ArrayBuffer];
     if (frame.owner) transfer.push(frame.owner.buffer as ArrayBuffer);
     this.post(frame, transfer);
   }

@@ -29,10 +29,11 @@ uniform uint uTreeTones;   // biome whose tones colour round trees
 uniform uint uPineTones;
 uniform uint uTrunkTones;   // its accent is the trunk brown
 uniform uint uRockTones;    // stone walls use this biome's greys
+uniform uint uHaz[12];      // fire 3, lava 3, ash 3, acid, snow, drought crack
 uniform uint uRoad[3];      // base, light, dark
 uniform uint uFarm[3];      // soil, young crop, ripe crop
 uniform float uSeason;      // 0 to 1 through the year, ripens crops
-uniform highp usampler2D uOwner;    // kingdom id per tile, 0 for nobody
+uniform highp usampler2D uOwner;    // low 12 bits kingdom id (0 nobody), high 4 bits hazard
 uniform usampler2D uKingdoms;       // 256 x 1: palette index of each kingdom id % 256
 
 out vec4 outColor;
@@ -97,7 +98,27 @@ vec4 pal(uint i) {
 }
 
 uint ownerAt(ivec2 t) {
-  return texelFetch(uOwner, clamp(t, ivec2(0), uSize - 1), 0).r;
+  return texelFetch(uOwner, clamp(t, ivec2(0), uSize - 1), 0).r & 4095u;
+}
+
+uint hazardAt(ivec2 t) {
+  return texelFetch(uOwner, clamp(t, ivec2(0), uSize - 1), 0).r >> 12;
+}
+
+// Hazards drawn over the ground: fire, lava, flood, acid, ash, snow, drought, fallout.
+vec4 hazard(vec4 base, uint h, vec2 ap, bool water) {
+  if (h == 0u) return base;
+  float n = hash(ap + vec2(floor(uTime * 3.0)), 11u);
+  float slow = vnoise(ap * 0.3 + vec2(uTime * 0.4, 0.0));
+  if (h == 1u) return pal(n > 0.66 ? uHaz[2] : n > 0.33 ? uHaz[1] : uHaz[0]);
+  if (h == 2u) return pal(slow > 0.62 ? uHaz[5] : slow > 0.38 ? uHaz[3] : uHaz[4]);
+  if (h == 3u) return water ? base : pal(slow > 0.7 ? uFresh[1] : uFresh[0]);
+  if (h == 4u) return mix(base, pal(uHaz[9]), n > 0.85 ? 0.8 : 0.35);
+  if (h == 5u) return pal(n > 0.7 ? uHaz[7] : n > 0.25 ? uHaz[6] : uHaz[8]);
+  if (h == 6u) return pal(n > 0.8 ? uHaz[11] : uHaz[10]);
+  if (h == 7u) return mod(ap.x + ap.y * 3.0, 7.0) < 1.0 ? pal(uRoad[2]) : mix(base, pal(uRoad[1]), 0.35);
+  if (h == 8u) return n > 0.93 ? pal(uHaz[9]) : base;
+  return base;
 }
 
 vec4 kingdomColor(uint id) {
@@ -229,7 +250,7 @@ void main() {
     if (!isWater(tileAt(home - ivec2(0, 1)))) edge = min(edge, f.y);
     float foam = uArt > 1.0 ? 0.18 + 0.1 * sin(uTime * 2.0 + ap.x * 0.3 + ap.y * 0.2) : (sin(uTime * 2.0 + wp.x * 0.6) > 0.2 ? 1.0 : -1.0);
     if (edge < foam) c = fresh ? light : uFoam;
-    outColor = pal(c);
+    outColor = hazard(pal(c), hazardAt(home), ap, true);
     return;
   }
 
@@ -306,6 +327,6 @@ void main() {
       }
     }
   }
-  outColor = territory(pal(c), home, wp);
+  outColor = hazard(territory(pal(c), home, wp), hazardAt(home), ap, false);
 }
 `;
