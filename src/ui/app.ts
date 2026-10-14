@@ -15,6 +15,7 @@ import type { Renderer } from "../render/renderer";
 import { Scene } from "../render/scene";
 import { mk, TAB_ICONS, TOOL_ICONS } from "../render/sprites";
 import { createWebGLRenderer } from "../render/webgl";
+import { makeMeta } from "../save/format";
 import { exportFile, importFile, listSlots, loadSlot, saveSlot, type Loaded, type SlotId } from "../save/store";
 import { SimClient } from "../sim/client";
 import { TOPICS, type Frame } from "../sim/protocol";
@@ -28,6 +29,7 @@ import { defaultOptions, type Layout, type SizeKey, type World, type WorldOption
 import { $, el, randomSeed, SAVE_SLOTS, toast, txt } from "./dom";
 import { bindLangSwitch, fmt, onLangChange, t, toggleLang, type PlayKey } from "./i18n";
 import { bindMapInput } from "./input";
+import { StatsPanel } from "./stats";
 import { armyCard, Command, type CmdTool } from "./command";
 import { chronicleText, kindName, tileCard, townCard, traitName, unitCard } from "./inspector";
 import { SimView } from "./simview";
@@ -102,6 +104,12 @@ export class App {
   private following = false;
   private speed = 1;
   private frames: number[] = [];
+  private stats = new StatsPanel({
+    ask: () => this.sim.stats(),
+    exportName: () => `pocket-pantheon-${this.world?.options.seed ?? 0}`,
+    meta: () => (this.world ? makeMeta(this.world, t("st_title"), this.view.frame?.year ?? 0) : null),
+    openKingdom: (capital) => this.visitTown(capital),
+  });
   // Canvas pixels per CSS pixel. Starts at the device ratio (capped) and steps
   // down while frames are slow, so weak phones draw fewer pixels instead.
   private res = Math.min(RES.max, window.devicePixelRatio || 1);
@@ -152,7 +160,10 @@ export class App {
     this.scene = new Scene(this.sprites);
     this.sim.onFrame = (f) => this.onFrame(f);
     bindLangSwitch("play");
-    onLangChange(() => this.refreshText());
+    onLangChange(() => {
+      this.refreshText();
+      this.stats.relabel();
+    });
     this.buildTabs();
     this.buildSpeed();
     this.selectTab("life");
@@ -534,6 +545,7 @@ export class App {
       "[": () => this.setBrush(this.brush - 1),
       "]": () => this.setBrush(this.brush + 1),
       l: () => toggleLang("play"),
+      h: () => void this.stats.open(),
       "+": () => this.cam.zoomStep(1, cx, cy),
       "=": () => this.cam.zoomStep(1, cx, cy),
       "-": () => this.cam.zoomStep(-1, cx, cy),
@@ -759,6 +771,7 @@ export class App {
         shelf.append(
           this.iconButton("new", "w_new", "tip_new", () => this.openNewWorld()),
           this.iconButton("saves", "w_saves", "tip_saves", () => this.openSaves()),
+          this.iconButton("stats", "st_open", "st_open_a", () => void this.stats.open()),
           this.iconButton("export", "w_export", "tip_export", () => this.exportWorld()),
           this.iconButton("import", "w_import", "tip_import", () => $<HTMLInputElement>("#import").click()),
           this.iconButton("fit", "w_fit", "tip_fit", () => {
@@ -851,6 +864,18 @@ export class App {
   }
 
   // Inspector
+
+  // From the kingdom tree: fly to a town and open it in the inspector.
+  private visitTown(id: number) {
+    const town = this.view.towns.find((tw) => tw.id === id);
+    if (!town) return;
+    this.select(0);
+    this.inspected = null;
+    this.cam.centerOn(town.x, town.y);
+    this.cameraMoved();
+    this.selectTown(id);
+    this.renderInspector();
+  }
 
   private inspect(tx: number, ty: number) {
     if (!this.world) return;
@@ -952,6 +977,7 @@ export class App {
   // Dialogs, saves, files
 
   private bindDialogs() {
+    $("#stats-btn").onclick = () => void this.stats.open();
     const dlg = $<HTMLDialogElement>("#newworld");
     const out = (id: string) => {
       const input = $<HTMLInputElement>(id);

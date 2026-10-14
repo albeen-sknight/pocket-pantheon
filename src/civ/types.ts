@@ -30,6 +30,7 @@ export interface Kingdom {
   founded: number; // tick
   parent: number; // kingdom it split from, 0 none
   alive: boolean;
+  fell?: number; // tick it lost its last town
   towns: number;
   pop: number;
 }

@@ -6,6 +6,7 @@ import { SimHost } from "./host";
 import type { Frame, FromWorker, ToWorker } from "./protocol";
 import type { Command } from "./sim";
 import type { SimSnapshot } from "./snapshot";
+import type { StatsReport } from "../stats/history";
 import type { RaceKey } from "./species";
 
 declare const PP_SIM_WORKER: string;
@@ -13,7 +14,7 @@ declare const PP_SIM_WORKER: string;
 export class SimClient {
   private worker: Worker | null = null;
   private local: SimHost | null = null;
-  private waiting = new Map<number, (s: SimSnapshot) => void>();
+  private waiting = new Map<number, (answer: never) => void>();
   private nextId = 1;
   onFrame: (f: Frame) => void = () => {};
 
@@ -38,7 +39,7 @@ export class SimClient {
 
   private receive(msg: FromWorker) {
     if (msg.type === "frame") return this.onFrame(msg);
-    this.waiting.get(msg.id)?.(msg.snapshot);
+    this.waiting.get(msg.id)?.((msg.type === "saved" ? msg.snapshot : msg.report) as never);
     this.waiting.delete(msg.id);
   }
 
@@ -79,10 +80,18 @@ export class SimClient {
   }
 
   snapshot(): Promise<SimSnapshot> {
+    return this.ask<SimSnapshot>("save");
+  }
+
+  stats(): Promise<StatsReport> {
+    return this.ask<StatsReport>("stats");
+  }
+
+  private ask<T>(type: "save" | "stats"): Promise<T> {
     const id = this.nextId++;
     return new Promise((resolve) => {
-      this.waiting.set(id, resolve);
-      this.send({ type: "save", id });
+      this.waiting.set(id, resolve as (answer: never) => void);
+      this.send({ type, id });
     });
   }
 }

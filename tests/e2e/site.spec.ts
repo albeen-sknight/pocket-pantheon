@@ -204,3 +204,42 @@ test("a Wrath power lands on the map", async ({ page }) => {
     .poll(() => page.evaluate(() => (window as unknown as { __pp: { frame(): { storms: unknown[] } } }).__pp.frame().storms.length))
     .toBeGreaterThan(0);
 });
+
+test("the stats panel charts the world and exports its history", async ({ page }) => {
+  await page.goto("./play/?seed=4242&size=small");
+  await ready(page);
+  await page.evaluate(() => (window as unknown as { __pp: { speed(s: number): void } }).__pp.speed(8));
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __pp: Hooks }).__pp.frame()?.year ?? 0), { timeout: 30_000 }).toBeGreaterThan(2);
+  await page.locator("#stats-btn").click();
+  const dlg = page.locator("#stats");
+  await expect(dlg.getByRole("heading", { name: "World history" })).toBeVisible();
+  await expect(dlg.locator(".chart canvas")).toBeVisible();
+  await expect(dlg.locator(".st-legend span")).toHaveCount(4);
+
+  await dlg.getByRole("button", { name: "Show as table" }).click();
+  await expect(dlg.locator(".st-table tbody tr").first()).toBeVisible();
+
+  for (const tab of ["Ages", "Deaths", "Wars", "Kingdoms", "Chronicle", "Leaders"]) {
+    await dlg.getByRole("tab", { name: tab }).click();
+    await expect(dlg.getByRole("tab", { name: tab })).toHaveAttribute("aria-selected", "true");
+  }
+  await expect(dlg.locator(".st-leaders section")).toHaveCount(6);
+
+  // keep the exported blob so its contents can be read back in the page
+  await page.evaluate(() => {
+    const make = URL.createObjectURL;
+    URL.createObjectURL = (b: Blob) => ((window as unknown as { lastBlob: Blob }).lastBlob = b, make(b));
+  });
+  const download = page.waitForEvent("download");
+  await dlg.getByRole("button", { name: "Export stats" }).click();
+  expect((await download).suggestedFilename()).toBe("pocket-pantheon-4242-stats.json");
+  const data = JSON.parse(await page.evaluate(() => (window as unknown as { lastBlob: Blob }).lastBlob.text()));
+  expect(data.meta.engine).toBe("PocketPantheon-Core");
+  expect(data.meta.seed).toBe(4242);
+  expect(data.stats.years.length).toBeGreaterThan(0);
+
+  await dlg.getByRole("button", { name: "Close" }).click();
+  await page.getByRole("button", { name: "ES" }).click();
+  await page.keyboard.press("h");
+  await expect(dlg.getByRole("heading", { name: "Historia del mundo" })).toBeVisible();
+});

@@ -7,6 +7,7 @@ import { culture, kingdom, townReligion } from "../civ/kingdoms";
 import { phrase } from "../civ/language";
 import { religion } from "../civ/religion";
 import { subspecies } from "../civ/subspecies";
+import type { StatsReport } from "../stats/history";
 import type { World } from "../world/types";
 import { G, GENES, stat, traitList } from "./genes";
 import type { Command, Fx, Sim, SimEvent } from "./sim";
@@ -29,7 +30,8 @@ export type ToWorker =
   | { type: "speed"; speed: number }
   | { type: "select"; uid: number }
   | { type: "selectTown"; id: number }
-  | { type: "save"; id: number };
+  | { type: "save"; id: number }
+  | { type: "stats"; id: number };
 
 export interface BuildingView {
   id: number;
@@ -173,7 +175,7 @@ export interface Frame {
   town?: TownDetail | null;
 }
 
-export type FromWorker = Frame | { type: "saved"; id: number; snapshot: SimSnapshot };
+export type FromWorker = Frame | { type: "saved"; id: number; snapshot: SimSnapshot } | { type: "stats"; id: number; report: StatsReport };
 
 export function packFrame(sim: Sim, selected: number, selectedTown = 0): Frame {
   // Kingdom colour + 1 per town, so clothes can wear the banner colour.
