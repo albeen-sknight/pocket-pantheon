@@ -14,8 +14,7 @@ const ready = (page: Page) =>
 
 // Page errors are printed so a CI failure says what broke, not just that it timed out.
 test.beforeEach(({ page }) => {
-  page.on("pageerror", (e) => console.log("page error:", e.message, e.stack?.split("
-").slice(0, 4).join(" | ")));
+  page.on("pageerror", (e) => console.log("page error:", e.message, e.stack?.slice(0, 400)));
   page.on("console", (m) => (m.type() === "error" || m.type() === "warning") && console.log(`console ${m.type()}:`, m.text().slice(0, 300)));
 });
 
