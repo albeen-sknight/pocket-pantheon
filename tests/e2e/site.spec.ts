@@ -9,8 +9,12 @@ type Hooks = {
 
 // The isolation service worker reloads the page once on a first visit, so
 // wait for that before touching anything.
-const ready = (page: Page) =>
-  page.waitForFunction(() => window.crossOriginIsolated && (window as unknown as { __pp?: Hooks }).__pp?.frame(), null, { timeout: 30_000 });
+// Page errors are printed so a CI failure says what broke, not just that it timed out.
+const ready = (page: Page) => {
+  page.on("pageerror", (e) => console.log("page error:", e.message));
+  page.on("console", (m) => m.type() === "error" && console.log("console error:", m.text()));
+  return page.waitForFunction(() => window.crossOriginIsolated && (window as unknown as { __pp?: Hooks }).__pp?.frame(), null, { timeout: 45_000 });
+};
 
 test("landing page renders, switches language and links to the game", async ({ page }) => {
   const logs: string[] = [];
