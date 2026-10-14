@@ -6,6 +6,8 @@ import { culture, newCulture, newKingdom } from "../civ/kingdoms";
 import { RESOURCES, type Chronicle, type Culture, type Grave, type Kingdom, type Legend, type Religion, type Subspecies } from "../civ/types";
 import type { LiveRelation } from "../civ/diplomacy";
 import type { DirectorMode } from "../director/director";
+import type { Army } from "../war/armies";
+import { rebuildWarPairs, type War } from "../war/wars";
 import { Sim, type Building, type Town } from "./sim";
 import { NEEDS, UNIT_ARRAYS } from "./units";
 import type { World } from "../world/types";
@@ -43,6 +45,10 @@ interface CivJson {
   settlements: { x: number; y: number; kingdom: number; until: number }[];
   directorMode: DirectorMode;
   lifeReturns: boolean;
+  wars?: War[];
+  armies?: Army[];
+  lastWar?: number;
+  nextArmy?: number;
 }
 
 // Fields with more than one value per unit
@@ -58,6 +64,7 @@ export function toSnapshot(sim: Sim): SimSnapshot {
   arrays.heat = sim.heat.slice();
   arrays.chops = sim.chops.slice();
   arrays.owner = sim.civ.owner.slice();
+  arrays.wallHp = sim.civ.wallHp.slice();
   const c = sim.civ;
   const ids = sim.ids();
   return {
@@ -86,6 +93,10 @@ export function toSnapshot(sim: Sim): SimSnapshot {
         settlements: c.settlements,
         directorMode: sim.directorMode,
         lifeReturns: sim.lifeReturns,
+        wars: c.wars,
+        armies: c.armies,
+        lastWar: c.lastWar,
+        nextArmy: c.nextArmy,
       }),
     },
     arrays,
@@ -112,6 +123,7 @@ export function fromSnapshot(world: World, seed: number, snap: SimSnapshot): Sim
   if (snap.arrays.heat) sim.heat.set(snap.arrays.heat as Uint16Array);
   if (snap.arrays.chops) sim.chops.set(snap.arrays.chops as Uint8Array);
   if (snap.arrays.owner) sim.civ.owner.set(snap.arrays.owner as Uint16Array);
+  if (snap.arrays.wallHp) sim.civ.wallHp.set(snap.arrays.wallHp as Uint8Array);
   sim.recount();
   if (j.civ) restoreCiv(sim, j.civ);
   else upgradeCiv(sim);
@@ -135,6 +147,11 @@ function restoreCiv(sim: Sim, c: CivJson) {
   civ.settlements = c.settlements;
   sim.directorMode = c.directorMode;
   sim.lifeReturns = c.lifeReturns;
+  civ.wars = c.wars ?? [];
+  civ.armies = c.armies ?? [];
+  civ.lastWar = c.lastWar ?? 0;
+  civ.nextArmy = c.nextArmy ?? 1;
+  rebuildWarPairs(sim);
 }
 
 // Saves from before Phase 3 have towns but no kingdoms: give each its own.

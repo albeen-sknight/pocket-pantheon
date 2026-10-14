@@ -44,7 +44,7 @@ test("the game builds a world and switches language in place", async ({ page }) 
   await ready(page);
 
   await expect(page.locator("#t-seed")).toHaveText("Seed 4242");
-  await expect(page.locator("#tabs button[data-tab=cmd]")).toBeDisabled();
+  await expect(page.locator("#tabs button[data-tab=wrath]")).toBeDisabled();
   await page.getByRole("button", { name: "ES" }).click();
   await expect(page.locator("#t-seed")).toHaveText("Semilla 4242");
   await expect(page.locator("#t-year")).toHaveText(/^Año [0-9]+$/);
@@ -137,4 +137,44 @@ test("kingdoms are counted and Grace powers answer a click", async ({ page }) =>
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
   await page.waitForTimeout(500);
   expect(errors).toEqual([]);
+});
+
+test("possessing someone lets the keyboard walk them around", async ({ page }) => {
+  await page.goto("./play/?seed=4242&size=small&races=human");
+  await ready(page);
+  await page.locator("#tabs button[data-tab=cmd]").click();
+  await page.locator("#shelf button", { hasText: "Possess" }).click();
+  // aim at the first human on screen
+  const at = await page.evaluate(() => {
+    const pp = (window as unknown as { __pp: { frame(): { units: Float32Array; count: number }; camera: { x: number; y: number; scale: number } } }).__pp;
+    const f = pp.frame();
+    const c = pp.camera;
+    for (let i = 0; i < f.count; i++) {
+      if (f.units[i * 5 + 3] !== 0) continue;
+      return { x: ((f.units[i * 5 + 1]! - c.x) * c.scale) / devicePixelRatio, y: ((f.units[i * 5 + 2]! - 0.3 - c.y) * c.scale) / devicePixelRatio };
+    }
+    return null;
+  });
+  expect(at).not.toBeNull();
+  const box = (await page.locator("#world").boundingBox())!;
+  await page.mouse.click(box.x + at!.x, box.y + at!.y);
+  await expect(page.locator("#possess")).toBeVisible();
+  const where = () => page.evaluate(() => (window as unknown as { __pp: { frame(): { possessed: number } } }).__pp.frame().possessed);
+  await expect.poll(where).toBeGreaterThan(0);
+  const pos = () =>
+    page.evaluate(() => {
+      const f = (window as unknown as { __pp: { frame(): { units: Float32Array; count: number; possessed: number } } }).__pp.frame();
+      for (let i = 0; i < f.count; i++) if (f.units[i * 5] === f.possessed) return f.units[i * 5 + 1]! + f.units[i * 5 + 2]!;
+      return 0;
+    });
+  const before = await pos();
+  for (const key of ["d", "s"]) {
+    await page.keyboard.down(key);
+    await page.waitForTimeout(400);
+    await page.keyboard.up(key);
+  }
+  expect(Math.abs((await pos()) - before)).toBeGreaterThan(0.2);
+  await page.keyboard.press("Escape");
+  await expect(page.locator("#possess")).toBeHidden();
+  await expect.poll(where).toBe(0);
 });

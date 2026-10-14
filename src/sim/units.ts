@@ -8,11 +8,11 @@ export const NEEDS = 6;
 export const NEED = { hunger: 0, rest: 1, safety: 2, social: 3, faith: 4, purpose: 5 } as const;
 
 export const ACT = {
-  idle: 0, wander: 1, eat: 2, sleep: 3, work: 4, build: 5, social: 6, flee: 7, fight: 8, settle: 9, pray: 10, explore: 11, hunt: 12,
+  idle: 0, wander: 1, eat: 2, sleep: 3, work: 4, build: 5, social: 6, flee: 7, fight: 8, settle: 9, pray: 10, explore: 11, hunt: 12, march: 13,
 } as const;
 export type Act = (typeof ACT)[keyof typeof ACT];
 
-export const JOB = { none: 0, gatherer: 1, farmer: 2, woodcutter: 3, builder: 4, miner: 5, smith: 6, priest: 7, scholar: 8 } as const;
+export const JOB = { none: 0, gatherer: 1, farmer: 2, woodcutter: 3, builder: 4, miner: 5, smith: 6, priest: 7, scholar: 8, soldier: 9 } as const;
 
 export const DEATH = { age: 0, battle: 1, disease: 2, hunger: 3, fire: 4, drowning: 5, monster: 6, disaster: 7, god: 8 } as const;
 
@@ -20,7 +20,7 @@ export const DEATH = { age: 0, battle: 1, disease: 2, hunger: 3, fire: 4, drowni
 export const UNIT_ARRAYS = [
   "alive", "kind", "sex", "x", "y", "age", "hp", "needs", "act", "actT", "tx", "ty", "town", "home", "job",
   "carry", "spouse", "mother", "father", "uid", "starve", "target", "kills", "born", "genes", "brain", "mood", "facing",
-  "religion", "subspecies", "weapon", "armor", "gearQ", "blessed", "fertile",
+  "religion", "subspecies", "weapon", "armor", "gearQ", "blessed", "fertile", "army",
 ] as const;
 
 export class Units {
@@ -61,6 +61,7 @@ export class Units {
   readonly gearQ: Uint8Array; // quality of the weapon, 0 poor to 4 legendary
   readonly blessed: Float32Array; // years of blessing left
   readonly fertile: Float32Array; // years of the fertility power left
+  readonly army: Uint16Array; // army id, 0 for none
   names: string[] = [];
   paths: (Int32Array | null)[] = [];
   pathAt: Int32Array;
@@ -104,6 +105,7 @@ export class Units {
     this.gearQ = new Uint8Array(c);
     this.blessed = new Float32Array(c);
     this.fertile = new Float32Array(c);
+    this.army = new Uint16Array(c);
     this.pathAt = new Int32Array(c);
   }
 
@@ -142,6 +144,7 @@ export class Units {
     this.gearQ[slot] = 0;
     this.blessed[slot] = 0;
     this.fertile[slot] = 0;
+    this.army[slot] = 0;
     this.born[slot] = tick;
     this.needs.fill(0, slot * NEEDS, slot * NEEDS + NEEDS);
     const uid = this.nextUid++;

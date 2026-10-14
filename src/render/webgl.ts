@@ -60,7 +60,7 @@ class WebGLTerrain implements Renderer {
     gl.enableVertexAttribArray(loc);
     gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
 
-    for (const name of ["uTiles", "uPalette", "uBiomes", "uOffset", "uScale", "uArt", "uViewH", "uSize", "uSea", "uTime", "uFresh", "uFoam", "uTreeTones", "uPineTones", "uTrunkTones", "uRoad", "uFarm", "uSeason", "uOwner", "uKingdoms"]) {
+    for (const name of ["uTiles", "uPalette", "uBiomes", "uOffset", "uScale", "uArt", "uViewH", "uSize", "uSea", "uTime", "uFresh", "uFoam", "uTreeTones", "uPineTones", "uTrunkTones", "uRoad", "uFarm", "uSeason", "uOwner", "uKingdoms", "uRockTones"]) {
       this.uni[name] = gl.getUniformLocation(program, name);
     }
 
@@ -75,6 +75,7 @@ class WebGLTerrain implements Renderer {
     gl.uniform1ui(this.uni.uTreeTones!, B.forest);
     gl.uniform1ui(this.uni.uPineTones!, B.taiga);
     gl.uniform1ui(this.uni.uTrunkTones!, B.savanna);
+    gl.uniform1ui(this.uni.uRockTones!, B.mountains);
     this.owner = this.texture(4, "uOwner");
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.R16UI, 1, 1, 0, gl.RED_INTEGER, gl.UNSIGNED_SHORT, new Uint16Array(1));
     this.kingdoms = this.texture(5, "uKingdoms");

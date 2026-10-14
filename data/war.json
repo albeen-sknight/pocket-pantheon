@@ -1,0 +1,46 @@
+{
+  "declare": {
+    "rivalOpinion": -50,
+    "chance": 0.12,
+    "militaristic": 1.8,
+    "holyWar": 0.08,
+    "ambition": 0.04,
+    "range": 120,
+    "minPeople": 12,
+    "allyJoinOpinion": 40
+  },
+  "army": {
+    "share": 0.35,
+    "min": 4,
+    "max": 60,
+    "orderEvery": 20,
+    "siegeRange": 7,
+    "engageRange": 7,
+    "archerRange": 5,
+    "spread": 2.5,
+    "retreatMorale": 30,
+    "retreatStrength": 0.5,
+    "moraleLossPerDeath": 4,
+    "moraleRecoverPerYear": 20,
+    "captureTicks": 60,
+    "generalMorale": 10
+  },
+  "end": {
+    "truceYears": 12,
+    "exhaustion": 0.45,
+    "razeChance": 0.35
+  },
+  "defense": {
+    "towerRange": 6,
+    "towerDamage": 6,
+    "towerEvery": 25,
+    "wallArmor": 0.3,
+    "wallHp": [60, 120, 200],
+    "wallRadius": 7,
+    "keepGarrisonBonus": 0.2
+  },
+  "director": { "peaceYears": 80, "friction": 25 },
+  "possess": { "speedBonus": 1.2, "jumpTicks": 8, "attackEvery": 8, "talkTicks": 60 },
+  "recruit": { "food": 10, "gold": 5, "count": 5 },
+  "armyNames": ["crown", "spear", "shield", "storm", "wolf", "dawn", "iron", "river", "stone", "flame"]
+}

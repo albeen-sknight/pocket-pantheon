@@ -381,6 +381,48 @@ export const BUILDING_ART: Record<string, { w: number; h: number; draw: (race: R
       R(19, 8, 4, 4, GOLD);
     };
   } },
+  tower: { w: 22, h: 46, draw: (race) => {
+    const k = LOOK[race];
+    const stone = race === "elf" || race === "orc" ? k.wall : "#aab0bc";
+    return (R) => {
+      R(9, 0, 1, 7, "#c3d3de");
+      R(10, 1, 6, 4, k.flag);
+      R(3, 12, 16, 32, stone);
+      [1, 8, 15].forEach((x) => R(x, 7, 5, 6, stone));
+      R(1, 12, 20, 3, "#8a8f9a");
+      R(9, 21, 4, 6, K1);
+      R(8, 36, 6, 8, WOOD);
+    };
+  } },
+  barracks: { w: 48, h: 34, draw: (race) => {
+    const k = LOOK[race];
+    return (R, E, P, T) => {
+      R(4, 14, 40, 18, k.wall);
+      T(24, 4, 22, 11, k.roof);
+      R(20, 22, 8, 10, k.trim);
+      for (const x of [8, 34]) {
+        R(x, 18, 1, 12, WOOD);
+        R(x - 2, 17, 5, 2, "#c3d3de");
+      }
+      R(40, 2, 1, 12, WOOD);
+      R(41, 2, 6, 4, k.flag);
+    };
+  } },
+  keep: { w: 78, h: 60, draw: (race) => {
+    const k = LOOK[race];
+    return (R) => {
+      R(24, 14, 30, 44, "#aab0bc");
+      R(2, 24, 20, 34, "#8a8f9a");
+      R(56, 24, 20, 34, "#8a8f9a");
+      for (let x = 2; x < 76; x += 6) R(x, x < 22 || x > 54 ? 19 : 9, 4, 5, "#6c7482");
+      R(38, 0, 1, 12, "#c3d3de");
+      R(39, 0, 10, 6, k.flag);
+      R(32, 40, 14, 18, "#3a2f55");
+      R(10, 34, 3, 7, K1);
+      R(65, 34, 3, 7, K1);
+      R(36, 24, 6, 6, K1);
+    };
+  } },
   site: { w: 40, h: 30, draw: () => (R) => {
     R(2, 26, 36, 3, "#b38d55");
     R(4, 6, 2, 21, WOOD);
@@ -399,10 +441,29 @@ export const BUILDING_ICON: Record<string, (race: RaceKey) => Draw> = {
   lumber: () => (R) => { R(0, 3, 8, 2, WOOD); R(0, 6, 8, 2, WOOD); },
   well: () => (R) => { R(1, 4, 6, 4, "#8a8f9a"); R(2, 5, 4, 1, "#3b78d8"); },
   site: () => (R) => { R(0, 6, 8, 2, "#b38d55"); R(1, 1, 1, 6, WOOD); R(6, 1, 1, 6, WOOD); },
+  tower: (race) => (R) => { R(2, 2, 4, 6, "#aab0bc"); R(1, 1, 6, 2, "#8a8f9a"); R(4, 0, 2, 1, LOOK[race].flag); },
+  barracks: (race) => (R, E, P, T) => { R(0, 4, 8, 4, LOOK[race].wall); T(4, 0, 4, 4, LOOK[race].roof); R(3, 5, 2, 3, "#c3d3de"); },
+  keep: (race) => (R) => { R(0, 2, 8, 6, "#8a8f9a"); R(2, 1, 4, 7, "#aab0bc"); R(3, 0, 3, 2, LOOK[race].flag); },
+  temple: () => (R, E, P, T) => { R(1, 4, 6, 4, "#f4f0e8"); T(4, 0, 4, 4, "#f0d9a0"); R(3, 0, 2, 1, GOLD); },
+  mine: () => (R, E) => { E(4, 6, 4, 3, "#8a8f9a"); R(3, 4, 3, 4, K1); },
+  smithy: () => (R) => { R(1, 3, 6, 5, "#8a8f9a"); R(5, 0, 2, 3, "#5a5f6b"); R(2, 5, 2, 2, "#f08a2c"); },
+  market: (race) => (R) => { R(0, 3, 8, 2, LOOK[race].roof); R(1, 5, 1, 3, WOOD); R(6, 5, 1, 3, WOOD); R(2, 6, 4, 2, "#d4a94e"); },
+  library: (race) => (R, E, P, T) => { R(1, 3, 6, 5, LOOK[race].wall); T(4, 0, 4, 3, LOOK[race].roof); R(2, 5, 4, 1, "#3b6fd4"); },
+};
+
+// An army's banner in its kingdom's colour (drawn in the cloth key colour).
+export const BANNER: Draw = (R) => {
+  R(0, 0, 1, 16, WOOD);
+  R(1, 0, 8, 6, KEY.base);
+  R(1, 6, 6, 2, KEY.base);
+  R(3, 2, 3, 2, GOLD);
 };
 
 // Grace power effects, 7 x 7.
 export const FX_ICON: Record<string, Draw> = {
+  arrow: (R) => { R(0, 3, 5, 1, WOOD); R(5, 2, 2, 3, STEEL); R(0, 2, 1, 1, WH); R(0, 4, 1, 1, WH); },
+  fire: (R) => { R(2, 1, 3, 6, "#f08a2c"); R(1, 3, 5, 4, "#d9453d"); R(3, 0, 1, 2, GOLD); R(3, 4, 1, 2, GOLD); },
+  dust: (R) => { R(1, 3, 5, 3, "#c9a46a"); R(2, 2, 3, 1, "#d4a94e"); },
   sparkle: (R) => { R(3, 0, 1, 7, GOLD); R(0, 3, 7, 1, GOLD); R(2, 2, 3, 3, WH); },
   drop: (R) => { R(3, 0, 1, 2, "#5cc8e6"); R(2, 2, 3, 3, "#5cc8e6"); R(3, 5, 1, 1, "#3b78d8"); },
   plus: (R) => { R(2, 0, 3, 7, "#5fbf4a"); R(0, 2, 7, 3, "#5fbf4a"); },

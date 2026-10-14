@@ -15,7 +15,7 @@ import { mk, TAB_ICONS, TOOL_ICONS } from "../render/sprites";
 import { createWebGLRenderer } from "../render/webgl";
 import { exportFile, importFile, listSlots, loadSlot, saveSlot, type Loaded, type SlotId } from "../save/store";
 import { SimClient } from "../sim/client";
-import type { Frame } from "../sim/protocol";
+import { TOPICS, type Frame } from "../sim/protocol";
 import type { Fx } from "../sim/sim";
 import type { SimSnapshot } from "../sim/snapshot";
 import { RACES, SPECIES, TRAITS, type RaceKey } from "../sim/species";
@@ -26,20 +26,28 @@ import { defaultOptions, type Layout, type SizeKey, type World, type WorldOption
 import { $, el, randomSeed, SAVE_SLOTS, toast, txt } from "./dom";
 import { bindLangSwitch, fmt, onLangChange, t, toggleLang, type PlayKey } from "./i18n";
 import { bindMapInput } from "./input";
+import { armyCard, Command, type CmdTool } from "./command";
 import { chronicleText, kindName, tileCard, townCard, traitName, unitCard } from "./inspector";
 import { SimView } from "./simview";
 
 type Tab = "shape" | "life" | "cmd" | "wrath" | "grace" | "gene" | "world" | "insp";
-type Tool = ShapeTool | "pan" | "inspect" | "spawn" | "pick" | "grace";
+type Tool = ShapeTool | "pan" | "inspect" | "spawn" | "pick" | "grace" | "cmd";
 
 // Which phase brings each tab to life (PLAN section 21).
 const TABS: { key: Tab; phase: number }[] = [
   { key: "shape", phase: 1 }, { key: "life", phase: 2 }, { key: "cmd", phase: 4 }, { key: "wrath", phase: 5 },
   { key: "grace", phase: 3 }, { key: "gene", phase: 2 }, { key: "world", phase: 1 }, { key: "insp", phase: 1 },
 ];
-const READY_PHASE = 3;
+const READY_PHASE = 4;
 // Chronicle entries big enough to pop up as a toast.
-const TOASTS = new Set(["kingdom", "rebellion", "independence", "fallen", "age", "faith", "sect", "alliance", "rivals", "subspecies", "legend", "revive", "sickness"]);
+const TOASTS = new Set([
+  "kingdom", "rebellion", "independence", "fallen", "age", "faith", "sect", "alliance", "rivals", "subspecies", "legend", "revive", "sickness",
+  "war", "war_truce", "war_peace", "war_won", "conquered", "razed", "friction",
+]);
+const CMD_TOOLS: CmdTool[] = ["select", "move", "attack", "defend", "recruit", "possess", "war", "peace", "ally"];
+const CMD_ICONS: Record<CmdTool, string> = {
+  select: "fit", move: "pan", attack: "volcano", defend: "saves", recruit: "new", possess: "raise", war: "range", peace: "island", ally: "paint",
+};
 const CONTINUOUS: Tool[] = ["raise", "lower", "flatten", "smooth", "paint"];
 const BRUSH = config.brush;
 const SPEEDS = simConfig.speeds;
@@ -64,6 +72,8 @@ export class App {
   private kingdomCount = 0;
   private directorMode: DirectorMode = "normal";
   private lifeReturns = true;
+  private cmd = new Command(this.sim, () => this.view);
+  private bubbleUntil = 0;
   private trait = 0;
   private stroke: Stroke | null = null;
   private strokeSeed = 1;
@@ -79,6 +89,40 @@ export class App {
   private miniImg: ImageData | null = null;
   private brushRing = el("div");
   private lastHover = { x: -1, y: -1 };
+
+  // On screen controls for possessing on a phone, and buttons for everyone.
+  private bindPossessPad() {
+    const pad = $("#possess");
+    const buttons: [string, PlayKey, () => void][] = [
+      ["jump", "poss_jump", () => this.cmd.tap("jump")],
+      ["attack", "poss_attack", () => this.cmd.tap("attack")],
+      ["talk", "poss_talk", () => this.cmd.tap("talk")],
+      ["use", "poss_use", () => this.cmd.tap("interact")],
+      ["release", "poss_release", () => this.endPossess()],
+    ];
+    const row = $(".pad-buttons", pad);
+    for (const [, key, fn] of buttons) row.append(el("button", { type: "button", className: "btn ghost", onclick: fn }, txt(key)));
+    const stick = $(".stick", pad);
+    const knob = $(".knob", pad);
+    const move = (e: PointerEvent) => {
+      const r = stick.getBoundingClientRect();
+      const x = Math.max(-1, Math.min(1, (e.clientX - r.left - r.width / 2) / (r.width / 2)));
+      const y = Math.max(-1, Math.min(1, (e.clientY - r.top - r.height / 2) / (r.height / 2)));
+      this.cmd.stick = { x, y };
+      knob.style.transform = `translate(${x * 30}px, ${y * 30}px)`;
+    };
+    const stop = () => {
+      this.cmd.stick = { x: 0, y: 0 };
+      knob.style.transform = "";
+    };
+    stick.addEventListener("pointerdown", (e) => {
+      stick.setPointerCapture(e.pointerId);
+      move(e);
+    });
+    stick.addEventListener("pointermove", (e) => e.buttons && move(e));
+    stick.addEventListener("pointerup", stop);
+    stick.addEventListener("pointercancel", stop);
+  }
 
   async start() {
     this.renderer = createWebGLRenderer(this.canvas) ?? this.fallback();
@@ -192,8 +236,45 @@ export class App {
     }
     if (f.selected === null && this.selected) this.select(0);
     if (f.town !== undefined) this.view.town = f.town;
+    if (this.cmd.possessed && f.possessed !== this.cmd.possessed && f.possessed === 0 && performance.now() - this.possessedAt > 1000) {
+      toast(t("poss_lost"));
+      this.endPossess();
+    }
+    if (f.fx.some((x) => x.kind === "talk")) this.bubbleUntil = performance.now() + 2500;
     this.updateTopBar();
-    if (this.tab === "insp" || this.tab === "gene") this.renderInspector();
+    if (this.tab === "insp" || this.tab === "gene" || this.tab === "cmd") this.renderInspector();
+  }
+
+  private possessedAt = 0;
+
+  private startPossess(uid: number) {
+    this.possessedAt = performance.now();
+    this.select(uid);
+    this.following = true;
+    this.cam.zoomTo(64, this.cam.viewW / 2, this.cam.viewH / 2);
+    $("#possess").hidden = false;
+  }
+
+  private endPossess() {
+    if (this.cmd.possessed) this.cmd.release();
+    this.following = false;
+    $("#possess").hidden = true;
+  }
+
+  // The possessed unit's words float over their head.
+  private drawBubble() {
+    const box = $("#bubble");
+    const d = this.view.selected;
+    const at = this.selected ? this.view.position(this.selected) : null;
+    if (!d?.says || !at || performance.now() > this.bubbleUntil) {
+      box.hidden = true;
+      return;
+    }
+    const dpr = window.devicePixelRatio || 1;
+    box.hidden = false;
+    box.replaceChildren(el("b", { textContent: d.says }), el("small", { textContent: t(("say_" + TOPICS[d.topic]) as PlayKey) }));
+    box.style.left = ((at[0] - this.cam.x) * this.cam.scale) / dpr + "px";
+    box.style.top = ((at[1] - this.cam.y) * this.cam.scale) / dpr - 70 - Math.max(16, (32 * Math.floor(this.cam.scale / 32)) / dpr) + "px";
   }
 
   // Frame loop
@@ -209,6 +290,8 @@ export class App {
     }
     if (this.cam.update(dt) || this.following) this.cameraMoved();
     if (this.stroke && CONTINUOUS.includes(this.stroke.tool)) this.paintStroke(this.stroke);
+    this.cmd.pump(now);
+    this.drawBubble();
     if (this.world && this.dirty) {
       this.renderer.update(this.world, this.dirty);
       if (this.miniImg) paintTiles(this.world, this.miniImg, this.dirty);
@@ -218,7 +301,7 @@ export class App {
     if (this.world) {
       const year = this.view.frame ? (this.view.frame.tick % simConfig.ticksPerYear) / simConfig.ticksPerYear : 0;
       this.renderer.draw(this.cam, now / 400, year);
-      this.scene.build(this.cam, this.view.units(now), this.view.count, this.view.buildings, this.view.towns, this.selected, now / 1000, this.fx);
+      this.scene.build(this.cam, this.view.units(now), this.view.count, this.view.buildings, this.view.towns, this.selected, now / 1000, this.fx, this.view.frame?.armies ?? [], this.cmd.army);
       this.renderer.drawSprites(this.scene, this.sprites.atlas, this.cam);
     }
     if (this.miniDirty) this.drawMinimap();
@@ -287,11 +370,23 @@ export class App {
     document.body.append(this.brushRing);
     this.mini.parentElement!.addEventListener("pointerdown", (e) => this.minimapJump(e));
     window.addEventListener("keydown", (e) => this.key(e));
+    window.addEventListener("keyup", (e) => this.cmd.key(e, false));
+    this.bindPossessPad();
   }
 
   private press(tx: number, ty: number) {
     if (!this.world) return;
+    if (this.cmd.possessed) return this.cmd.tap("attack");
     switch (this.tool) {
+      case "cmd": {
+        const r = this.cmd.click(tx, ty);
+        if (r.possess) this.startPossess(r.possess);
+        if (r.town !== undefined) {
+          this.select(0);
+          this.selectTown(r.town);
+        }
+        return this.renderInspector();
+      }
       case "inspect":
         return this.inspect(tx, ty);
       case "pick":
@@ -336,6 +431,11 @@ export class App {
 
   private key(e: KeyboardEvent) {
     if ((e.target as HTMLElement).closest("input, select, dialog")) return;
+    if (this.cmd.key(e, true)) {
+      e.preventDefault();
+      if (!this.cmd.possessed) this.endPossess();
+      return;
+    }
     const n = Number(e.key);
     if (n >= 1 && n <= 8) {
       const tab = TABS[n - 1]!;
@@ -446,8 +546,8 @@ export class App {
   private selectTab(tab: Tab) {
     this.tab = tab;
     document.querySelectorAll<HTMLButtonElement>("#tabs button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === tab)));
-    const defaults: Partial<Record<Tab, Tool>> = { shape: "raise", life: "spawn", gene: "pick", insp: "inspect", world: "pan", grace: "grace" };
-    const keep = (tab === "shape" && !["inspect", "pan", "spawn", "pick", "grace"].includes(this.tool)) || this.tool === "pan";
+    const defaults: Partial<Record<Tab, Tool>> = { shape: "raise", life: "spawn", gene: "pick", insp: "inspect", world: "pan", grace: "grace", cmd: "cmd" };
+    const keep = (tab === "shape" && !["inspect", "pan", "spawn", "pick", "grace", "cmd"].includes(this.tool)) || this.tool === "pan";
     if (!keep || tab === "world") this.tool = defaults[tab] ?? "pan";
     this.buildShelf();
     this.renderInspector();
@@ -540,6 +640,26 @@ export class App {
         }
         shelf.append(sep(), this.brushControl());
         return;
+      case "cmd": {
+        shelf.append(panButton(), sep());
+        for (const tool of CMD_TOOLS) {
+          shelf.append(this.iconButton(CMD_ICONS[tool], `tool_${tool}`, tool === "peace" ? "tip_peace_k" : `tip_${tool}`, () => {
+            this.cmd.tool = tool;
+            this.tool = "cmd";
+            this.buildShelf();
+          }, this.tool === "cmd" && this.cmd.tool === tool));
+          if (tool === "defend") {
+            shelf.append(
+              this.iconButton("flatten", "tool_hold", "tip_hold", () => this.cmd.order("hold")),
+              this.iconButton("lower", "tool_retreat", "tip_retreat", () => this.cmd.order("retreat")),
+              this.stancePicker(),
+              sep(),
+            );
+          }
+          if (tool === "possess") shelf.append(sep());
+        }
+        return;
+      }
       case "insp":
         shelf.append(panButton(), this.iconButton("fit", "tool_pick", "in_hint", pick("inspect"), this.tool === "inspect"));
         return;
@@ -563,6 +683,14 @@ export class App {
   private gene(cmd: Parameters<SimClient["command"]>[0]) {
     if (!this.selected) return toast(t("gene_none"));
     this.sim.command(cmd);
+  }
+
+  private stancePicker() {
+    const select = el("select", { id: "stance" });
+    for (const s of ["aggressive", "defensive", "hold"] as const) select.append(el("option", { value: s }, txt(`stance_${s}`)));
+    select.value = this.cmd.selectedArmy()?.stance ?? "aggressive";
+    select.onchange = () => this.cmd.stance(select.value as "aggressive");
+    return el("label", { htmlFor: "stance" }, txt("in_stance"), select);
   }
 
   private directorControl() {
@@ -633,10 +761,15 @@ export class App {
 
   private renderInspector() {
     const box = $("#insp");
-    const show = this.tab === "insp" || this.tab === "gene";
+    const show = this.tab === "insp" || this.tab === "gene" || this.tab === "cmd";
     box.hidden = !show;
     box.classList.toggle("open", show && (!!this.inspected || !!this.selected || !!this.selectedTown));
     if (!show) return;
+    const army = this.tab === "cmd" ? this.cmd.selectedArmy() : undefined;
+    if (army) {
+      box.replaceChildren(...armyCard(army));
+      return;
+    }
     if (this.selectedTown && this.view.town) {
       box.replaceChildren(...townCard(this.view.town));
       return;
@@ -851,6 +984,7 @@ export class App {
       frame: () => this.view.frame,
       generate: (o: Partial<WorldOptions>, races?: RaceKey[]) => this.generate({ ...defaultOptions(randomSeed()), ...o }, races),
       speed: (s: number) => this.setSpeed(s),
+      command: (c: Parameters<SimClient["command"]>[0]) => this.sim.command(c),
       select: (uid: number) => this.select(uid),
       fmt,
     };

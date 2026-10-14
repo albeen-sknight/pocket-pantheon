@@ -15,10 +15,16 @@ import { yearlyReligion } from "../civ/religion";
 import { checkSubspecies, rememberBaseline, split } from "../civ/subspecies";
 import { RESOURCES, type Chronicle, type Culture, type Grave, type Kingdom, type Legend, type Religion, type Subspecies } from "../civ/types";
 import { directorYear, type DirectorMode } from "../director/director";
+import warData from "../../data/war.json";
+import { moraleHit, raiseArmy, updateArmies, type Army, type Stance } from "../war/armies";
+import { buildWalls, towersShoot, unitKingdom } from "../war/defense";
+import { NO_INPUT, possessTick, type PossessInput } from "../war/possess";
+import { activeWar, declareWar, endWar, sideOf, yearlyWars, type War } from "../war/wars";
+import { relation } from "../civ/diplomacy";
 import { createRng, type Rng } from "../core/rng";
 import { B, BIOMES, isWaterBiome } from "../world/biomes";
 import { applyStroke, type Rect, type Stroke } from "../world/edit";
-import { FARM, LAKE, RIVER, ROAD, type World } from "../world/types";
+import { FARM, LAKE, RIVER, ROAD, WALL, type World } from "../world/types";
 import { inheritBrain, randomBrain } from "./brain";
 import { addTrait, G, inheritGenes, mutate, randomGenes, removeTrait, STAT, stat } from "./genes";
 import { thinkAll, moveAll } from "./mind";
@@ -82,9 +88,16 @@ export class CivState {
   ownerChanged = true;
   borders = new Set<string>();
   settlements: { x: number; y: number; kingdom: number; until: number }[] = [];
+  wars: War[] = [];
+  armies: Army[] = [];
+  warPairs = new Set<string>();
+  lastWar = 0;
+  nextArmy = 1;
+  wallHp: Uint8Array;
 
   constructor(tiles: number) {
     this.owner = new Uint16Array(tiles);
+    this.wallHp = new Uint8Array(tiles);
   }
 }
 
@@ -93,7 +106,11 @@ export interface Fx {
   x: number;
   y: number;
   r: number;
+  tx?: number; // for arrows: where they land
+  ty?: number;
 }
+
+export type ArmyOrder = "move" | "attack" | "defend" | "hold" | "retreat" | "stance";
 
 export type SimEvent =
   | { t: "birth"; uid: number; kind: number; tick: number }
@@ -113,7 +130,15 @@ export type Command =
   | { c: "kill"; uid: number }
   | { c: "grace"; power: GracePower; x: number; y: number; radius: number }
   | { c: "split"; uid: number }
-  | { c: "director"; mode: DirectorMode; lifeReturns: boolean };
+  | { c: "director"; mode: DirectorMode; lifeReturns: boolean }
+  | { c: "war"; a: number; b: number }
+  | { c: "peace"; a: number; b: number }
+  | { c: "ally"; a: number; b: number }
+  | { c: "army"; id: number; order: ArmyOrder; x: number; y: number; town?: number; stance?: Stance }
+  | { c: "recruit"; town: number }
+  | { c: "possess"; uid: number }
+  | { c: "release" }
+  | { c: "input"; input: PossessInput };
 
 export class Sim {
   tick = 0;
@@ -128,6 +153,9 @@ export class Sim {
   readonly rng: { life: Rng; mind: Rng; genes: Rng; towns: Rng; spawn: Rng; civ: Rng };
   readonly civ: CivState;
   directorMode: DirectorMode = "normal";
+  possessed = 0; // uid the player is driving
+  input: PossessInput = { ...NO_INPUT };
+  jump = 0; // ticks left in the air
   lifeReturns = true;
   fx: Fx[] = [];
   events: SimEvent[] = [];
@@ -169,6 +197,14 @@ export class Sim {
     return Math.floor(this.tick / TPY);
   }
 
+  get ticksPerYear(): number {
+    return TPY;
+  }
+
+  get ticksPerSecond(): number {
+    return config.ticksPerSecond;
+  }
+
   // World setup: animals at half their carrying capacity, and a band of each
   // starting race on land it likes.
   populate(startRaces: RaceKey[]) {
@@ -187,6 +223,17 @@ export class Sim {
       if (at >= 0) this.spawnBand(kind, (at % this.world.w) + 0.5, Math.floor(at / this.world.w) + 0.5, config.life.startBand);
     }
     rememberBaseline(this);
+  }
+
+  private countCasualty(slot: number) {
+    moraleHit(this, slot);
+    const kid = unitKingdom(this, slot);
+    if (!kid) return;
+    for (const w of this.civ.wars) {
+      if (w.end) continue;
+      const side = sideOf(w, kid);
+      if (side !== -1) w.casualties[side]++;
+    }
   }
 
   // History, for the chronicle and the UI. Director entries carry a reason.
@@ -291,6 +338,8 @@ export class Sim {
     const kind = u.kind[slot]!;
     if (isCiv(kind)) {
       this.events.push({ t: "death", uid: u.uid[slot]!, kind, cause, tick: this.tick, name: u.names[slot]! });
+      if (cause === DEATH.battle) this.countCasualty(slot);
+      if (u.uid[slot] === this.possessed) this.possessed = 0;
       const graves = this.civ.graves;
       graves.push({ kind, x: u.x[slot]!, y: u.y[slot]!, name: u.names[slot]!, genes: Array.from(u.genesOf(slot)), town: u.town[slot]!, tick: this.tick });
       if (graves.length > civData.director.graveyard) graves.shift();
@@ -330,10 +379,11 @@ export class Sim {
   }
 
   // Movement cost into a tile for pathfinding.
-  moveCost(kind: number, i: number): number {
+  moveCost(kind: number, i: number, kingdom = 0): number {
     if (!this.passable(kind, i)) return Infinity;
     const w = this.world;
     const s = SPECIES_INFO[kind]!;
+    if (w.flags[i]! & WALL && !s.flies && this.civ.owner[i] !== kingdom) return Infinity;
     if (w.flags[i]! & ROAD) return 0.7;
     if (w.flags[i]! & RIVER && !s.flies) return 2.5;
     const b = w.biome[i]!;
@@ -550,6 +600,46 @@ export class Sim {
         this.directorMode = cmd.mode;
         this.lifeReturns = cmd.lifeReturns;
         return null;
+      case "war":
+        declareWar(this, cmd.a, cmd.b, "god");
+        return null;
+      case "peace": {
+        const w = activeWar(this, cmd.a, cmd.b);
+        if (w) endWar(this, w, "peace", 0);
+        return null;
+      }
+      case "ally": {
+        const w = activeWar(this, cmd.a, cmd.b);
+        if (w) endWar(this, w, "peace", 0);
+        const rel = relation(this, cmd.a, cmd.b);
+        rel.opinion = Math.max(rel.opinion, civData.diplomacy.alliance + 10);
+        rel.state = "alliance";
+        this.chronicle("alliance", { a: kingdom(this, cmd.a)?.name ?? "", b: kingdom(this, cmd.b)?.name ?? "" });
+        return null;
+      }
+      case "army":
+        this.orderArmy(cmd);
+        return null;
+      case "recruit": {
+        const t = this.town(cmd.town);
+        const k = t ? kingdom(this, t.kingdom) : undefined;
+        const R = warData.recruit;
+        if (!t || !k || t.food < R.food || k.gold < R.gold) return null;
+        t.food -= R.food;
+        k.gold -= R.gold;
+        raiseArmy(this, t, this.civ.wars.find((w) => !w.end && sideOf(w, k.id) >= 0) ?? null, 0.5);
+        return null;
+      }
+      case "possess":
+        this.possessed = u.find(cmd.uid) >= 0 ? cmd.uid : 0;
+        this.input = { ...NO_INPUT };
+        return null;
+      case "release":
+        this.possessed = 0;
+        return null;
+      case "input":
+        this.input = { ...cmd.input, talk: cmd.input.talk || this.input.talk, interact: cmd.input.interact || this.input.interact };
+        return null;
       case "clone": {
         const s = u.find(cmd.uid);
         if (s < 0) return null;
@@ -563,6 +653,37 @@ export class Sim {
         if (town) town.pop++;
         return null;
       }
+    }
+  }
+
+  private orderArmy(cmd: Extract<Command, { c: "army" }>) {
+    const a = this.civ.armies.find((x) => x.id === cmd.id);
+    if (!a) return;
+    a.player = cmd.order !== "retreat";
+    switch (cmd.order) {
+      case "stance":
+        a.stance = cmd.stance ?? "aggressive";
+        return;
+      case "hold":
+        a.state = "hold";
+        return;
+      case "retreat": {
+        const home = this.town(a.home);
+        a.state = "retreat";
+        a.target = { town: a.home, x: home?.x ?? a.x, y: (home?.y ?? a.y) + 2 };
+        return;
+      }
+      case "attack":
+        a.state = "march";
+        a.target = { town: cmd.town ?? 0, x: cmd.x, y: cmd.y };
+        return;
+      case "defend":
+        a.state = "defend";
+        a.target = { town: 0, x: cmd.x, y: cmd.y };
+        return;
+      default:
+        a.state = "march";
+        a.target = { town: 0, x: cmd.x, y: cmd.y };
     }
   }
 
@@ -592,6 +713,9 @@ export class Sim {
     this.grid.rebuild(u.alive, u.x, u.y, u.count);
     thinkAll(this);
     moveAll(this);
+    if (this.possessed) possessTick(this);
+    towersShoot(this);
+    if (this.tick % warData.army.orderEvery === 0) updateArmies(this);
     this.yearly();
     if (this.tick % config.town.plannerEvery === 0) planTowns(this);
     if (this.tick % config.roads.decayEvery === 0) this.coolRoads();
@@ -605,6 +729,8 @@ export class Sim {
       yearlyReligion(this);
       checkSubspecies(this);
       directorYear(this);
+      yearlyWars(this);
+      for (const t of this.towns) if (t.alive) buildWalls(this, t);
     }
   }
 

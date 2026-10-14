@@ -54,6 +54,30 @@ export interface TownView {
   kingdom: number;
 }
 
+export interface ArmyView {
+  id: number;
+  kingdom: number;
+  color: number;
+  name: string;
+  x: number;
+  y: number;
+  size: number;
+  morale: number;
+  state: string;
+  stance: string;
+  general: string;
+  target: string;
+}
+
+export interface WarView {
+  id: number;
+  a: string;
+  b: string;
+  aId: number;
+  bId: number;
+  start: number; // year
+}
+
 export interface KingdomView {
   id: number;
   name: string;
@@ -139,6 +163,9 @@ export interface Frame {
   events: SimEvent[];
   selected?: UnitDetail | null;
   kingdoms?: KingdomView[];
+  wars?: WarView[];
+  armies: ArmyView[];
+  possessed: number;
   owner?: Uint16Array;
   fx: Fx[];
   town?: TownDetail | null;
@@ -196,6 +223,21 @@ export function packFrame(sim: Sim, selected: number, selectedTown = 0): Frame {
     tiles,
     events: sim.events,
     fx: sim.fx,
+    armies: sim.civ.armies.map((a) => ({
+      id: a.id,
+      kingdom: a.kingdom,
+      color: kingdom(sim, a.kingdom)?.color ?? 0,
+      name: a.name,
+      x: a.x,
+      y: a.y,
+      size: a.members.length,
+      morale: Math.round(Math.max(0, a.morale)),
+      state: a.state,
+      stance: a.stance,
+      general: u.names[u.find(a.general)] ?? "",
+      target: sim.town(a.target.town)?.name ?? "",
+    })),
+    possessed: sim.possessed,
   };
   sim.events = [];
   sim.fx = [];
@@ -210,6 +252,9 @@ export function packFrame(sim: Sim, selected: number, selectedTown = 0): Frame {
       progress: Math.min(1, b.progress / buildingData[b.type].work),
     }));
     frame.townList = sim.towns.filter((tw) => tw.alive).map((tw) => ({ id: tw.id, race: tw.race, name: tw.name, x: tw.x, y: tw.y, pop: tw.pop, stage: tw.stage, kingdom: tw.kingdom }));
+    frame.wars = sim.civ.wars
+      .filter((w) => !w.end)
+      .map((w) => ({ id: w.id, a: kingdom(sim, w.a)?.name ?? "", b: kingdom(sim, w.b)?.name ?? "", aId: w.a, bId: w.b, start: Math.floor(w.start / sim.ticksPerYear) }));
     frame.kingdoms = sim.civ.kingdoms.filter((k) => k.alive).map((k) => ({ id: k.id, name: k.name, color: k.color, race: k.race, towns: k.towns, pop: k.pop, age: k.age, capital: k.capital }));
   }
   if (selectedTown) frame.town = townDetail(sim, selectedTown);

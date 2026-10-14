@@ -2,7 +2,7 @@
 // Turns the latest sim frame into a sorted list of sprite instances for the
 // current zoom (PLAN section 6.3). Below Town zoom units become markers, so
 // sprites are never shrunk.
-import { BLESSED, COLOR_SHIFT, F, ICONS, ICON_SHIFT, UNIT_STRIDE, type BuildingView, type TownView } from "../sim/protocol";
+import { BLESSED, COLOR_SHIFT, F, ICONS, ICON_SHIFT, UNIT_STRIDE, type ArmyView, type BuildingView, type TownView } from "../sim/protocol";
 import type { Fx } from "../sim/sim";
 import { RACE_COUNT } from "../sim/species";
 import { RACE_TINT_ROWS, type SpriteSet } from "./atlas";
@@ -11,7 +11,7 @@ import type { Camera } from "./camera";
 // Per instance: screen x, screen y (top left, device px), sprite, scale, flip, tint row (-1 none)
 export const INST = 6;
 
-const FX_SPRITE: Record<string, string> = { rain: "drop", heal: "plus", fertility: "love", bounty: "eat", peace: "love" };
+const FX_SPRITE: Record<string, string> = { rain: "drop", heal: "plus", fertility: "love", bounty: "eat", peace: "love", fire: "fire", dust: "dust" };
 const FX_LIFE = 1.4; // seconds
 
 export class Scene {
@@ -23,7 +23,7 @@ export class Scene {
 
   constructor(private set: SpriteSet) {}
 
-  build(cam: Camera, units: Float32Array, n: number, buildings: BuildingView[], towns: TownView[], selected: number, time: number, fx: { fx: Fx; at: number }[] = []) {
+  build(cam: Camera, units: Float32Array, n: number, buildings: BuildingView[], towns: TownView[], selected: number, time: number, fx: { fx: Fx; at: number }[] = [], armies: ArmyView[] = [], selectedArmy = 0) {
     this.count = 0;
     const scale = cam.scale;
     const s = this.set;
@@ -85,11 +85,26 @@ export class Scene {
         put(x, y - (sp.h * k) / scale - 0.05, s.action(ICONS[icon]!), k, 0, 0.5, 1, y + 0.001);
       }
     }
+    // Army banners, readable from any zoom.
+    for (const a of armies) {
+      const bk = full ? k : scale >= 8 ? 2 : 1;
+      put(a.x, a.y - (full ? 1.2 : 0), s.banner, bk, 0, 0.2, 1, a.y + 0.5, s.keyed ? RACE_TINT_ROWS + a.color : -1);
+      if (a.id === selectedArmy) put(a.x, a.y, s.ring, bk, 0, 0.5, 0.5, a.y + 0.4);
+    }
     // Grace effects: sparkles scattered over the area, drifting up as they fade.
     const fk = Math.max(1, Math.min(4, Math.floor(scale / 8)));
     for (const { fx: f, at } of fx) {
       const age = time - at;
       if (age < 0 || age > FX_LIFE) continue;
+      if (f.kind === "talk") continue; // shown as a speech bubble by the UI
+      if (f.kind === "arrow") {
+        const p = Math.min(1, age / 0.35);
+        if (p >= 1) continue;
+        const ax = f.x + ((f.tx ?? f.x) - f.x) * p;
+        const ay = f.y + ((f.ty ?? f.y) - f.y) * p - Math.sin(p * Math.PI) * 0.8;
+        put(ax, ay, s.fx("arrow"), Math.max(1, k), (f.tx ?? f.x) < f.x ? 1 : 0, 0.5, 0.5, 1e6);
+        continue;
+      }
       const sprite = s.fx(FX_SPRITE[f.kind] ?? "sparkle");
       const count = Math.min(40, Math.round(6 + f.r * f.r));
       for (let i = 0; i < count; i++) {

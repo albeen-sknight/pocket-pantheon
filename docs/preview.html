@@ -353,7 +353,7 @@ for(let k=0;k<5;k++){const p=(t*.12+k*.2)%1,x0=304,y0=26+k*26,x1=230-k*12,y1=70+
 const whoFig=fig(OR,5);whoFig.setAttribute('aria-hidden','true');document.getElementById('who').append(whoFig);
 
 /* roadmap */
-const road=[["r0","done"],["r1","done"],["r2","done"],["r3","done"],["r4","done"],["r5","next"],["r6","plan"],["r7","plan"],["r8","plan"]];
+const road=[["r0","done"],["r1","done"],["r2","done"],["r3","done"],["r4","done"],["r5","done"],["r6","next"],["r7","plan"],["r8","plan"]];
 road.forEach(([k,s],i)=>{const li=document.createElement('li');li.innerHTML='<span class="n">'+(i?i-1:'\u2713')+'</span><div><h3 data-i="'+k+'_n"></h3><p data-i="'+k+'_d"></p></div><span class="st '+s+'" data-i="'+s+'"></span>';document.getElementById('road').append(li)});
 
 document.querySelectorAll('#lang button').forEach(b=>b.onclick=()=>setLang(b.dataset.l));

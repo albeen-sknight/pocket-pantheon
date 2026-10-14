@@ -26,6 +26,8 @@ export function toast(message: string) {
   const box = $("#toast");
   const note = el("div", { textContent: message });
   box.append(note);
+  // A burst of news shows only the latest few.
+  while (box.children.length > 4) box.firstElementChild!.remove();
   setTimeout(() => note.remove(), 3500);
 }
 
