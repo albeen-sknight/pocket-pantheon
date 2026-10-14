@@ -259,6 +259,176 @@ export const ANIMAL_ART: Record<string, AnimalArt> = {
   } },
 };
 
+// Monsters and specials (PLAN section 8). Dragon, slime, ghost, UFO and the
+// giant crab come from the concept preview.
+const humanoid = (skin: string, cloth: string, extra: (R: Parameters<Draw>[0], P: Parameters<Draw>[2]) => void): ((f: number) => Draw) => (f) => (R, E, P) => {
+  const l = f ? 1 : 0;
+  R(9, 22, 4, 6 - l, cloth);
+  R(15, 22, 4, 6, cloth);
+  R(7, 12, 14, 11, cloth);
+  R(4, 13, 3, 8, skin);
+  R(21, 13, 3, 8, skin);
+  E(14, 7, 5, 5, skin);
+  extra(R, P);
+};
+
+export const MONSTER_ART: Record<string, AnimalArt> = {
+  dragon: { w: 50, h: 34, draw: (f) => (R, E, P) => {
+    R(2, 21, 12, 4, "#d9453d");
+    R(0, 19, 4, 3, "#d9453d");
+    E(18, f ? 7 : 9, 9, 7, "#5a2a30");
+    E(24, 19, 13, 7, "#d9453d");
+    E(26, 22, 10, 3, GOLD);
+    R(15, 24, 4, 8, "#d9453d");
+    R(30, 24, 4, 8, "#d9453d");
+    R(14, 31, 6, 2, WH);
+    R(29, 31, 6, 2, WH);
+    R(33, 8, 6, 12, "#d9453d");
+    R(36, 4, 10, 7, "#d9453d");
+    R(44, 6, 5, 4, "#d9453d");
+    R(40, 10, 8, 2, "#d9453d");
+    R(41, 5, 2, 2, GOLD);
+    P(42, 6, K1);
+    R(36, 1, 2, 4, WH);
+    R(40, 1, 2, 3, WH);
+    P(47, 7, K1);
+  } },
+  zombie: { w: 28, h: 30, draw: humanoid("#7bc24a", "#6b5a4a", (R, P) => { P(12, 7, "#d9453d"); P(16, 7, "#d9453d"); R(4, 13, 3, 3, "#6b5a4a"); R(22, 11, 4, 3, "#7bc24a"); }) },
+  skeleton: { w: 28, h: 30, draw: humanoid("#f4f0e8", "#dfe9ef", (R, P) => { P(12, 7, K1); P(16, 7, K1); R(12, 10, 5, 1, K1); for (let y = 14; y < 22; y += 2) R(8, y, 12, 1, "#8a8f9a"); }) },
+  ghost: { w: 20, h: 24, draw: (f) => (R, E) => {
+    E(10, 9, 7, 7, "#dfe9ef");
+    R(3, 9, 14, 10, "#dfe9ef");
+    R(3, 19, 3, 3 + f, "#dfe9ef");
+    R(8, 19, 4, 4 - f, "#dfe9ef");
+    R(14, 19, 3, 3 + f, "#dfe9ef");
+    R(7, 8, 2, 3, K1);
+    R(12, 8, 2, 3, K1);
+    R(9, 13, 2, 2, K1);
+  } },
+  demon: { w: 28, h: 32, draw: (f) => (R, E, P, T) => {
+    humanoid("#d9453d", "#2b2233", () => {})(f)(R, E, P, T);
+    R(8, 0, 2, 4, "#f4f0e8");
+    R(18, 0, 2, 4, "#f4f0e8");
+    P(12, 7, GOLD);
+    P(16, 7, GOLD);
+    R(22, 22, 5, 2, "#d9453d");
+    R(25, 18, 2, 4, "#f08a2c");
+  } },
+  fairy: { w: 16, h: 16, draw: (f) => (R, E, P) => {
+    E(4, 6, 3, f ? 4 : 3, "#d8f0f8");
+    E(12, 6, 3, f ? 4 : 3, "#d8f0f8");
+    E(8, 9, 2, 4, "#b58cf0");
+    E(8, 4, 2, 2, "#e0b184");
+    P(8, 1, GOLD);
+  } },
+  slime: { w: 22, h: 16, draw: (f) => (R, E) => {
+    E(11, 9 + f, 10, 6 - f, "#7bc24a");
+    R(1, 10, 20, 5, "#7bc24a");
+    R(5, 4 + f, 3, 2, "#8fd88f");
+    R(7, 7, 2, 3, K1);
+    R(13, 7, 2, 3, K1);
+    R(10, 11, 3, 1, K1);
+  } },
+  ice_golem: { w: 30, h: 32, draw: (f) => (R) => {
+    const l = f ? 1 : 0;
+    R(7, 24, 6, 8 - l, "#5cc8e6");
+    R(17, 24, 6, 8, "#5cc8e6");
+    R(5, 10, 20, 15, "#d8f0f8");
+    R(0, 11, 5, 12, "#5cc8e6");
+    R(25, 11, 5, 12, "#5cc8e6");
+    R(9, 2, 12, 9, "#d8f0f8");
+    R(11, 5, 2, 2, "#3b6fd4");
+    R(17, 5, 2, 2, "#3b6fd4");
+  } },
+  sea_serpent: { w: 40, h: 22, draw: (f) => (R, E, P) => {
+    for (let x = 0; x < 30; x++) {
+      const y = 12 + Math.round(Math.sin((x + f * 3) * 0.4) * 4);
+      R(x, y, 1, 4, x % 6 < 3 ? "#2f8f3a" : "#1f8f4a");
+    }
+    E(34, 9, 5, 4, "#2f8f3a");
+    R(32, 4, 2, 4, GOLD);
+    P(36, 8, "#d9453d");
+  } },
+  mutant: { w: 28, h: 30, draw: humanoid("#8fd14f", "#5a5f6b", (R, P) => { R(17, 3, 4, 4, "#8fd14f"); P(11, 7, K1); P(14, 6, K1); P(19, 5, K1); R(22, 14, 4, 2, "#8fd14f"); }) },
+  clawzilla: { w: 102, h: 66, draw: (f) => (R, E) => {
+    const k = 3;
+    const r = (x: number, y: number, w: number, h: number, c: string) => R(x * k, y * k, w * k, h * k, c);
+    r(5, 15 + f, 5, 2, "#b5602a");
+    r(4, 18, 5, 2, "#b5602a");
+    r(25, 15, 5, 2, "#b5602a");
+    r(26, 18 - f, 5, 2, "#b5602a");
+    r(8, 9, 6, 2, "#f08a2c");
+    r(20, 9, 6, 2, "#f08a2c");
+    E(5 * k, 6 * k, 5 * k, 4 * k, "#f08a2c");
+    E(29 * k, 6 * k, 5 * k, 4 * k, "#f08a2c");
+    r(12, 5, 2, 5, "#f08a2c");
+    r(21, 5, 2, 5, "#f08a2c");
+    E(17 * k, 13 * k, 10 * k, 6 * k, "#f08a2c");
+    E(13 * k, 4 * k, 2 * k, 2 * k, WH);
+    E(22 * k, 4 * k, 2 * k, 2 * k, WH);
+    r(13, 4, 1, 1, K1);
+    r(22, 4, 1, 1, K1);
+    r(12, 6, 2, 3, GOLD);
+    r(16, 5, 2, 3, GOLD);
+    r(20, 6, 2, 3, GOLD);
+  } },
+  ufo: { w: 32, h: 20, draw: (f) => (R, E) => {
+    E(16, 6, 6, 5, "#5cc8e6");
+    E(16, 11, 14, 4, "#8a8f9a");
+    [5, 11, 16, 21, 27].forEach((x, i) => R(x, 11, 2, 2, (i + f) % 2 ? GOLD : "#f08a2c"));
+  } },
+  guardian: { w: 60, h: 80, draw: (f) => (R, E) => {
+    const l = f ? 2 : 0;
+    R(14, 56, 12, 24 - l, "#6c7482");
+    R(34, 56, 12, 24, "#6c7482");
+    R(10, 22, 40, 36, "#8a8f9a");
+    R(0, 24, 10, 30, "#6c7482");
+    R(50, 24, 10, 30, "#6c7482");
+    R(18, 2, 24, 22, "#aab0bc");
+    R(22, 10, 5, 4, "#5cc8e6");
+    R(33, 10, 5, 4, "#5cc8e6");
+    R(24, 36, 12, 8, "#5a5f6b");
+    E(30, 40, 4, 3, "#5cc8e6");
+  } },
+};
+
+// Effects for disasters, 7 to 40 pixels.
+export const CHAOS_FX: Record<string, { w: number; h: number; draw: Draw }> = {
+  bolt: { w: 9, h: 40, draw: (R) => {
+    const zig = [[4, 0], [2, 6], [5, 12], [2, 18], [6, 24], [3, 30], [5, 36]];
+    zig.forEach(([x, y]) => R(x!, y!, 2, 7, GOLD));
+    zig.forEach(([x, y]) => R(x!, y! + 2, 1, 3, WH));
+  } },
+  meteor: { w: 18, h: 18, draw: (R, E) => {
+    R(0, 0, 4, 4, "#f2c94c");
+    R(3, 3, 4, 4, "#f08a2c");
+    R(6, 6, 3, 3, "#d9453d");
+    E(13, 13, 4.5, 4.5, "#6b5a4a");
+    E(12, 12, 2, 2, "#8a8f9a");
+  } },
+  flame: { w: 7, h: 9, draw: (R) => { R(2, 0, 3, 9, "#f08a2c"); R(1, 3, 5, 6, "#d9453d"); R(3, 2, 1, 5, GOLD); } },
+  puff: { w: 10, h: 8, draw: (R, E) => { E(5, 4, 4.5, 3.5, "#8a8f9a"); E(4, 3, 2, 1.5, "#aab0bc"); } },
+  acid: { w: 12, h: 8, draw: (R, E) => { E(6, 4, 5.5, 3.5, "#7bc24a"); E(5, 3, 2.5, 1.5, "#8fd88f"); } },
+  snow: { w: 5, h: 5, draw: (R) => { R(2, 0, 1, 5, WH); R(0, 2, 5, 1, WH); } },
+  mushroom: { w: 40, h: 46, draw: (R, E) => {
+    R(16, 20, 8, 26, "#aab0bc");
+    E(20, 14, 18, 11, "#f08a2c");
+    E(20, 12, 14, 8, "#f2c94c");
+    E(20, 10, 8, 4, WH);
+    R(8, 40, 24, 6, "#8a8f9a");
+  } },
+  ring: { w: 30, h: 16, draw: (R, E) => { E(15, 8, 14, 7, "#f4f0e8"); E(15, 8, 11, 5, "#f2c94c"); E(15, 8, 8, 3, "#f08a2c"); } },
+  beam: { w: 12, h: 40, draw: (R) => { R(2, 0, 8, 40, "#f2e8a0"); R(4, 0, 4, 40, "#f4f0e8"); } },
+  tornado: { w: 18, h: 30, draw: (R) => {
+    for (let y = 0; y < 30; y += 3) {
+      const w = Math.max(3, 18 - y * 0.5);
+      R(Math.round(9 - w / 2 + Math.sin(y * 0.6) * 2), y, Math.round(w), 2, y % 6 ? "#aab0bc" : "#8a8f9a");
+    }
+  } },
+  laser: { w: 6, h: 6, draw: (R) => { R(0, 1, 6, 4, "#d9453d"); R(0, 2, 6, 2, "#f4f0e8"); } },
+  germ: { w: 7, h: 7, draw: (R, E) => { E(3, 3, 3, 3, "#7bc24a"); R(2, 2, 1, 1, K1); } },
+};
+
 // Building colours per race: walls, roof, trim
 const LOOK: Record<RaceKey, { wall: string; roof: string; trim: string; flag: string }> = {
   human: { wall: "#d8b98a", roof: "#b5483a", trim: "#8a5a36", flag: "#3b6fd4" },

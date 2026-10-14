@@ -1,7 +1,10 @@
 // Pocket Pantheon · Copyright (c) 2026 Albeen (albeen-sknight)
 // Possess (PLAN section 14): the player drives one unit with its real stats
 // and gear while the world keeps running around it.
+import dis from "../../data/disasters.json";
 import war from "../../data/war.json";
+import { ignite } from "../chaos/hazards";
+import { DEATH } from "../sim/units";
 import { B } from "../world/biomes";
 import { strikeAt } from "../sim/mind";
 import type { Sim } from "../sim/sim";
@@ -39,14 +42,21 @@ export function possessTick(sim: Sim) {
   if (sim.jump > 0) sim.jump--;
   const len = Math.hypot(input.dx, input.dy);
   if (len > 0.05) move(sim, s, input.dx / len, input.dy / len);
-  if (input.jump && sim.jump === 0) jump(sim, s, input.dx, input.dy);
-  if (input.attack && (sim.tick + s) % P.attackEvery === 0) attack(sim, s);
+  const giant = SPECIES_INFO[u.kind[s]!]!.giant;
+  if (giant) {
+    if (input.jump && sim.jump === 0) stomp(sim, s);
+    if (input.attack && (sim.tick + s) % P.attackEvery === 0) sweep(sim, s);
+    if (input.interact) laser(sim, s, input.dx, input.dy);
+  } else {
+    if (input.jump && sim.jump === 0) jump(sim, s, input.dx, input.dy);
+    if (input.attack && (sim.tick + s) % P.attackEvery === 0) attack(sim, s);
+  }
   if (input.talk) {
     sim.fx.push({ kind: "talk", x: u.x[s]!, y: u.y[s]!, r: 0 });
     sim.input.talk = false;
   }
   if (input.interact) {
-    interact(sim, s);
+    if (!giant) interact(sim, s);
     sim.input.interact = false;
   }
 }
@@ -98,6 +108,51 @@ function attack(sim: Sim, s: number) {
     }
   });
   if (target >= 0) strikeAt(sim, s, target);
+}
+
+// Clawzilla's moves (PLAN section 14): stomp, claw sweep, eye laser.
+function stomp(sim: Sim, s: number) {
+  const u = sim.units;
+  const G = dis.giant;
+  sim.jump = P.jumpTicks * 2;
+  sim.fx.push({ kind: "stomp", x: u.x[s]!, y: u.y[s]!, r: G.stompRadius });
+  hitAround(sim, s, u.x[s]!, u.y[s]!, G.stompRadius, G.stompDamage);
+}
+
+function sweep(sim: Sim, s: number) {
+  const u = sim.units;
+  const G = dis.giant;
+  const dir = u.facing[s] ? -1 : 1;
+  const cx = u.x[s]! + dir * 1.5;
+  sim.fx.push({ kind: "dust", x: cx, y: u.y[s]!, r: G.sweepRadius });
+  hitAround(sim, s, cx, u.y[s]!, G.sweepRadius, G.sweepDamage);
+}
+
+function laser(sim: Sim, s: number, dx: number, dy: number) {
+  const u = sim.units;
+  const G = dis.giant;
+  const len = Math.hypot(dx, dy);
+  const fx = len > 0.1 ? dx / len : u.facing[s] ? -1 : 1;
+  const fy = len > 0.1 ? dy / len : 0;
+  const x0 = u.x[s]!;
+  const y0 = u.y[s]! - 1.5;
+  sim.fx.push({ kind: "laser", x: x0, y: y0, r: 0, tx: x0 + fx * G.laserRange, ty: y0 + fy * G.laserRange });
+  for (let d = 2; d <= G.laserRange; d += 1) {
+    const x = x0 + fx * d;
+    const y = y0 + 1.5 + fy * d;
+    hitAround(sim, s, x, y, 0.8, G.laserDamage / 4);
+    if (d % 3 === 0) ignite(sim, Math.floor(y) * sim.world.w + Math.floor(x));
+  }
+}
+
+function hitAround(sim: Sim, s: number, x: number, y: number, r: number, dmg: number) {
+  const u = sim.units;
+  sim.grid.query(x, y, r, (o) => {
+    if (o === s || Math.hypot(u.x[o]! - x, u.y[o]! - y) > r) return;
+    u.hp[o]! -= dmg;
+    if (u.hp[o]! <= 0) sim.kill(o, DEATH.monster);
+  });
+  for (const b of [...sim.buildings]) if (Math.hypot(b.x + b.w / 2 - x, b.y + b.h / 2 - y) <= r + 0.5) sim.removeBuilding(b);
 }
 
 // Chop a tree, pray at a temple, or eat from the town stores, whichever is closest.

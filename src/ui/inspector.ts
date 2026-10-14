@@ -153,6 +153,7 @@ export function chronicleText(e: Chronicle): string {
   if (typeof vars.race === "number") vars.race = t(("race_pl_" + RACES[vars.race]) as PlayKey);
   else if (typeof vars.race === "string") vars.race = t(("race_pl_" + vars.race) as PlayKey);
   if (typeof vars.age === "string") vars.age = t(("age_" + vars.age) as PlayKey);
+  if (typeof vars.what === "string") vars.what = t(("wrath_" + vars.what) as PlayKey).toLowerCase();
   if (typeof vars.tier === "string") vars.tier = t(("gear_" + vars.tier) as PlayKey).toLowerCase();
   const text = t(("ev_" + e.kind) as PlayKey, vars);
   return e.why ? `${text} ${t(e.why as PlayKey)}` : text;

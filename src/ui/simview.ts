@@ -41,10 +41,11 @@ export class SimView {
     let y0 = Infinity;
     let x1 = -Infinity;
     let y1 = -Infinity;
-    for (let k = 0; k < tiles.length; k += 3) {
+    for (let k = 0; k < tiles.length; k += 4) {
       const i = tiles[k]!;
       world.biome[i] = tiles[k + 1]!;
       world.flags[i] = tiles[k + 2]!;
+      world.height[i] = tiles[k + 3]! / 65535;
       const x = i % world.w;
       const y = Math.floor(i / world.w);
       x0 = Math.min(x0, x);

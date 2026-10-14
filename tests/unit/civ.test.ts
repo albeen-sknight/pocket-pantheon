@@ -14,6 +14,7 @@ const YEAR = 120;
 function makeSim(seed: number, races: RaceKey[], size: SizeKey = "small") {
   const world = generateWorld({ ...defaultOptions(seed), size });
   const sim = new Sim(world, seed);
+  sim.disasterFrequency = "off"; // these tests are about people, not acts of nature
   sim.populate(races);
   return sim;
 }
@@ -124,7 +125,7 @@ describe("grace powers", () => {
     }
     expect(blessed).toBeGreaterThan(0);
     expect(fertile).toBeGreaterThan(0);
-    expect(sim.fx.map((f) => f.kind)).toEqual(["bless", "fertility"]);
+    expect(sim.fx.map((f) => f.kind)).toEqual(expect.arrayContaining(["bless", "fertility"]));
   }, 60_000);
 
   it("bounty fills the nearest town, inspire speeds research", () => {

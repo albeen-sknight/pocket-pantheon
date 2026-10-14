@@ -20,7 +20,7 @@ export const DEATH = { age: 0, battle: 1, disease: 2, hunger: 3, fire: 4, drowni
 export const UNIT_ARRAYS = [
   "alive", "kind", "sex", "x", "y", "age", "hp", "needs", "act", "actT", "tx", "ty", "town", "home", "job",
   "carry", "spouse", "mother", "father", "uid", "starve", "target", "kills", "born", "genes", "brain", "mood", "facing",
-  "religion", "subspecies", "weapon", "armor", "gearQ", "blessed", "fertile", "army",
+  "religion", "subspecies", "weapon", "armor", "gearQ", "blessed", "fertile", "army", "sick", "immune", "stun",
 ] as const;
 
 export class Units {
@@ -62,6 +62,9 @@ export class Units {
   readonly blessed: Float32Array; // years of blessing left
   readonly fertile: Float32Array; // years of the fertility power left
   readonly army: Uint16Array; // army id, 0 for none
+  readonly sick: Float32Array; // years of plague left
+  readonly immune: Uint8Array;
+  readonly stun: Uint8Array; // ticks frozen in place
   names: string[] = [];
   paths: (Int32Array | null)[] = [];
   pathAt: Int32Array;
@@ -106,6 +109,9 @@ export class Units {
     this.blessed = new Float32Array(c);
     this.fertile = new Float32Array(c);
     this.army = new Uint16Array(c);
+    this.sick = new Float32Array(c);
+    this.immune = new Uint8Array(c);
+    this.stun = new Uint8Array(c);
     this.pathAt = new Int32Array(c);
   }
 
@@ -145,6 +151,9 @@ export class Units {
     this.blessed[slot] = 0;
     this.fertile[slot] = 0;
     this.army[slot] = 0;
+    this.sick[slot] = 0;
+    this.immune[slot] = 0;
+    this.stun[slot] = 0;
     this.born[slot] = tick;
     this.needs.fill(0, slot * NEEDS, slot * NEEDS + NEEDS);
     const uid = this.nextUid++;

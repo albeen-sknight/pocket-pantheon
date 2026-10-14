@@ -2,7 +2,7 @@
 // Turns the latest sim frame into a sorted list of sprite instances for the
 // current zoom (PLAN section 6.3). Below Town zoom units become markers, so
 // sprites are never shrunk.
-import { BLESSED, COLOR_SHIFT, F, ICONS, ICON_SHIFT, UNIT_STRIDE, type ArmyView, type BuildingView, type TownView } from "../sim/protocol";
+import { BLESSED, COLOR_SHIFT, F, ICONS, ICON_SHIFT, UNIT_STRIDE, type ArmyView, type BuildingView, type Frame, type TownView } from "../sim/protocol";
 import type { Fx } from "../sim/sim";
 import { RACE_COUNT } from "../sim/species";
 import { RACE_TINT_ROWS, type SpriteSet } from "./atlas";
@@ -11,7 +11,13 @@ import type { Camera } from "./camera";
 // Per instance: screen x, screen y (top left, device px), sprite, scale, flip, tint row (-1 none)
 export const INST = 6;
 
-const FX_SPRITE: Record<string, string> = { rain: "drop", heal: "plus", fertility: "love", bounty: "eat", peace: "love", fire: "fire", dust: "dust" };
+const FX_SPRITE: Record<string, string> = {
+  rain: "drop", heal: "plus", fertility: "love", bounty: "eat", peace: "love", fire: "flame", dust: "dust",
+  ash: "puff", plague: "germ", zombie: "germ", volcano: "puff", flood: "drop", blizzard: "snow", drought: "dust",
+  acid: "acid", earthquake: "dust", stomp: "dust", breath: "flame",
+};
+// Effects drawn their own way below, not as scattered sparkles.
+const SPECIAL_FX = new Set(["talk", "arrow", "lightning", "boom", "mushroom", "nuke", "laser", "beam", "breath", "tornado", "meteor"]);
 const FX_LIFE = 1.4; // seconds
 
 export class Scene {
@@ -23,7 +29,7 @@ export class Scene {
 
   constructor(private set: SpriteSet) {}
 
-  build(cam: Camera, units: Float32Array, n: number, buildings: BuildingView[], towns: TownView[], selected: number, time: number, fx: { fx: Fx; at: number }[] = [], armies: ArmyView[] = [], selectedArmy = 0) {
+  build(cam: Camera, units: Float32Array, n: number, buildings: BuildingView[], towns: TownView[], selected: number, time: number, fx: { fx: Fx; at: number }[] = [], armies: ArmyView[] = [], selectedArmy = 0, storms: Frame["storms"] = []) {
     this.count = 0;
     const scale = cam.scale;
     const s = this.set;
@@ -91,12 +97,33 @@ export class Scene {
       put(a.x, a.y - (full ? 1.2 : 0), s.banner, bk, 0, 0.2, 1, a.y + 0.5, s.keyed ? RACE_TINT_ROWS + a.color : -1);
       if (a.id === selectedArmy) put(a.x, a.y, s.ring, bk, 0, 0.5, 0.5, a.y + 0.4);
     }
+    // Storms: tornado funnels, acid clouds, smoke over eruptions, falling meteors.
+    for (const st of storms) {
+      const sk = Math.max(1, Math.min(4, Math.floor(scale / 8)));
+      if (st.kind === "tornado") {
+        put(st.x + Math.sin(time * 9) * 0.3, st.y, s.fx("tornado"), sk, Math.floor(time * 8) & 1, 0.5, 1, st.y + 0.5);
+      } else if (st.kind === "acid") {
+        for (let i = 0; i < 12; i++) {
+          const a = i * 2.4 + time * 0.3;
+          put(st.x + Math.cos(a) * st.r * 0.7, st.y + Math.sin(a) * st.r * 0.5 - 2, s.fx("acid"), sk, 0, 0.5, 0.5, 1e6);
+        }
+      } else if (st.kind === "eruption") {
+        for (let i = 0; i < 6; i++) put(st.x + Math.sin(time * 2 + i) * 1.5, st.y - 2 - ((time * 2 + i) % 4), s.fx("puff"), sk, 0, 0.5, 0.5, 1e6);
+      } else if (st.kind === "meteor") {
+        const up = st.ticks * 0.9;
+        put(st.x - up, st.y - up, s.fx("meteor"), sk, 0, 0.5, 0.5, 1e6);
+      }
+    }
     // Grace effects: sparkles scattered over the area, drifting up as they fade.
     const fk = Math.max(1, Math.min(4, Math.floor(scale / 8)));
     for (const { fx: f, at } of fx) {
       const age = time - at;
       if (age < 0 || age > FX_LIFE) continue;
       if (f.kind === "talk") continue; // shown as a speech bubble by the UI
+      if (SPECIAL_FX.has(f.kind) && f.kind !== "arrow") {
+        this.special(f, age, fk, put);
+        continue;
+      }
       if (f.kind === "arrow") {
         const p = Math.min(1, age / 0.35);
         if (p >= 1) continue;
@@ -114,6 +141,43 @@ export class Scene {
       }
     }
     this.sort();
+  }
+
+  // Bolts, explosions, the mushroom cloud, beams and dragon breath.
+  private special(f: Fx, age: number, k: number, put: (x: number, y: number, sprite: number, sc: number, flip: number, ax?: number, ay?: number, sort?: number) => void) {
+    const s = this.set;
+    const line = (sprite: number, steps: number) => {
+      const tx = f.tx ?? f.x;
+      const ty = f.ty ?? f.y;
+      for (let i = 0; i <= steps; i++) put(f.x + ((tx - f.x) * i) / steps, f.y + ((ty - f.y) * i) / steps, sprite, k, 0, 0.5, 0.5, 1e6);
+    };
+    switch (f.kind) {
+      case "lightning":
+        if (age < 0.35) put(f.x, f.y, s.fx("bolt"), k * 2, Math.floor(age * 20) & 1, 0.5, 1, 1e6);
+        return;
+      case "boom": {
+        if (age > 1.2) return;
+        const r = f.r * Math.min(1, age * 2.5);
+        for (let i = 0; i < 24; i++) {
+          const a = (i / 24) * Math.PI * 2;
+          put(f.x + Math.cos(a) * r, f.y + Math.sin(a) * r * 0.6, s.fx("flame"), k, 0, 0.5, 0.5, 1e6);
+        }
+        put(f.x, f.y, s.fx("ring"), k * 2, 0, 0.5, 0.5, 1e6);
+        return;
+      }
+      case "mushroom":
+        put(f.x, f.y - Math.min(1.4, age) * 3, s.fx("mushroom"), k * 3, 0, 0.5, 1, 1e6);
+        return;
+      case "laser":
+        if (age < 0.4) line(s.fx("laser"), 24);
+        return;
+      case "breath":
+        if (age < 0.5) line(s.fx("flame"), 6);
+        return;
+      case "beam":
+        if (age < 1) put(f.x, f.y, s.fx("beam"), k, 0, 0.5, 1, 1e6);
+        return;
+    }
   }
 
   private ensure(n: number) {

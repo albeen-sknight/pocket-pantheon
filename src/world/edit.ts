@@ -175,7 +175,7 @@ function range(world: World, s: Stroke): Rect | null {
 
 // Recomputes biomes after a height change. Coasts look two tiles out, so the
 // rectangle grows by two.
-function reclassify(world: World, r: Rect): Rect {
+export function reclassify(world: World, r: Rect): Rect {
   const grown = {
     x0: Math.max(0, r.x0 - 2),
     y0: Math.max(0, r.y0 - 2),

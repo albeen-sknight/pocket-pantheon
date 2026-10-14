@@ -81,6 +81,9 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 #possess .stick{display:none;position:relative;width:96px;height:96px;border:2px solid var(--line);border-radius:50%;touch-action:none}
 #possess .knob{position:absolute;left:30px;top:30px;width:36px;height:36px;border-radius:50%;background:var(--acc)}
 @media(pointer:coarse){#possess .stick{display:block}#possess p{display:none}}
+#flash{position:fixed;inset:0;background:#f4f0e8;opacity:0;pointer-events:none;z-index:12}
+#flash.on{animation:flash .35s ease-out}
+@keyframes flash{from{opacity:.75}to{opacity:0}}
 #toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none;z-index:20}
 #toast div{background:var(--panel);border:2px solid var(--acc);padding:8px 14px;box-shadow:4px 4px 0 rgba(0,0,0,.4);max-width:90vw}
 dialog{background:var(--panel);color:var(--ink);border:3px solid var(--acc);box-shadow:6px 6px 0 rgba(0,0,0,.5);padding:18px 20px;max-width:min(440px,calc(100vw - 32px));width:100%}
@@ -116,6 +119,7 @@ dialog .row{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;flex-
 <div id="help" class="hud" data-i="help"></div>
 <div id="toast" role="status" aria-live="polite"></div>
 <div id="bubble" class="bub" hidden></div>
+<div id="flash"></div>
 <div id="possess" class="hud" hidden><p data-i="poss_hint"></p><div class="pad"><div class="stick"><div class="knob"></div></div><div class="pad-buttons"></div></div></div>
 <div id="loading" hidden><div><h2 data-i="load_title"></h2><div class="barwrap"><div class="barfill"></div></div><span class="stage"></span></div></div>
 

@@ -157,7 +157,9 @@ export interface Frame {
   towns: number;
   count: number;
   units: Float32Array;
-  tiles: Int32Array; // index, biome, flags triples
+  tiles: Int32Array; // index, biome, flags, height x 65535
+  hazards: Int32Array; // index, kind pairs
+  storms: { kind: string; x: number; y: number; r: number; ticks: number }[];
   buildings?: BuildingView[];
   townList?: TownView[];
   events: SimEvent[];
@@ -203,14 +205,23 @@ export function packFrame(sim: Sim, selected: number, selectedTown = 0): Frame {
     units[k++] = flags;
   }
 
-  const tiles = new Int32Array(sim.changed.size * 3);
+  const tiles = new Int32Array(sim.changed.size * 4);
   let t = 0;
   for (const i of sim.changed) {
     tiles[t++] = i;
     tiles[t++] = sim.world.biome[i]!;
     tiles[t++] = sim.world.flags[i]!;
+    tiles[t++] = Math.round(Math.max(0, Math.min(1, sim.world.height[i]!)) * 65535);
   }
   sim.changed.clear();
+  const hz = sim.hazards;
+  const hazards = new Int32Array(hz.changed.size * 2);
+  let h = 0;
+  for (const i of hz.changed) {
+    hazards[h++] = i;
+    hazards[h++] = hz.kind[i]!;
+  }
+  hz.changed.clear();
 
   const frame: Frame = {
     type: "frame",
@@ -221,6 +232,8 @@ export function packFrame(sim: Sim, selected: number, selectedTown = 0): Frame {
     count: n,
     units,
     tiles,
+    hazards,
+    storms: sim.storms.map((s) => ({ kind: s.kind, x: s.x, y: s.y, r: s.r, ticks: s.ticks })),
     events: sim.events,
     fx: sim.fx,
     armies: sim.civ.armies.map((a) => ({

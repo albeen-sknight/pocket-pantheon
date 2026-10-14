@@ -6,10 +6,10 @@
   },
   "fire": {
     "spreadEvery": 10,
-    "spread": 0.18,
-    "burnTicks": 120,
-    "damagePerTick": 0.6,
-    "buildingBurn": 0.04,
+    "spread": 0.07,
+    "burnTicks": 80,
+    "damagePerTick": 0.2,
+    "buildingBurn": 0.02,
     "regrowYears": [
       5,
       10

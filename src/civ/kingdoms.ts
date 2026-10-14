@@ -202,6 +202,8 @@ function loyalty(sim: Sim, t: Town, totalTowns: number) {
   const charm = ruler >= 0 ? (stat(u.genesOf(ruler), STAT.charisma) - 10) * L.charisma : 0;
   let target = L.base + charm + Math.hypot(capital.x - t.x, capital.y - t.y) * L.distancePerTile;
   if (t.food < t.pop * 0.5) target += L.famine;
+  // A crown stretched over many towns is harder to love.
+  target += Math.max(0, k.towns - L.comfortTowns) * L.perTownOver;
   const faith = townReligion(sim, t);
   if (k.religion && faith) target += faith === k.religion ? L.sameReligion : L.otherReligion;
   // The Director leans on empires that own more than half the world.

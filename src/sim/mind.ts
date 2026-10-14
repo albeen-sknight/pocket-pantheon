@@ -11,6 +11,8 @@ import { kingdomOfTown } from "../civ/kingdoms";
 import { prayAtTemple, preach } from "../civ/religion";
 import war from "../../data/war.json";
 import { hitWall, unitKingdom, wallCover } from "../war/defense";
+import { monsterThink, onHit, wreck } from "../chaos/monsters";
+import { HAZ, hazardAt } from "../chaos/hazards";
 import { atWar } from "../war/wars";
 import { ORES } from "../world/types";
 import { RES } from "../civ/types";
@@ -363,6 +365,7 @@ function go(sim: Sim, s: number, x: number, y: number, ticks: number) {
 function thinkAnimal(sim: Sim, s: number) {
   const u = sim.units;
   const info = SPECIES_INFO[u.kind[s]!]!;
+  if (info.monster && monsterThink(sim, s)) return;
   const r = sim.rng.mind;
   if (info.meat) {
     u.needs[s * NEEDS + NEED.hunger] = Math.min(1, u.needs[s * NEEDS + NEED.hunger]! + N.hungerPerYear * 1.5 * DT);
@@ -430,6 +433,11 @@ export function moveAll(sim: Sim) {
   const u = sim.units;
   for (let s = 0; s < u.count; s++) {
     if (!u.alive[s] || u.uid[s] === sim.possessed) continue;
+    if (u.stun[s]) {
+      u.stun[s]!--;
+      continue;
+    }
+    if (SPECIES_INFO[u.kind[s]!]!.giant) wreck(sim, s);
     if (u.act[s] === ACT.fight || u.act[s] === ACT.hunt) {
       chase(sim, s);
       continue;
@@ -465,7 +473,8 @@ function walk(sim: Sim, s: number, path: Int32Array) {
     return;
   }
   const g = u.genesOf(s);
-  const speed = (info.speed * (1 + traitEffect(g, "speed")) * (0.85 + stat(g, STAT.agility) / 70)) / config.ticksPerSecond / cost;
+  const slow = info.flies ? 1 : hazardAt(sim, u.x[s]!, u.y[s]!) === HAZ.snow ? 0.5 : hazardAt(sim, u.x[s]!, u.y[s]!) === HAZ.flood ? 0.6 : 1;
+  const speed = ((info.speed * (1 + traitEffect(g, "speed")) * (0.85 + stat(g, STAT.agility) / 70)) / config.ticksPerSecond / cost) * slow;
   const dx = nx - u.x[s]!;
   const dy = ny - u.y[s]!;
   const d = Math.hypot(dx, dy);
@@ -555,6 +564,7 @@ function strike(sim: Sim, s: number, t: number) {
   const quality = 0.8 + u.gearQ[s]! * 0.1;
   const dmg = info.damage * (1 + stat(g, STAT.strength) / 40) * (1 + gearBonus(u.weapon[s]!).damage * quality) * armour * (u.blessed[s]! > 0 ? 1.25 : 1);
   u.hp[t]! -= dmg;
+  if (onHit(sim, s, t)) return idle(u, s);
   // The victim fights back or runs.
   if (u.act[t] !== ACT.fight && u.act[t] !== ACT.flee) {
     u.act[t] = ACT.idle;
