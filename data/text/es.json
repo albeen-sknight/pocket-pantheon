@@ -370,7 +370,7 @@
     "biome_grove": "Arboleda encantada",
     "biome_mushroom": "Tierras de hongos",
     "biome_wasteland": "Páramo",
-    "help": "Arrastra con el botón derecho o con dos dedos para moverte. Usa la rueda o pellizca para hacer zoom. Las teclas 1 a 8 cambian de pestaña los corchetes cambian el pincel y la H abre las estadísticas.",
+    "help": "Arrastra con el botón derecho o con dos dedos para moverte. Usa la rueda o pellizca para hacer zoom. Las teclas 1 a 8 cambian de pestaña, los corchetes cambian el pincel, la H abre las estadísticas y la C abre el Códice.",
     "speed_pause": "Pausa",
     "speed_n": "{n}x",
     "tip_speed": "Velocidad del juego. Espacio pausa.",
@@ -1128,6 +1128,21 @@
     "cx_s_steel": "Acero más duro y ejércitos más afilados.",
     "cx_l_steel": "Los ejércitos de acero son lo más peligroso del mapa, sin contar a los dragones.",
     "cx_s_mythril": "La última edad, con el mejor equipo del mundo.",
-    "cx_l_mythril": "Pocos reinos llegan hasta aquí. Los que lo hacen dejan huella en la historia."
+    "cx_l_mythril": "Pocos reinos llegan hasta aquí. Los que lo hacen dejan huella en la historia.",
+    "set_open": "Ajustes",
+    "set_open_a": "Abrir los ajustes",
+    "set_title": "Ajustes",
+    "set_sound": "Sonido",
+    "set_mute": "Silenciar todo",
+    "set_master": "Volumen general",
+    "set_effects": "Efectos",
+    "set_music": "Música y ambiente",
+    "set_screen": "Pantalla",
+    "set_shake": "Temblores y destellos en los golpes fuertes",
+    "set_language": "Idioma",
+    "set_help": "Ayuda",
+    "set_audio_on": "El sonido está activado.",
+    "set_audio_wait": "El sonido empieza después de tu primer clic o tecla.",
+    "set_audio_none": "Este navegador no puede reproducir el sonido del juego. Todo lo demás funciona con normalidad."
   }
 }

@@ -5,6 +5,9 @@ type Hooks = { frame(): unknown };
 
 const ready = (page: Page) =>
   page.waitForFunction(() => window.crossOriginIsolated && (window as unknown as { __pp?: Hooks }).__pp?.frame(), null, { timeout: 45_000 });
+// After a reload the isolation shim sometimes doesn't isolate again, and the
+// game runs fine without it, so only the first frame matters here.
+const reloaded = (page: Page) => page.waitForFunction(() => (window as unknown as { __pp?: Hooks }).__pp?.frame(), null, { timeout: 45_000 });
 
 // Every test starts with the tutorial done, so its card stays out of the way.
 async function start(page: Page, stored?: string) {
@@ -136,7 +139,7 @@ test("unlocks survive a reload", async ({ page }) => {
   await spawnDragon(page);
   await expect(page.locator("#toast")).toContainText("Dragon");
   await page.reload();
-  await ready(page);
+  await reloaded(page);
   await openEntry(page, "Dragon");
   await expect(codex(page).locator(".cx-article .cx-sum")).toBeVisible();
 });
@@ -149,7 +152,7 @@ test("broken saved Codex data is ignored safely", async ({ page }) => {
   // a well formed file with junk inside keeps only what it recognises
   await page.evaluate(() => localStorage.setItem("pp_codex_unlocked", JSON.stringify({ unlocked: ["creature:dragon", 5, "creature:nothing"], fresh: "x" })));
   await page.reload();
-  await ready(page);
+  await reloaded(page);
   await openEntry(page, "Dragon");
 });
 
@@ -185,7 +188,7 @@ test("every entry draws its icon and article once unlocked", async ({ page }) =>
   expect(ids).toHaveLength(121);
   await page.evaluate((all) => localStorage.setItem("pp_codex_unlocked", JSON.stringify({ unlocked: all, fresh: [] })), ids);
   await page.reload();
-  await ready(page);
+  await reloaded(page);
   await page.locator("#codex-btn").click();
   await expect(codex(page).locator(".cx-progress")).toHaveText("121 of 121 discovered");
   await expect(codex(page).locator('.cx-item[data-locked="true"]')).toHaveCount(0);

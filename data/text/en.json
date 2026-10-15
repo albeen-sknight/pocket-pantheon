@@ -370,7 +370,7 @@
     "biome_grove": "Enchanted Grove",
     "biome_mushroom": "Mushroom Wilds",
     "biome_wasteland": "Wasteland",
-    "help": "Right drag or two fingers to move. Scroll or pinch to zoom. Keys 1 to 8 switch tabs, the bracket keys change the brush, and H opens the stats.",
+    "help": "Right drag or two fingers to move. Scroll or pinch to zoom. Keys 1 to 8 switch tabs, the bracket keys change the brush, H opens the stats and C opens the Codex.",
     "speed_pause": "Pause",
     "speed_n": "{n}x",
     "tip_speed": "Game speed. Space pauses.",
@@ -1128,6 +1128,21 @@
     "cx_s_steel": "Harder steel and sharper armies.",
     "cx_l_steel": "Steel armies are the most dangerous things on the map, dragons aside.",
     "cx_s_mythril": "The final age, with the finest gear in the world.",
-    "cx_l_mythril": "Few kingdoms ever get here. Those that do leave a mark on history."
+    "cx_l_mythril": "Few kingdoms ever get here. Those that do leave a mark on history.",
+    "set_open": "Settings",
+    "set_open_a": "Open the settings",
+    "set_title": "Settings",
+    "set_sound": "Sound",
+    "set_mute": "Mute all sound",
+    "set_master": "Master volume",
+    "set_effects": "Effects",
+    "set_music": "Music and ambience",
+    "set_screen": "Screen",
+    "set_shake": "Screen shake and flashes on big hits",
+    "set_language": "Language",
+    "set_help": "Help",
+    "set_audio_on": "Sound is on.",
+    "set_audio_wait": "Sound starts after your first click or key press.",
+    "set_audio_none": "This browser can't play the game's sound. Everything else works as usual."
   }
 }

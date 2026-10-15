@@ -113,6 +113,13 @@ dialog p.note{margin:-6px 0 12px;color:var(--mut);font-size:14px}
 .slots li{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;border:2px solid var(--line);padding:8px}
 .slots b{font-family:'Pixelify Sans',monospace}.slots small{display:block;color:var(--mut)}
 .slots button{min-height:40px;padding:6px 10px;border:2px solid var(--line);background:transparent}
+#settings-btn{font:500 13px 'Pixelify Sans',monospace;min-height:32px;border:2px solid var(--line);background:transparent;padding:0 10px}
+dialog h3{font:700 16px 'Pixelify Sans',monospace;margin:16px 0 8px}
+dialog .row.start{justify-content:flex-start;margin-top:0}
+dialog .btn.ghost[aria-pressed="true"]{border-color:var(--acc);color:var(--acc);background:rgba(242,201,76,.12)}
+dialog label.toggle{display:flex;align-items:center;gap:10px;min-height:44px;cursor:pointer}
+dialog label.toggle input{width:22px;height:22px;accent-color:var(--acc)}
+#settings .f{grid-template-columns:minmax(110px,auto) 1fr 48px}
 #codex-btn{position:relative;font:500 13px 'Pixelify Sans',monospace;min-height:32px;border:2px solid var(--acc);background:transparent;color:var(--acc);padding:0 10px}
 #codex-btn .badge{position:absolute;top:-8px;right:-8px;min-width:18px;height:18px;padding:0 4px;border-radius:9px;background:var(--bad);color:#f4f0e8;font:700 11px/18px Outfit,sans-serif;text-align:center}
 #codex-btn .badge[hidden]{display:none}
@@ -219,7 +226,7 @@ button.link{background:none;border:0;color:var(--mut);text-decoration:underline;
 </style></head><body>
 <canvas id="world" data-ia="world_a" role="img"></canvas>
 <div id="construction" data-ia="buildings_under"></div>
-<div id="top" class="hud"><span id="t-year"></span><span id="t-pop"></span><span id="t-kin"></span><span id="t-seed"></span><span id="t-zoom"></span><button type="button" id="stats-btn" data-i="st_open" data-it="st_open_a"></button><button type="button" id="codex-btn"><span data-i="cx_open"></span><span class="badge" hidden></span></button><span class="spacer"></span><a href="../" data-i="back"></a><div id="lang" role="group" data-ia="lang"><button type="button" data-l="en" aria-pressed="true">EN</button><button type="button" data-l="es" aria-pressed="false">ES</button></div></div>
+<div id="top" class="hud"><span id="t-year"></span><span id="t-pop"></span><span id="t-kin"></span><span id="t-seed"></span><span id="t-zoom"></span><button type="button" id="stats-btn" data-i="st_open" data-it="st_open_a"></button><button type="button" id="settings-btn" data-i="set_open" data-it="set_open_a"></button><button type="button" id="codex-btn"><span data-i="cx_open"></span><span class="badge" hidden></span></button><span class="spacer"></span><a href="../" data-i="back"></a><div id="lang" role="group" data-ia="lang"><button type="button" data-l="en" aria-pressed="true">EN</button><button type="button" data-l="es" aria-pressed="false">ES</button></div></div>
 <nav id="tabs" class="hud" role="tablist"></nav>
 <div id="shelf" class="hud" role="toolbar"></div>
 <aside id="insp" class="hud" aria-live="polite"></aside>
@@ -249,6 +256,7 @@ button.link{background:none;border:0;color:var(--mut);text-decoration:underline;
 <dialog id="saves"><h2 data-i="sv_title"></h2><p class="note" data-i="sv_local"></p><ul class="slots"></ul>
 <div class="row"><button class="btn ghost" type="button" id="sv-close" data-i="close"></button></div></dialog>
 <dialog id="confirm"><form method="dialog"><h2></h2><p></p><div class="row"><button class="btn ghost" value="cancel" data-i="cancel"></button><button class="btn" value="ok"></button></div></form></dialog>
+<dialog id="settings" data-ia="set_title"></dialog>
 <dialog id="codex" class="codex" data-ia="cx_title"></dialog>
 <dialog id="stats" class="wide" data-ia="st_title"></dialog>
 <input type="file" id="import" accept=".ppworld,application/octet-stream" hidden>

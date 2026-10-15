@@ -22,6 +22,7 @@ import { TOPICS, type BuildingView, type Frame } from "../sim/protocol";
 import type { Fx } from "../sim/sim";
 import type { SimSnapshot } from "../sim/snapshot";
 import { RACES, SPECIES, SPECIES_INFO, TRAITS, type RaceKey } from "../sim/species";
+import { DEATH } from "../sim/units";
 import { BIOMES } from "../world/biomes";
 import { generateAsync } from "../world/client";
 import { applyStroke, strokeTarget, type Rect, type ShapeTool, type Stroke } from "../world/edit";
@@ -29,7 +30,10 @@ import { defaultOptions, type Layout, type SizeKey, type World, type WorldOption
 import { $, el, randomSeed, SAVE_SLOTS, toast, txt } from "./dom";
 import { bindLangSwitch, fmt, onLangChange, t, toggleLang, type PlayKey } from "./i18n";
 import { bindMapInput } from "./input";
+import { AudioEngine, type Sound } from "../audio/engine";
+import audioConfig from "../../data/audio.json";
 import { Codex, type Entry } from "./codex";
+import { Settings } from "./settings";
 import { StatsPanel } from "./stats";
 import { Tutorial, type TutorialAction } from "./tutorial";
 import { armyCard, Command, type CmdTool } from "./command";
@@ -118,6 +122,10 @@ export class App {
   });
   private tutorial!: Tutorial;
   private codex!: Codex;
+  private audio = new AudioEngine();
+  private settings!: Settings;
+  private dangerAt = -Infinity;
+  private moodAt = 0;
   // Canvas pixels per CSS pixel. Starts at the device ratio (capped) and steps
   // down while frames are slow, so weak phones draw fewer pixels instead.
   private res = Math.min(RES.max, window.devicePixelRatio || 1);
@@ -170,13 +178,19 @@ export class App {
     this.scene = new Scene(this.sprites);
     this.sim.onFrame = (f) => this.onFrame(f);
     this.codex = new Codex((e) => this.codexIcon(e));
-    this.sim.onCommand = (cmd) => this.codex.onCommand(cmd);
+    this.sim.onCommand = (cmd) => {
+      this.codex.onCommand(cmd);
+      this.commandSound(cmd);
+    };
+    this.settings = new Settings(this.audio, () => this.tutorial.replay());
+    this.bindAudio();
     bindLangSwitch("play");
     this.tutorial = new Tutorial($("#tutorial"), (step) => this.prepareTutorialStep(step));
     onLangChange(() => {
       this.refreshText();
       this.stats.relabel();
       this.codex.relabel();
+      this.settings.relabel();
       this.tutorial.refresh();
     });
     this.buildTabs();
@@ -211,6 +225,7 @@ export class App {
     }
     if (!$<HTMLDialogElement>("#newworld").open) this.tutorial.autoStart();
     window.__pp = this.debug();
+    (window as unknown as { __ppAudio: AudioEngine }).__ppAudio = this.audio;
   }
 
   private prepareTutorialStep(step: number) {
@@ -321,6 +336,7 @@ export class App {
   private onFrame(f: Frame) {
     const rect = this.view.receive(f, this.world);
     this.codex.onFrame(f);
+    this.frameSounds(f);
     if (rect) this.markDirty(rect);
     if (f.owner) {
       this.owner = f.owner;
@@ -371,7 +387,7 @@ export class App {
 
   // Big hits shake the screen and flash; both respect reduced motion.
   private feel(fx: Fx[]) {
-    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (!this.settings.prefs.shake || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     if (fx.some((f) => SHAKE.has(f.kind))) this.shakeUntil = performance.now() + 450;
     if (fx.some((f) => FLASH.has(f.kind))) {
       const flash = $("#flash");
@@ -1176,6 +1192,7 @@ export class App {
   private bindDialogs() {
     $("#stats-btn").onclick = () => this.openStats();
     $("#codex-btn").onclick = () => this.codex.open();
+    $("#settings-btn").onclick = () => this.settings.open();
     const dlg = $<HTMLDialogElement>("#newworld");
     const out = (id: string) => {
       const input = $<HTMLInputElement>(id);
@@ -1354,7 +1371,51 @@ export class App {
 
   // Browsers slow hidden tabs down anyway, so the world waits for you (PLAN section 12).
   private pauseWhenHidden() {
-    document.addEventListener("visibilitychange", () => this.sim.setSpeed(document.hidden ? 0 : this.speed));
+    document.addEventListener("visibilitychange", () => {
+      this.sim.setSpeed(document.hidden ? 0 : this.speed);
+      this.audio.pause(document.hidden);
+    });
+  }
+
+  // Sound
+
+  // Browsers only allow sound after a gesture, so the first one starts it.
+  // Every button click ticks, from one listener instead of one per button.
+  private bindAudio() {
+    const wake = () => this.audio.unlock();
+    window.addEventListener("pointerdown", wake, { capture: true });
+    window.addEventListener("keydown", wake, { capture: true });
+    document.addEventListener("click", (e) => (e.target as HTMLElement).closest?.("button") && this.audio.play("click"), { capture: true });
+  }
+
+  private commandSound(cmd: Parameters<SimClient["command"]>[0]) {
+    const sounds: Partial<Record<string, Sound>> = { spawn: "place", stroke: "terraform", mutate: "magic", trait: "magic", clone: "magic", split: "magic", possess: "magic", war: "horn", peace: "power", ally: "power" };
+    const s = sounds[cmd.c];
+    if (s) this.audio.play(s);
+  }
+
+  // Sounds follow what the sim reports, so natural disasters and the
+  // player's own powers both sound once, when they land.
+  private frameSounds(f: Frame) {
+    const now = performance.now();
+    const disasters = audioConfig.disasters as Record<string, Sound>;
+    for (const fx of f.fx) {
+      const s = disasters[fx.kind];
+      if (s) {
+        this.audio.play(s);
+        this.dangerAt = now;
+      } else if ((GRACE as readonly string[]).includes(fx.kind)) this.audio.play("power");
+      else if (fx.kind === "arrow") this.audio.play("arrow");
+    }
+    for (const e of f.events) {
+      if (e.t === "built") this.audio.play("build");
+      else if (e.t === "birth") this.audio.play("birth");
+      else if (e.t === "death" && e.cause === DEATH.battle) this.audio.play("hit");
+      else if (e.t === "chronicle" && e.entry.kind === "war") this.audio.play("horn");
+    }
+    if (now - this.moodAt < 1000) return;
+    this.moodAt = now;
+    this.audio.setMood({ year: f.year, danger: f.storms.length > 0 || now - this.dangerAt < audioConfig.music.dangerMs });
   }
 
   // Read only hooks for the browser tests.

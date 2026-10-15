@@ -1,0 +1,35 @@
+{
+  "defaults": { "master": 80, "effects": 80, "music": 50, "muted": false },
+  "maxVoices": 10,
+  "sounds": {
+    "click":     { "wave": "square",   "from": 1100, "to": 900,  "length": 0.05, "level": 0.12, "gap": 60,  "noise": false, "filter": 0 },
+    "place":     { "wave": "sine",     "from": 300,  "to": 900,  "length": 0.12, "level": 0.3,  "gap": 120, "noise": false, "filter": 0 },
+    "terraform": { "wave": "sine",     "from": 0,    "to": 0,    "length": 0.25, "level": 0.25, "gap": 220, "noise": true,  "filter": 500 },
+    "power":     { "wave": "triangle", "from": 660,  "to": 1320, "length": 0.6,  "level": 0.3,  "gap": 250, "noise": false, "filter": 0 },
+    "magic":     { "wave": "sine",     "from": 880,  "to": 440,  "length": 0.4,  "level": 0.25, "gap": 250, "noise": false, "filter": 0 },
+    "hit":       { "wave": "sine",     "from": 0,    "to": 0,    "length": 0.08, "level": 0.3,  "gap": 180, "noise": true,  "filter": 3000 },
+    "arrow":     { "wave": "triangle", "from": 1400, "to": 500,  "length": 0.1,  "level": 0.15, "gap": 140, "noise": false, "filter": 0 },
+    "thunder":   { "wave": "sine",     "from": 0,    "to": 0,    "length": 1.2,  "level": 0.6,  "gap": 400, "noise": true,  "filter": 900 },
+    "rumble":    { "wave": "sine",     "from": 0,    "to": 0,    "length": 1.4,  "level": 0.5,  "gap": 1500, "noise": true,  "filter": 220 },
+    "boom":      { "wave": "sine",     "from": 120,  "to": 30,   "length": 1.0,  "level": 0.7,  "gap": 300, "noise": false, "filter": 0 },
+    "build":     { "wave": "square",   "from": 520,  "to": 520,  "length": 0.07, "level": 0.12, "gap": 300, "noise": false, "filter": 0 },
+    "birth":     { "wave": "sine",     "from": 1320, "to": 1760, "length": 0.25, "level": 0.08, "gap": 4000, "noise": false, "filter": 0 },
+    "horn":      { "wave": "sawtooth", "from": 196,  "to": 220,  "length": 0.9,  "level": 0.25, "gap": 1500, "noise": false, "filter": 0 }
+  },
+  "disasters": {
+    "lightning": "thunder", "fire": "rumble", "tornado": "rumble", "earthquake": "rumble", "meteor": "boom", "acid": "rumble", "plague": "magic",
+    "zombie": "magic", "volcano": "boom", "flood": "rumble", "blizzard": "rumble", "drought": "rumble", "nuke": "boom", "boom": "boom", "stomp": "boom"
+  },
+  "music": {
+    "everyMs": 2200,
+    "root": 220,
+    "level": 0.18,
+    "attack": 0.4,
+    "note": 2.6,
+    "major": [0, 2, 4, 7, 9, 12, 9, 7],
+    "minor": [0, 3, 5, 7, 10, 12, 10, 7],
+    "yearsPerLift": 50,
+    "maxLift": 5,
+    "dangerMs": 10000
+  }
+}
