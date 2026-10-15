@@ -26,7 +26,7 @@ test("starts on a first visit and changes language in place", async ({ page }) =
   await expect(page.locator(".tutorial-checklist li")).toHaveCount(10);
   await expect(page.locator('.tutorial-checklist li[aria-current="step"]')).toHaveCount(1);
 
-  await page.getByRole("button", { name: "ES" }).click();
+  await page.getByRole("button", { name: "ES", exact: true }).click();
   await expect(tutorial.getByRole("heading", { name: "Controles de cámara" })).toBeVisible();
   await expect(page.locator("#tutorial-count")).toHaveText("Paso 1 de 10");
   await expect(page.locator("#tutorial-action")).toHaveText("Arrastra el mapa o usa la rueda o dos dedos para acercar y alejar.");
