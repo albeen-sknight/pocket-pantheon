@@ -62,7 +62,7 @@ test("opens, shows locked entries without their secrets, and closes", async ({ p
   await start(page);
   await page.locator("#codex-btn").click();
   await expect(codex(page).getByRole("heading", { name: "Codex" })).toBeVisible();
-  await expect(codex(page).locator(".cx-progress")).toContainText("of 121 discovered");
+  await expect(codex(page).locator(".cx-progress")).toContainText("of 122 discovered");
 
   await codex(page).getByRole("button", { name: "Creatures", exact: true }).click();
   const locked = codex(page).locator('.cx-item[data-locked="true"]');
@@ -159,7 +159,7 @@ test("unlocks survive a reload", async ({ page }) => {
 test("broken saved Codex data is ignored safely", async ({ page }) => {
   await start(page, "{not json");
   await page.locator("#codex-btn").click();
-  await expect(codex(page).locator(".cx-progress")).toContainText("of 121 discovered");
+  await expect(codex(page).locator(".cx-progress")).toContainText("of 122 discovered");
   await page.keyboard.press("Escape");
   // a well formed file with junk inside keeps only what it recognises
   await storeAndReturn(page, { unlocked: ["creature:dragon", 5, "creature:nothing"], fresh: "x" });
@@ -195,10 +195,10 @@ test("every entry draws its icon and article once unlocked", async ({ page }) =>
   await start(page);
   await page.locator("#codex-btn").click();
   const ids = await codex(page).locator(".cx-item").evaluateAll((items) => items.map((b) => (b as HTMLElement).dataset.id!));
-  expect(ids).toHaveLength(121);
+  expect(ids).toHaveLength(122);
   await storeAndReturn(page, { unlocked: ids, fresh: [] });
   await page.locator("#codex-btn").click();
-  await expect(codex(page).locator(".cx-progress")).toHaveText("121 of 121 discovered");
+  await expect(codex(page).locator(".cx-progress")).toHaveText("122 of 122 discovered");
   await expect(codex(page).locator('.cx-item[data-locked="true"]')).toHaveCount(0);
   // open every article; a broken icon or missing string would throw here
   const titles = await codex(page).locator(".cx-item").evaluateAll((items) =>

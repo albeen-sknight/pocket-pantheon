@@ -1124,7 +1124,7 @@
     "cx_l_bronze": "Bronze changes war forever. Whoever reaches it first has an edge.",
     "cx_s_iron": "Libraries, castle keeps and stronger weapons.",
     "cx_l_iron": "Iron Age kingdoms build in stone and think in centuries.",
-    "cx_s_steel": "Harder steel and sharper armies.",
+    "cx_s_steel": "Siege engines: catapults that smash walls and rams that break them.",
     "cx_l_steel": "Steel armies are the most dangerous things on the map, dragons aside.",
     "cx_s_mythril": "The final age, with the finest gear in the world.",
     "cx_l_mythril": "Few kingdoms ever get here. Those that do leave a mark on history.",
@@ -1190,6 +1190,10 @@
     "ach_codex_half_n": "Scholar",
     "ach_codex_half_d": "Discover half of the Codex.",
     "ach_codex_full_n": "Know it all",
-    "ach_codex_full_d": "Discover the whole Codex."
+    "ach_codex_full_d": "Discover the whole Codex.",
+    "wonder_n": "World wonder",
+    "ev_guardian": "The Ancient Guardian wakes to defend the wonder of {kingdom} in {town}.",
+    "cx_s_wonder": "A great monument, one per kingdom, raised in the capital.",
+    "cx_l_wonder": "A wonder makes every town of its kingdom prouder and more loyal. Attack one and an Ancient Guardian wakes to defend it."
   }
 }

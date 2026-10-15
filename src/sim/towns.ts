@@ -130,6 +130,8 @@ function wishes(sim: Sim, town: Town, count: (t: BuildingType) => number): Build
   if (unlocked("tower") && count("tower") < (atWar || hawk ? 2 : 1)) out.push("tower");
   if (unlocked("barracks") && (atWar || hawk) && count("barracks") === 0) out.push("barracks");
   if (unlocked("keep") && k?.capital === town.id && count("keep") === 0) out.push("keep");
+  // one wonder per kingdom, raised in the capital
+  if (unlocked("wonder") && k?.capital === town.id && !sim.buildings.some((b) => b.type === "wonder" && sim.town(b.town)?.kingdom === k.id)) out.push("wonder");
   if (town.food > town.pop * 3 && town.wood > 20) out.push("house");
   if (k && hasTrait(k, "builder") && town.wood > 30) out.push("house");
   return out;

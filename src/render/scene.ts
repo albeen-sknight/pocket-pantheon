@@ -96,6 +96,11 @@ export class Scene {
       const bk = full ? k : scale >= 8 ? 2 : 1;
       put(a.x, a.y - (full ? 1.2 : 0), s.banner, bk, 0, 0.2, 1, a.y + 0.5, s.keyed ? RACE_TINT_ROWS + a.color : -1);
       if (a.id === selectedArmy) put(a.x, a.y, s.ring, bk, 0, 0.5, 0.5, a.y + 0.4);
+      // siege engines trail the banner once the army gets close enough to see them
+      if (a.engines && scale >= 8) {
+        put(a.x - 1.6, a.y + 0.6, s.catapult, bk, 0, 0.5, 1, a.y + 0.6);
+        put(a.x + 1.4, a.y + 0.7, s.ram, bk, 0, 0.5, 1, a.y + 0.7);
+      }
     }
     // Storms: tornado funnels, acid clouds, smoke over eruptions, falling meteors.
     for (const st of storms) {
@@ -122,6 +127,14 @@ export class Scene {
       if (f.kind === "talk") continue; // shown as a speech bubble by the UI
       if (SPECIAL_FX.has(f.kind) && f.kind !== "arrow") {
         this.special(f, age, fk, put);
+        continue;
+      }
+      if (f.kind === "boulder") {
+        const p = Math.min(1, age / 0.9);
+        if (p >= 1) continue;
+        const bx = f.x + ((f.tx ?? f.x) - f.x) * p;
+        const by = f.y + ((f.ty ?? f.y) - f.y) * p - Math.sin(p * Math.PI) * 3;
+        put(bx, by, s.fx("boulder"), Math.max(1, k), 0, 0.5, 0.5, 1e6);
         continue;
       }
       if (f.kind === "arrow") {

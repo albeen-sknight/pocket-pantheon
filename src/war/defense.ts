@@ -2,6 +2,7 @@
 // Town defences (PLAN section 13): watchtowers and keeps shoot at enemies in
 // range, and towns at war ring their core with walls that only their own
 // people can pass. Enemies hack their way through; builders mend the gaps.
+import { hasEngines } from "./wonders";
 import war from "../../data/war.json";
 import { kingdomOfTown } from "../civ/kingdoms";
 import type { Sim, Town } from "../sim/sim";
@@ -82,7 +83,8 @@ export function hitWall(sim: Sim, s: number): boolean {
     for (let dx = -1; dx <= 1; dx++) {
       const i = (y + dy) * w.w + x + dx;
       if (!(w.flags[i]! & WALL) || sim.civ.owner[i] === unitKingdom(sim, s)) continue;
-      const left = (sim.civ.wallHp[i] ?? 0) - 6;
+      const ram = u.army[s] && hasEngines(sim, unitKingdom(sim, s)) ? war.siege.ramMultiplier : 1;
+      const left = (sim.civ.wallHp[i] ?? 0) - 6 * ram;
       sim.civ.wallHp[i] = Math.max(0, left);
       if (left <= 0) {
         sim.setTileFlag(i, WALL, false);

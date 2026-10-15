@@ -67,7 +67,8 @@
     "joinRange": 30,
     "vassalRange": 55,
     "perTownOver": -3,
-    "comfortTowns": 4
+    "comfortTowns": 4,
+    "wonder": 10
   },
   "cultureTraits": [
     "militaristic",

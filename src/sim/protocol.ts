@@ -8,6 +8,7 @@ import { phrase } from "../civ/language";
 import { religion } from "../civ/religion";
 import { subspecies } from "../civ/subspecies";
 import type { StatsReport } from "../stats/history";
+import { hasEngines } from "../war/wonders";
 import type { World } from "../world/types";
 import { G, GENES, stat, traitList } from "./genes";
 import type { Command, Fx, Sim, SimEvent } from "./sim";
@@ -64,6 +65,7 @@ export interface ArmyView {
   x: number;
   y: number;
   size: number;
+  engines: boolean; // Steel Age armies bring a catapult and a ram
   morale: number;
   state: string;
   stance: string;
@@ -248,6 +250,7 @@ export function packFrame(sim: Sim, selected: number, selectedTown = 0): Frame {
       x: a.x,
       y: a.y,
       size: a.members.length,
+      engines: hasEngines(sim, a.kingdom),
       morale: Math.round(Math.max(0, a.morale)),
       state: a.state,
       stance: a.stance,

@@ -1124,7 +1124,7 @@
     "cx_l_bronze": "El bronce cambia la guerra para siempre. Quien llega primero tiene ventaja.",
     "cx_s_iron": "Bibliotecas, castillos y armas más fuertes.",
     "cx_l_iron": "Los reinos de la Edad del Hierro construyen en piedra y piensan en siglos.",
-    "cx_s_steel": "Acero más duro y ejércitos más afilados.",
+    "cx_s_steel": "Máquinas de asedio: catapultas que destrozan murallas y arietes que las derriban.",
     "cx_l_steel": "Los ejércitos de acero son lo más peligroso del mapa, sin contar a los dragones.",
     "cx_s_mythril": "La última edad, con el mejor equipo del mundo.",
     "cx_l_mythril": "Pocos reinos llegan hasta aquí. Los que lo hacen dejan huella en la historia.",
@@ -1190,6 +1190,10 @@
     "ach_codex_half_n": "Erudito",
     "ach_codex_half_d": "Descubre la mitad del Códice.",
     "ach_codex_full_n": "Sabelotodo",
-    "ach_codex_full_d": "Descubre el Códice entero."
+    "ach_codex_full_d": "Descubre el Códice entero.",
+    "wonder_n": "Maravilla del mundo",
+    "ev_guardian": "El Guardián Ancestral despierta para defender la maravilla de {kingdom} en {town}.",
+    "cx_s_wonder": "Un gran monumento, uno por reino, levantado en la capital.",
+    "cx_l_wonder": "Una maravilla hace que todos los pueblos de su reino estén más orgullosos y sean más leales. Si atacas una, un Guardián Ancestral despierta para defenderla."
   }
 }
