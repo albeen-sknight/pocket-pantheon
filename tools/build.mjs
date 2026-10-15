@@ -5,6 +5,7 @@ import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { basename } from "node:path";
 import { fileURLToPath } from "node:url";
 import { writeIcons } from "./icons.mjs";
+import { buildSingle, FONTS } from "./single.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const out = root + "dist/";
@@ -45,6 +46,14 @@ async function buildGame(dev) {
   const html = await readFile(root + "site/play/index.html", "utf8");
   await writeFile(out + "play/index.html", html.replace("__PP_MAIN__", main));
   await cp(root + "node_modules/coi-serviceworker/coi-serviceworker.min.js", out + "play/coi-serviceworker.min.js");
+  return { main, gen, sim };
+}
+
+// The two fonts ship with the site, so nothing loads from a font service.
+async function copyFonts() {
+  await mkdir(out + "fonts", { recursive: true });
+  await cp(root + "site/fonts.css", out + "fonts.css");
+  for (const [, , path] of FONTS) await cp(root + "node_modules/" + path, out + "fonts/" + basename(path));
 }
 
 export async function buildSite({ dev = false } = {}) {
@@ -52,7 +61,8 @@ export async function buildSite({ dev = false } = {}) {
   await mkdir(out + "play", { recursive: true });
   const [en, es] = await Promise.all([readText("en"), readText("es")]);
   await buildLanding(en, es);
-  await buildGame(dev);
+  const files = await buildGame(dev);
+  await copyFonts();
   const iconBuild = await build({
     entryPoints: [root + "src/render/appIcon.ts"],
     bundle: true,
@@ -65,6 +75,7 @@ export async function buildSite({ dev = false } = {}) {
   await writeIcons(out, iconModule.appIcon());
   await cp(root + "site/manifest.webmanifest", out + "manifest.webmanifest");
   await cp(root + "site/share-preview.png", out + "share-preview.png");
+  await buildSingle(root, out, files);
   await writeFile(out + ".nojekyll", "");
 }
 
