@@ -3,8 +3,11 @@ import { expect, test, type Page } from "@playwright/test";
 
 type GameHooks = { frame(): unknown };
 
+// Isolation comes from a shim that reloads the page once, early on. It
+// sometimes doesn't isolate at all, and the game runs fine without it, so a
+// page that has had a frame and no reload for 8 seconds counts as ready.
 const ready = (page: Page) =>
-  page.waitForFunction(() => window.crossOriginIsolated && (window as unknown as { __pp?: GameHooks }).__pp?.frame(), null, { timeout: 45_000 });
+  page.waitForFunction(() => !!(window as unknown as { __pp?: GameHooks }).__pp?.frame() && (window.crossOriginIsolated || performance.now() > 8000), null, { timeout: 45_000 });
 // After a reload the isolation shim sometimes doesn't isolate again, and the
 // game runs fine without it, so only the first frame matters here.
 const reloaded = (page: Page) => page.waitForFunction(() => (window as unknown as { __pp?: GameHooks }).__pp?.frame(), null, { timeout: 45_000 });

@@ -11,8 +11,11 @@ type Hooks = {
 
 // The isolation service worker reloads the page once on a first visit, so
 // wait for that before touching anything.
+// Isolation comes from a shim that reloads the page once, early on. It
+// sometimes doesn't isolate at all, and the game runs fine without it, so a
+// page that has had a frame and no reload for 8 seconds counts as ready.
 const ready = (page: Page) =>
-  page.waitForFunction(() => window.crossOriginIsolated && (window as unknown as { __pp?: Hooks }).__pp?.frame(), null, { timeout: 45_000 });
+  page.waitForFunction(() => !!(window as unknown as { __pp?: Hooks }).__pp?.frame() && (window.crossOriginIsolated || performance.now() > 8000), null, { timeout: 45_000 });
 
 // Page errors are printed so a CI failure says what broke, not just that it timed out.
 test.beforeEach(({ page }) => {

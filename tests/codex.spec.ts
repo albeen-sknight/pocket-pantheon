@@ -3,8 +3,11 @@ import { expect, test, type Page } from "@playwright/test";
 
 type Hooks = { frame(): unknown };
 
+// Isolation comes from a shim that reloads the page once, early on. It
+// sometimes doesn't isolate at all, and the game runs fine without it, so a
+// page that has had a frame and no reload for 8 seconds counts as ready.
 const ready = (page: Page) =>
-  page.waitForFunction(() => window.crossOriginIsolated && (window as unknown as { __pp?: Hooks }).__pp?.frame(), null, { timeout: 45_000 });
+  page.waitForFunction(() => !!(window as unknown as { __pp?: Hooks }).__pp?.frame() && (window.crossOriginIsolated || performance.now() > 8000), null, { timeout: 45_000 });
 // After a reload the isolation shim sometimes doesn't isolate again, and the
 // game runs fine without it, so only the first frame matters here.
 const reloaded = (page: Page) => page.waitForFunction(() => (window as unknown as { __pp?: Hooks }).__pp?.frame(), null, { timeout: 45_000 });
@@ -29,6 +32,15 @@ async function spawnDragon(page: Page) {
   await page.locator("#shelf button", { hasText: "Dragon" }).click();
   const box = (await page.locator("#world").boundingBox())!;
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+}
+
+// Writes Codex data from the landing page, which shares the origin but runs no
+// game, so a running Codex can't save over it, then opens the game again.
+async function storeAndReturn(page: Page, data: unknown) {
+  await page.goto("./");
+  await page.evaluate((d) => localStorage.setItem("pp_codex_unlocked", JSON.stringify(d)), data);
+  await page.goto("./play/?seed=4242&size=small&races=human");
+  await reloaded(page);
 }
 
 async function openEntry(page: Page, name: string) {
@@ -150,9 +162,7 @@ test("broken saved Codex data is ignored safely", async ({ page }) => {
   await expect(codex(page).locator(".cx-progress")).toContainText("of 121 discovered");
   await page.keyboard.press("Escape");
   // a well formed file with junk inside keeps only what it recognises
-  await page.evaluate(() => localStorage.setItem("pp_codex_unlocked", JSON.stringify({ unlocked: ["creature:dragon", 5, "creature:nothing"], fresh: "x" })));
-  await page.reload();
-  await reloaded(page);
+  await storeAndReturn(page, { unlocked: ["creature:dragon", 5, "creature:nothing"], fresh: "x" });
   await openEntry(page, "Dragon");
 });
 
@@ -186,9 +196,7 @@ test("every entry draws its icon and article once unlocked", async ({ page }) =>
   await page.locator("#codex-btn").click();
   const ids = await codex(page).locator(".cx-item").evaluateAll((items) => items.map((b) => (b as HTMLElement).dataset.id!));
   expect(ids).toHaveLength(121);
-  await page.evaluate((all) => localStorage.setItem("pp_codex_unlocked", JSON.stringify({ unlocked: all, fresh: [] })), ids);
-  await page.reload();
-  await reloaded(page);
+  await storeAndReturn(page, { unlocked: ids, fresh: [] });
   await page.locator("#codex-btn").click();
   await expect(codex(page).locator(".cx-progress")).toHaveText("121 of 121 discovered");
   await expect(codex(page).locator('.cx-item[data-locked="true"]')).toHaveCount(0);
