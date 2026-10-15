@@ -34,6 +34,7 @@ import { AudioEngine, type Sound } from "../audio/engine";
 import audioConfig from "../../data/audio.json";
 import { Codex, type Entry } from "./codex";
 import { Settings } from "./settings";
+import { Achievements } from "./achievements";
 import { StatsPanel } from "./stats";
 import { Tutorial, type TutorialAction } from "./tutorial";
 import { armyCard, Command, type CmdTool } from "./command";
@@ -119,11 +120,13 @@ export class App {
     exportName: () => `pocket-pantheon-${this.world?.options.seed ?? 0}`,
     meta: () => (this.world ? makeMeta(this.world, t("st_title"), this.view.frame?.year ?? 0) : null),
     openKingdom: (capital) => this.visitTown(capital),
+    achievements: () => this.achievements.list(),
   });
   private tutorial!: Tutorial;
   private codex!: Codex;
   private audio = new AudioEngine();
   private settings!: Settings;
+  private achievements!: Achievements;
   private dangerAt = -Infinity;
   private moodAt = 0;
   // Canvas pixels per CSS pixel. Starts at the device ratio (capped) and steps
@@ -178,8 +181,11 @@ export class App {
     this.scene = new Scene(this.sprites);
     this.sim.onFrame = (f) => this.onFrame(f);
     this.codex = new Codex((e) => this.codexIcon(e));
+    this.achievements = new Achievements(() => this.codex.share);
+    this.achievements.onEarn = () => this.audio.play("power");
     this.sim.onCommand = (cmd) => {
       this.codex.onCommand(cmd);
+      this.achievements.onCommand(cmd);
       this.commandSound(cmd);
     };
     this.settings = new Settings(this.audio, () => this.tutorial.replay());
@@ -336,6 +342,7 @@ export class App {
   private onFrame(f: Frame) {
     const rect = this.view.receive(f, this.world);
     this.codex.onFrame(f);
+    this.achievements.onFrame(f);
     this.frameSounds(f);
     if (rect) this.markDirty(rect);
     if (f.owner) {

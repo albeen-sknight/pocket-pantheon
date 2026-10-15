@@ -7,14 +7,15 @@ import type { Chronicle } from "../civ/types";
 import { CAUSES, type Series, type StatsReport, type WarReport } from "../stats/history";
 import { Chart, type ChartSeries, type ChartSpec } from "./charts";
 import { $, el, toast } from "./dom";
-import { fmt, t, type PlayKey } from "./i18n";
+import { fmt, lang, t, type PlayKey } from "./i18n";
+import type { AchievementView } from "./achievements";
 import { chronicleLine } from "./inspector";
 
-type Tab = "pop" | "ages" | "deaths" | "wars" | "tree" | "chron" | "lead";
+type Tab = "pop" | "ages" | "deaths" | "wars" | "tree" | "chron" | "lead" | "ach";
 type By = "race" | "kingdom" | "religion" | "subspecies";
 type Filter = "all" | "war" | "ruler" | "faith" | "disaster" | "director";
 
-const TABS: Tab[] = ["pop", "ages", "deaths", "wars", "tree", "chron", "lead"];
+const TABS: Tab[] = ["pop", "ages", "deaths", "wars", "tree", "chron", "lead", "ach"];
 const BY: By[] = ["race", "kingdom", "religion", "subspecies"];
 const FILTERS: Filter[] = ["all", "war", "ruler", "faith", "disaster", "director"];
 const LEADERS = ["strongest", "oldest", "kills", "smartest", "richest", "armies"] as const;
@@ -34,6 +35,7 @@ export interface StatsHost {
   exportName(): string;
   meta(): object | null;
   openKingdom(capital: number): void;
+  achievements(): AchievementView[];
 }
 
 export class StatsPanel {
@@ -165,6 +167,7 @@ export class StatsPanel {
     if (!r) return;
     // the pyramid list depends on which kingdoms are alive
     if (this.tab === "ages" && this.controls.querySelector("select")?.options.length !== r.pyramids.length) this.buildControls();
+    if (this.tab === "ach") return this.showAchievements();
     if (!r.years.length && this.tab !== "lead" && this.tab !== "chron") {
       this.body.replaceChildren(el("p", { className: "st-empty", textContent: t("st_empty") }));
       return;
@@ -343,6 +346,29 @@ export class StatsPanel {
               ? el("ol", {}, ...rows.map((l) => el("li", {}, el("span", {}, el("b", { textContent: l.name }), el("small", { textContent: l.detail })), el("em", { textContent: fmt(l.value) }))))
               : el("p", { className: "st-empty", textContent: t("st_lead_none") }),
           );
+        }),
+      ),
+    );
+  }
+
+  private showAchievements() {
+    const all = this.host.achievements();
+    const earned = all.filter((a) => a.earned !== null).length;
+    this.body.replaceChildren(
+      el("p", { className: "st-empty", textContent: t("st_ach_count", { n: earned, total: all.length }) }),
+      el(
+        "ul",
+        { className: "st-ach" },
+        ...all.map((a) => {
+          const li = el(
+            "li",
+            {},
+            el("span", { className: "mark", textContent: a.earned ? "★" : "?" }),
+            el("span", {}, el("b", { textContent: a.name }), el("small", { textContent: a.detail })),
+            el("em", { textContent: a.earned ? t("st_ach_on", { date: new Date(a.earned).toLocaleDateString(lang()) }) : t("st_ach_locked") }),
+          );
+          li.dataset.earned = String(a.earned !== null);
+          return li;
         }),
       ),
     );

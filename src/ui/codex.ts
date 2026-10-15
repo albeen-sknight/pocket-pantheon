@@ -191,6 +191,11 @@ export class Codex {
     return this.dlg.open;
   }
 
+  // How much of the Codex is unlocked, from 0 to 1.
+  get share(): number {
+    return this.unlocked.size / CATALOG.length;
+  }
+
   isUnlocked(id: string): boolean {
     return this.unlocked.has(id);
   }

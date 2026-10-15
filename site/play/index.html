@@ -186,6 +186,12 @@ dialog.wide{max-width:min(960px,calc(100vw - 16px));max-height:calc(100vh - 16px
 .st-table th,.st-table td{padding:4px 8px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
 .st-table th:first-child,.st-table td:first-child{text-align:left}
 .st-table th{position:sticky;top:0;background:var(--panel);color:var(--mut);font-weight:600}
+.st-ach{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px;max-height:min(460px,60vh);overflow:auto}
+.st-ach li{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;align-items:center;border:2px solid var(--line);padding:8px}
+.st-ach li[data-earned="false"]{opacity:.6}
+.st-ach .mark{grid-row:span 2;font:700 20px 'Pixelify Sans',monospace;color:var(--acc);width:24px;text-align:center}
+.st-ach b{display:block;font-family:'Pixelify Sans',monospace}.st-ach small{display:block;color:var(--mut)}
+.st-ach em{grid-column:2;font-style:normal;font-size:12px;color:var(--mut)}
 .st-chron{list-style:none;margin:0;padding:0;max-height:min(460px,60vh);overflow:auto}
 .st-chron li{display:grid;grid-template-columns:auto 1fr auto;gap:2px 10px;align-items:baseline;padding:6px 0;border-bottom:1px solid var(--line);font-size:14px}
 .st-chron small{color:var(--mut);font-family:'Pixelify Sans',monospace;white-space:nowrap}
