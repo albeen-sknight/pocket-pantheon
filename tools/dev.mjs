@@ -20,6 +20,7 @@ const types = {
   ".webmanifest": "application/manifest+json",
   ".png": "image/png",
   ".wasm": "application/wasm",
+  ".woff2": "font/woff2",
 };
 
 let pending = null;

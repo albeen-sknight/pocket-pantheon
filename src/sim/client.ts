@@ -17,6 +17,8 @@ export class SimClient {
   private waiting = new Map<number, (answer: never) => void>();
   private nextId = 1;
   onFrame: (f: Frame) => void = () => {};
+  // Sees every command the player sends, before the worker does.
+  onCommand: (cmd: Command) => void = () => {};
 
   constructor() {
     try {
@@ -64,6 +66,7 @@ export class SimClient {
   }
 
   command(cmd: Command) {
+    this.onCommand(cmd);
     this.send({ type: "cmd", cmd });
   }
 

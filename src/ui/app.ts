@@ -7,7 +7,7 @@ import { WRATH, type FrequencyKey, type WrathPower } from "../chaos/disasters";
 import { GRACE, type GracePower } from "../civ/grace";
 import type { DirectorMode } from "../director/director";
 import { paletteIndex } from "../render/palette";
-import { figure, FX_ICON, raceFigure } from "../render/art";
+import { BUILDING_ICON, figure, FX_ICON, raceFigure } from "../render/art";
 import { buildSprites, type SpriteSet } from "../render/atlas";
 import { Camera } from "../render/camera";
 import { createCanvasRenderer, paintTiles } from "../render/canvas2d";
@@ -22,6 +22,7 @@ import { TOPICS, type BuildingView, type Frame } from "../sim/protocol";
 import type { Fx } from "../sim/sim";
 import type { SimSnapshot } from "../sim/snapshot";
 import { RACES, SPECIES, SPECIES_INFO, TRAITS, type RaceKey } from "../sim/species";
+import { DEATH } from "../sim/units";
 import { BIOMES } from "../world/biomes";
 import { generateAsync } from "../world/client";
 import { applyStroke, strokeTarget, type Rect, type ShapeTool, type Stroke } from "../world/edit";
@@ -29,7 +30,13 @@ import { defaultOptions, type Layout, type SizeKey, type World, type WorldOption
 import { $, el, randomSeed, SAVE_SLOTS, toast, txt } from "./dom";
 import { bindLangSwitch, fmt, onLangChange, t, toggleLang, type PlayKey } from "./i18n";
 import { bindMapInput } from "./input";
+import { AudioEngine, type Sound } from "../audio/engine";
+import audioConfig from "../../data/audio.json";
+import { Codex, type Entry } from "./codex";
+import { Settings } from "./settings";
+import { Achievements } from "./achievements";
 import { StatsPanel } from "./stats";
+import { Tutorial, type TutorialAction } from "./tutorial";
 import { armyCard, Command, type CmdTool } from "./command";
 import { chronicleText, kindName, tileCard, townCard, traitName, unitCard } from "./inspector";
 import { SimView } from "./simview";
@@ -55,6 +62,8 @@ const WRATH_ICONS: Record<WrathPower, string> = {
   lightning: "bolt", fire: "flame", tornado: "tornado", earthquake: "dust", meteor: "meteor", acid: "acid", plague: "germ",
   zombie: "germ", volcano: "puff", flood: "drop", blizzard: "snow", drought: "dust", nuke: "ring",
 };
+const GENE_ICONS: Record<string, string> = { mutate: "new", trait: "raise", clone: "saves", split: "range" };
+const AGE_TONES: Record<string, string> = { stone: "#8a8f9a", bronze: "#d9822b", iron: "#aab0bc", steel: "#c8d0dc", mythril: "#5cc8e6" };
 const CMD_TOOLS: CmdTool[] = ["select", "move", "attack", "defend", "recruit", "possess", "war", "peace", "ally"];
 const CMD_ICONS: Record<CmdTool, string> = {
   select: "fit", move: "pan", attack: "volcano", defend: "saves", recruit: "new", possess: "raise", war: "range", peace: "island", ally: "paint",
@@ -111,7 +120,15 @@ export class App {
     exportName: () => `pocket-pantheon-${this.world?.options.seed ?? 0}`,
     meta: () => (this.world ? makeMeta(this.world, t("st_title"), this.view.frame?.year ?? 0) : null),
     openKingdom: (capital) => this.visitTown(capital),
+    achievements: () => this.achievements.list(),
   });
+  private tutorial!: Tutorial;
+  private codex!: Codex;
+  private audio = new AudioEngine();
+  private settings!: Settings;
+  private achievements!: Achievements;
+  private dangerAt = -Infinity;
+  private moodAt = 0;
   // Canvas pixels per CSS pixel. Starts at the device ratio (capped) and steps
   // down while frames are slow, so weak phones draw fewer pixels instead.
   private res = Math.min(RES.max, window.devicePixelRatio || 1);
@@ -163,10 +180,24 @@ export class App {
     this.sprites = buildSprites(this.renderer.kind === "webgl2");
     this.scene = new Scene(this.sprites);
     this.sim.onFrame = (f) => this.onFrame(f);
+    this.codex = new Codex((e) => this.codexIcon(e));
+    this.achievements = new Achievements(() => this.codex.share);
+    this.achievements.onEarn = () => this.audio.play("power");
+    this.sim.onCommand = (cmd) => {
+      this.codex.onCommand(cmd);
+      this.achievements.onCommand(cmd);
+      this.commandSound(cmd);
+    };
+    this.settings = new Settings(this.audio, () => this.tutorial.replay());
+    this.bindAudio();
     bindLangSwitch("play");
+    this.tutorial = new Tutorial($("#tutorial"), (step) => this.prepareTutorialStep(step));
     onLangChange(() => {
       this.refreshText();
       this.stats.relabel();
+      this.codex.relabel();
+      this.settings.relabel();
+      this.tutorial.refresh();
     });
     this.buildTabs();
     this.buildSpeed();
@@ -174,7 +205,10 @@ export class App {
     this.bindInput();
     this.bindDialogs();
     this.resize();
-    window.addEventListener("resize", () => this.resize());
+    window.addEventListener("resize", () => {
+      this.resize();
+      this.tutorial.relayout();
+    });
     this.startAutosave();
     this.pauseWhenHidden();
     requestAnimationFrame((now) => this.frame(now, now));
@@ -195,7 +229,45 @@ export class App {
       this.openNewWorld();
       $("#nw-seed-error").hidden = false;
     }
+    if (!$<HTMLDialogElement>("#newworld").open) this.tutorial.autoStart();
     window.__pp = this.debug();
+    (window as unknown as { __ppAudio: AudioEngine }).__ppAudio = this.audio;
+  }
+
+  private prepareTutorialStep(step: number) {
+    if (step === 1) return this.selectTab("shape");
+    if (step === 2) {
+      this.selectTab("life");
+      this.spawnKind = RACES.indexOf("human");
+      return this.buildShelf();
+    }
+    if (step === 3) return this.selectTab("insp");
+    if (step === 4) {
+      this.selectTab("life");
+      this.spawnKind = RACES.indexOf("orc");
+      return this.buildShelf();
+    }
+    if (step === 5) {
+      this.selectTab("cmd");
+      this.cmd.tool = "move";
+      return this.buildShelf();
+    }
+    if (step === 6) {
+      this.selectTab("cmd");
+      this.cmd.tool = "possess";
+      return this.buildShelf();
+    }
+    if (step === 7) {
+      this.selectTab("wrath");
+      this.wrathPower = "lightning";
+      this.tool = "wrath";
+      return this.buildShelf();
+    }
+    if (step === 9) this.selectTab("world");
+  }
+
+  private tutorialAction(action: TutorialAction) {
+    this.tutorial.action(action);
   }
 
   private fallback(): Renderer {
@@ -263,11 +335,15 @@ export class App {
     paintTiles(world, this.miniImg, { x0: 0, y0: 0, x1: world.w, y1: world.h });
     this.miniDirty = true;
     this.inspected = null;
+    this.codex.worldChanged(world);
     this.refreshText();
   }
 
   private onFrame(f: Frame) {
     const rect = this.view.receive(f, this.world);
+    this.codex.onFrame(f);
+    this.achievements.onFrame(f);
+    this.frameSounds(f);
     if (rect) this.markDirty(rect);
     if (f.owner) {
       this.owner = f.owner;
@@ -318,7 +394,7 @@ export class App {
 
   // Big hits shake the screen and flash; both respect reduced motion.
   private feel(fx: Fx[]) {
-    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (!this.settings.prefs.shake || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     if (fx.some((f) => SHAKE.has(f.kind))) this.shakeUntil = performance.now() + 450;
     if (fx.some((f) => FLASH.has(f.kind))) {
       const flash = $("#flash");
@@ -334,6 +410,7 @@ export class App {
   }
 
   private startPossess(uid: number) {
+    this.tutorialAction("possess");
     this.possessedAt = performance.now();
     this.select(uid);
     this.following = true;
@@ -441,6 +518,7 @@ export class App {
     this.sim.command({ c: "stroke", stroke: { ...s } });
     if (!rect) return;
     this.markDirty(rect);
+    if (s.tool === "raise" || s.tool === "lower") this.tutorialAction("shape");
     if (this.inspected) this.renderInspector();
   }
 
@@ -462,6 +540,7 @@ export class App {
       },
       moved: () => {
         this.following = false;
+        this.tutorialAction("camera");
         this.cameraMoved();
       },
     });
@@ -481,6 +560,7 @@ export class App {
     switch (this.tool) {
       case "cmd": {
         const r = this.cmd.click(tx, ty);
+        if (["move", "attack", "recruit", "defend"].includes(this.cmd.tool)) this.tutorialAction("army");
         if (r.possess) this.startPossess(r.possess);
         if (r.town !== undefined) {
           this.select(0);
@@ -499,11 +579,14 @@ export class App {
         return;
       case "wrath":
         this.sim.command({ c: "wrath", power: this.wrathPower, x: tx, y: ty, radius: this.brush });
+        this.tutorialAction("disaster");
         return;
       case "spawn": {
         const civ = this.spawnKind < RACES.length;
         const count = civ ? Math.max(2, this.brush * 2) : this.brush;
         this.sim.command({ c: "spawn", kind: this.spawnKind, x: tx, y: ty, count });
+        if (RACES[this.spawnKind] === "human") this.tutorialAction("spawnHuman");
+        if (RACES[this.spawnKind] === "orc") this.tutorialAction("spawnRival");
         return;
       }
       default: {
@@ -558,7 +641,8 @@ export class App {
       "[": () => this.setBrush(this.brush - 1),
       "]": () => this.setBrush(this.brush + 1),
       l: () => toggleLang("play"),
-      h: () => void this.stats.open(),
+      h: () => this.openStats(),
+      c: () => this.codex.open(),
       "+": () => this.cam.zoomStep(1, cx, cy),
       "=": () => this.cam.zoomStep(1, cx, cy),
       "-": () => this.cam.zoomStep(-1, cx, cy),
@@ -576,6 +660,7 @@ export class App {
     if (!act) return;
     e.preventDefault();
     act();
+    if (["+", "=", "-", "Home", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "a", "d", "w", "s"].includes(e.key)) this.tutorialAction("camera");
     this.cameraMoved();
   }
 
@@ -745,7 +830,9 @@ export class App {
       case "shape":
         shelf.append(panButton(), sep());
         for (const tool of ["raise", "lower", "flatten", "smooth", "paint"] as const) {
-          shelf.append(this.iconButton(tool, `tool_${tool}`, `tip_${tool}`, pick(tool), this.tool === tool));
+          const button = this.iconButton(tool, `tool_${tool}`, `tip_${tool}`, pick(tool), this.tool === tool);
+          if (tool === "raise") button.dataset.tutorial = "shape-raise";
+          shelf.append(button);
         }
         shelf.append(sep());
         for (const tool of ["island", "volcano", "range"] as const) {
@@ -757,22 +844,13 @@ export class App {
       case "life":
         shelf.append(panButton(), sep());
         SPECIES.forEach((key, kind) => {
-          // Races are drawn fresh in their own colours; the atlas holds key colours.
-          const src = kind < RACES.length ? mk(32, 30, figure(raceFigure(RACES[kind]!, 0, false), 0), 1) : this.sprites.atlas.canvas;
-          const sprite = kind < RACES.length ? { x: 0, y: 0, w: src.width, h: src.height } : this.sprites.atlas.sprites[this.sprites.unit(kind, 0, 0, 0)]!;
-          const icon = el("canvas", { width: 24, height: 24, className: "px" });
-          const ctx = icon.getContext("2d")!;
-          const k = Math.min(1, 24 / Math.max(sprite.w, sprite.h));
-          ctx.imageSmoothingEnabled = false;
-          const w = Math.round(sprite.w * k);
-          const h = Math.round(sprite.h * k);
-          ctx.drawImage(src, sprite.x, sprite.y, sprite.w, sprite.h, (24 - w) / 2, 24 - h, w, h);
-          icon.setAttribute("aria-hidden", "true");
-          const b = this.toolButton(icon, txt(("kind_" + key) as PlayKey), "tip_life", () => {
+          const b = this.toolButton(this.creatureIcon(kind), txt(("kind_" + key) as PlayKey), "tip_life", () => {
             this.spawnKind = kind;
             this.tool = "spawn";
             this.buildShelf();
           }, this.tool === "spawn" && this.spawnKind === kind);
+          if (RACES[kind] === "human") b.dataset.tutorial = "spawn-human";
+          if (RACES[kind] === "orc") b.dataset.tutorial = "spawn-rival";
           shelf.append(b);
         });
         shelf.append(sep(), this.brushControl());
@@ -792,11 +870,13 @@ export class App {
         shelf.append(panButton(), sep());
         for (const power of WRATH) {
           const icon = this.atlasIcon(`fx.${WRATH_ICONS[power]}`);
-          shelf.append(this.toolButton(icon, txt(`wrath_${power}`), `tip_w_${power}`, () => {
+          const button = this.toolButton(icon, txt(`wrath_${power}`), `tip_w_${power}`, () => {
             this.wrathPower = power;
             this.tool = "wrath";
             this.buildShelf();
-          }, this.tool === "wrath" && this.wrathPower === power));
+          }, this.tool === "wrath" && this.wrathPower === power);
+          if (power === "lightning") button.dataset.tutorial = "disaster";
+          shelf.append(button);
         }
         shelf.append(sep(), this.brushControl());
         return;
@@ -816,11 +896,14 @@ export class App {
       case "cmd": {
         shelf.append(panButton(), sep());
         for (const tool of CMD_TOOLS) {
-          shelf.append(this.iconButton(CMD_ICONS[tool], `tool_${tool}`, tool === "peace" ? "tip_peace_k" : `tip_${tool}`, () => {
+          const button = this.iconButton(CMD_ICONS[tool], `tool_${tool}`, tool === "peace" ? "tip_peace_k" : `tip_${tool}`, () => {
             this.cmd.tool = tool;
             this.tool = "cmd";
             this.buildShelf();
-          }, this.tool === "cmd" && this.cmd.tool === tool));
+          }, this.tool === "cmd" && this.cmd.tool === tool);
+          if (["move", "attack", "recruit"].includes(tool)) button.dataset.tutorial = "army-command";
+          if (tool === "possess") button.dataset.tutorial = "possess-tool";
+          shelf.append(button);
           if (tool === "defend") {
             shelf.append(
               this.iconButton("flatten", "tool_hold", "tip_hold", () => this.cmd.order("hold")),
@@ -836,11 +919,16 @@ export class App {
       case "insp":
         shelf.append(panButton(), this.iconButton("fit", "tool_pick", "in_hint", pick("inspect"), this.tool === "inspect"));
         return;
-      case "world":
+      case "world": {
+        const replay = this.iconButton("help", "tut_replay", "tip_replay", () => this.tutorial.replay());
+        replay.classList.add("tutorial-replay");
+        const saves = this.iconButton("saves", "w_saves", "tip_saves", () => this.openSaves());
+        saves.dataset.tutorial = "save-world";
         shelf.append(
+          replay,
           this.iconButton("new", "w_new", "tip_new", () => this.openNewWorld()),
-          this.iconButton("saves", "w_saves", "tip_saves", () => this.openSaves()),
-          this.iconButton("stats", "st_open", "st_open_a", () => void this.stats.open()),
+          saves,
+          this.iconButton("stats", "st_open", "st_open_a", () => this.openStats()),
           el("span", { className: "sep" }),
           el("span", { className: "seed", id: "w-seed", textContent: this.world ? t("seed", { n: String(this.world.options.seed) }) : "" }),
           this.iconButton("share", "w_share", "tip_share", () => this.shareSeed()),
@@ -856,12 +944,68 @@ export class App {
           this.directorControl(),
           this.frequencyControl(),
         );
+        return;
+      }
     }
   }
 
   private gene(cmd: Parameters<SimClient["command"]>[0]) {
     if (!this.selected) return toast(t("gene_none"));
     this.sim.command(cmd);
+  }
+
+  private creatureIcon(kind: number) {
+    // Races are drawn fresh in their own colours; the atlas holds key colours.
+    const src = kind < RACES.length ? mk(32, 30, figure(raceFigure(RACES[kind]!, 0, false), 0), 1) : this.sprites.atlas.canvas;
+    const sprite = kind < RACES.length ? { x: 0, y: 0, w: src.width, h: src.height } : this.sprites.atlas.sprites[this.sprites.unit(kind, 0, 0, 0)]!;
+    const icon = el("canvas", { width: 24, height: 24, className: "px" });
+    const ctx = icon.getContext("2d")!;
+    const k = Math.min(1, 24 / Math.max(sprite.w, sprite.h));
+    ctx.imageSmoothingEnabled = false;
+    const w = Math.round(sprite.w * k);
+    const h = Math.round(sprite.h * k);
+    ctx.drawImage(src, sprite.x, sprite.y, sprite.w, sprite.h, (24 - w) / 2, 24 - h, w, h);
+    icon.setAttribute("aria-hidden", "true");
+    return icon;
+  }
+
+  // The same pixel art the rest of the game uses, so entries look familiar.
+  private codexIcon(e: Entry): HTMLElement {
+    const flat = (c: HTMLCanvasElement) => {
+      c.style.width = c.style.height = "";
+      return c;
+    };
+    const [group, ...rest] = e.key.split("_");
+    const sub = rest.join("_");
+    switch (e.cat) {
+      case "creature":
+        return this.creatureIcon(SPECIES.indexOf(e.key as (typeof SPECIES)[number]));
+      case "biome": {
+        const tones = BIOMES.find((b) => b.key === e.key)!.tones;
+        return flat(mk(12, 12, (R) => {
+          R(0, 0, 12, 12, tones[0]!);
+          for (let i = 0; i < 12; i += 3) R((i * 5) % 11, i, 2, 2, tones[1]!);
+          R(3, 6, 2, 2, tones[2] ?? tones[1]!);
+        }, 2));
+      }
+      case "trait":
+        if (e.key === "blessed") return flat(mk(7, 7, FX_ICON.sparkle!, 3));
+        if (e.key === "immune") return flat(mk(7, 7, FX_ICON.plus!, 3));
+        if (e.key === "sick") return this.atlasIcon("fx.germ");
+        return flat(mk(14, 14, TAB_ICONS.gene!, 2));
+      case "building":
+        return flat(mk(8, 8, (BUILDING_ICON[e.key] ?? BUILDING_ICON.site!)("human"), 3));
+      case "age":
+        return flat(mk(12, 12, (R) => {
+          R(1, 6, 10, 5, AGE_TONES[e.key]!);
+          R(3, 3, 6, 4, AGE_TONES[e.key]!);
+        }, 2));
+    }
+    if (group === "wrath") return this.atlasIcon(`fx.${WRATH_ICONS[sub as WrathPower]}`);
+    if (group === "grace") return flat(mk(12, 12, graceIcon(sub as GracePower), 2));
+    if (group === "shape") return flat(mk(12, 12, TOOL_ICONS[sub]!, 2));
+    if (group === "gene") return flat(mk(12, 12, TOOL_ICONS[GENE_ICONS[sub]!]!, 2));
+    return flat(mk(12, 12, TOOL_ICONS[CMD_ICONS[sub as CmdTool]]!, 2));
   }
 
   // A small canvas icon cut from the sprite atlas.
@@ -952,6 +1096,7 @@ export class App {
 
   private inspect(tx: number, ty: number) {
     if (!this.world) return;
+    this.tutorialAction("inspect");
     const uid = this.view.nearest(tx, ty, 1.5);
     if (uid) {
       this.inspected = null;
@@ -1024,6 +1169,7 @@ export class App {
     const r = this.mini.getBoundingClientRect();
     this.following = false;
     this.cam.centerOn(((e.clientX - r.left) / r.width) * this.world.w, ((e.clientY - r.top) / r.height) * this.world.h);
+    this.tutorialAction("camera");
     this.cameraMoved();
   }
 
@@ -1052,7 +1198,11 @@ export class App {
   // Dialogs, saves, files
 
   private bindDialogs() {
-    $("#stats-btn").onclick = () => void this.stats.open();
+    // pixel icons in front of the top bar labels; narrow screens show only these
+    for (const [id, icon] of [["#stats-btn", "stats"], ["#settings-btn", "gear"], ["#codex-btn", "book"]] as const) $(id).prepend(mk(12, 12, TOOL_ICONS[icon]!, 2));
+    $("#stats-btn").onclick = () => this.openStats();
+    $("#codex-btn").onclick = () => this.codex.open();
+    $("#settings-btn").onclick = () => this.settings.open();
     const dlg = $<HTMLDialogElement>("#newworld");
     const out = (id: string) => {
       const input = $<HTMLInputElement>(id);
@@ -1068,7 +1218,7 @@ export class App {
     });
     dlg.addEventListener("close", () => {
       this.updateTitle();
-      if (dlg.returnValue !== "go") return;
+      if (dlg.returnValue !== "go") return this.tutorial.autoStart();
       const num = (id: string) => Number($<HTMLInputElement>(id).value);
       const chosen = [...races.querySelectorAll<HTMLInputElement>("input:checked")].map((i) => i.value as RaceKey);
       void this.generate({
@@ -1079,7 +1229,7 @@ export class App {
         temperature: num("#nw-temp"),
         moisture: num("#nw-moist"),
         magic: num("#nw-magic"),
-      }, chosen);
+      }, chosen).then(() => this.tutorial.autoStart());
     });
 
     $("#sv-close").onclick = () => $<HTMLDialogElement>("#saves").close();
@@ -1107,6 +1257,11 @@ export class App {
     $("#nw-races").querySelectorAll("span").forEach((s, k) => (s.textContent = kindName(k)));
     $<HTMLDialogElement>("#newworld").showModal();
     this.updateTitle();
+  }
+
+  private openStats() {
+    this.tutorialAction("stats");
+    void this.stats.open();
   }
 
   private async shareSeed() {
@@ -1171,6 +1326,7 @@ export class App {
       const snap = await this.snapshot();
       await saveSlot(slot, this.world, t("sv_slot", { n: slot }), this.view.frame?.year ?? 0, snap);
       toast(t("sv_saved", { n: slot }));
+      this.tutorialAction("save");
       void this.keepSaves();
       await this.openSaves();
     } catch {
@@ -1225,7 +1381,51 @@ export class App {
 
   // Browsers slow hidden tabs down anyway, so the world waits for you (PLAN section 12).
   private pauseWhenHidden() {
-    document.addEventListener("visibilitychange", () => this.sim.setSpeed(document.hidden ? 0 : this.speed));
+    document.addEventListener("visibilitychange", () => {
+      this.sim.setSpeed(document.hidden ? 0 : this.speed);
+      this.audio.pause(document.hidden);
+    });
+  }
+
+  // Sound
+
+  // Browsers only allow sound after a gesture, so the first one starts it.
+  // Every button click ticks, from one listener instead of one per button.
+  private bindAudio() {
+    const wake = () => this.audio.unlock();
+    window.addEventListener("pointerdown", wake, { capture: true });
+    window.addEventListener("keydown", wake, { capture: true });
+    document.addEventListener("click", (e) => (e.target as HTMLElement).closest?.("button") && this.audio.play("click"), { capture: true });
+  }
+
+  private commandSound(cmd: Parameters<SimClient["command"]>[0]) {
+    const sounds: Partial<Record<string, Sound>> = { spawn: "place", stroke: "terraform", mutate: "magic", trait: "magic", clone: "magic", split: "magic", possess: "magic", war: "horn", peace: "power", ally: "power" };
+    const s = sounds[cmd.c];
+    if (s) this.audio.play(s);
+  }
+
+  // Sounds follow what the sim reports, so natural disasters and the
+  // player's own powers both sound once, when they land.
+  private frameSounds(f: Frame) {
+    const now = performance.now();
+    const disasters = audioConfig.disasters as Record<string, Sound>;
+    for (const fx of f.fx) {
+      const s = disasters[fx.kind];
+      if (s) {
+        this.audio.play(s);
+        this.dangerAt = now;
+      } else if ((GRACE as readonly string[]).includes(fx.kind)) this.audio.play("power");
+      else if (fx.kind === "arrow") this.audio.play("arrow");
+    }
+    for (const e of f.events) {
+      if (e.t === "built") this.audio.play("build");
+      else if (e.t === "birth") this.audio.play("birth");
+      else if (e.t === "death" && e.cause === DEATH.battle) this.audio.play("hit");
+      else if (e.t === "chronicle" && e.entry.kind === "war") this.audio.play("horn");
+    }
+    if (now - this.moodAt < 1000) return;
+    this.moodAt = now;
+    this.audio.setMood({ year: f.year, danger: f.storms.length > 0 || now - this.dangerAt < audioConfig.music.dangerMs });
   }
 
   // Read only hooks for the browser tests.

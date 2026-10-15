@@ -1,0 +1,23 @@
+{
+  "list": [
+    { "id": "village", "event": "town" },
+    { "id": "kingdom", "chronicle": ["kingdom", "rebellion", "independence"] },
+    { "id": "war", "chronicle": ["war"] },
+    { "id": "conquest", "chronicle": ["conquered", "razed"] },
+    { "id": "faith", "chronicle": ["faith", "sect"] },
+    { "id": "species", "chronicle": ["subspecies"] },
+    { "id": "legend", "chronicle": ["legend"] },
+    { "id": "iron", "age": 2 },
+    { "id": "mythril", "age": 4 },
+    { "id": "crowd", "pop": 500 },
+    { "id": "century", "year": 100 },
+    { "id": "millennium", "year": 1000 },
+    { "id": "nuke", "wrath": "nuke" },
+    { "id": "miracle", "grace": "miracle" },
+    { "id": "all_wrath", "allWrath": true },
+    { "id": "all_grace", "allGrace": true },
+    { "id": "kaiju", "possess": "clawzilla" },
+    { "id": "codex_half", "codex": 0.5 },
+    { "id": "codex_full", "codex": 1 }
+  ]
+}

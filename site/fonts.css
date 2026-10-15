@@ -1,0 +1,6 @@
+/* Pocket Pantheon · Copyright (c) 2026 Albeen (albeen-sknight) */
+/* Pixelify Sans and Outfit, both under the SIL Open Font License, bundled so the game works offline. */
+@font-face{font-family:'Pixelify Sans';font-weight:500;font-style:normal;font-display:swap;src:url(fonts/pixelify-sans-latin-500-normal.woff2) format("woff2")}
+@font-face{font-family:'Pixelify Sans';font-weight:700;font-style:normal;font-display:swap;src:url(fonts/pixelify-sans-latin-700-normal.woff2) format("woff2")}
+@font-face{font-family:'Outfit';font-weight:400;font-style:normal;font-display:swap;src:url(fonts/outfit-latin-400-normal.woff2) format("woff2")}
+@font-face{font-family:'Outfit';font-weight:600;font-style:normal;font-display:swap;src:url(fonts/outfit-latin-600-normal.woff2) format("woff2")}

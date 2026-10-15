@@ -578,6 +578,21 @@ export const BUILDING_ART: Record<string, { w: number; h: number; draw: (race: R
       R(41, 2, 6, 4, k.flag);
     };
   } },
+  // A stepped golden monument with the kingdom's flag on top: one per kingdom.
+  wonder: { w: 78, h: 72, draw: (race) => {
+    const k = LOOK[race];
+    return (R, E) => {
+      R(4, 56, 70, 14, "#c8a46a");
+      R(12, 42, 54, 16, "#d4a94e");
+      R(20, 28, 38, 16, "#e0c070");
+      R(28, 16, 22, 14, GOLD);
+      for (let x = 8; x < 72; x += 8) R(x, 60, 3, 8, "#a8803f");
+      R(34, 46, 10, 12, K1);
+      E(39, 10, 5, 5, "#5cc8e6");
+      R(38, 0, 1, 8, "#c3d3de");
+      R(39, 0, 8, 5, k.flag);
+    };
+  } },
   keep: { w: 78, h: 60, draw: (race) => {
     const k = LOOK[race];
     return (R) => {
@@ -608,11 +623,13 @@ export const BUILDING_ART: Record<string, { w: number; h: number; draw: (race: R
 export const BUILDING_ICON: Record<string, (race: RaceKey) => Draw> = {
   hall: (race) => (R) => { R(1, 2, 6, 6, "#aab0bc"); R(3, 0, 1, 3, WH); R(4, 0, 3, 2, LOOK[race].flag); },
   house: (race) => (R, E, P, T) => { R(1, 4, 6, 4, LOOK[race].wall); T(4, 0, 4, 4, LOOK[race].roof); },
+  farm: () => (R) => { R(0, 0, 8, 8, "#8a5a36"); R(1, 1, 6, 1, "#d4a94e"); R(1, 3, 6, 1, "#5fbf4a"); R(1, 5, 6, 1, "#d4a94e"); },
   lumber: () => (R) => { R(0, 3, 8, 2, WOOD); R(0, 6, 8, 2, WOOD); },
   well: () => (R) => { R(1, 4, 6, 4, "#8a8f9a"); R(2, 5, 4, 1, "#3b78d8"); },
   site: () => (R) => { R(0, 6, 8, 2, "#b38d55"); R(1, 1, 1, 6, WOOD); R(6, 1, 1, 6, WOOD); },
   tower: (race) => (R) => { R(2, 2, 4, 6, "#aab0bc"); R(1, 1, 6, 2, "#8a8f9a"); R(4, 0, 2, 1, LOOK[race].flag); },
   barracks: (race) => (R, E, P, T) => { R(0, 4, 8, 4, LOOK[race].wall); T(4, 0, 4, 4, LOOK[race].roof); R(3, 5, 2, 3, "#c3d3de"); },
+  wonder: (race) => (R) => { R(0, 6, 8, 2, "#c8a46a"); R(1, 4, 6, 2, "#d4a94e"); R(2, 2, 4, 2, GOLD); R(3, 0, 2, 2, LOOK[race].flag); },
   keep: (race) => (R) => { R(0, 2, 8, 6, "#8a8f9a"); R(2, 1, 4, 7, "#aab0bc"); R(3, 0, 3, 2, LOOK[race].flag); },
   temple: () => (R, E, P, T) => { R(1, 4, 6, 4, "#f4f0e8"); T(4, 0, 4, 4, "#f0d9a0"); R(3, 0, 2, 1, GOLD); },
   mine: () => (R, E) => { E(4, 6, 4, 3, "#8a8f9a"); R(3, 4, 3, 4, K1); },
@@ -631,6 +648,7 @@ export const BANNER: Draw = (R) => {
 
 // Grace power effects, 7 x 7.
 export const FX_ICON: Record<string, Draw> = {
+  boulder: (R, E) => { E(3, 3, 3, 3, "#8a8f9a"); R(2, 2, 2, 1, "#aab0bc"); },
   arrow: (R) => { R(0, 3, 5, 1, WOOD); R(5, 2, 2, 3, STEEL); R(0, 2, 1, 1, WH); R(0, 4, 1, 1, WH); },
   fire: (R) => { R(2, 1, 3, 6, "#f08a2c"); R(1, 3, 5, 4, "#d9453d"); R(3, 0, 1, 2, GOLD); R(3, 4, 1, 2, GOLD); },
   dust: (R) => { R(1, 3, 5, 3, "#c9a46a"); R(2, 2, 3, 1, "#d4a94e"); },
@@ -659,3 +677,21 @@ export const RACE_COLORS: Record<RaceKey, string> = {
 };
 
 export { RACES };
+
+// Steel Age siege engines that roll alongside an army.
+export const CATAPULT: Draw = (R) => {
+  R(1, 9, 14, 2, WOOD);
+  R(2, 11, 3, 3, K1);
+  R(11, 11, 3, 3, K1);
+  R(6, 4, 2, 6, WOOD);
+  R(3, 2, 10, 1, WOOD);
+  R(11, 0, 3, 3, "#8a8f9a");
+};
+
+export const RAM: Draw = (R, E, P, T) => {
+  T(8, 0, 8, 5, "#6b5a4a");
+  R(1, 5, 14, 3, WOOD);
+  R(0, 6, 2, 1, STEEL);
+  R(2, 8, 3, 3, K1);
+  R(11, 8, 3, 3, K1);
+};

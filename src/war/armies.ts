@@ -10,6 +10,7 @@ import type { Sim, Town } from "../sim/sim";
 import { RACES, SPECIES_INFO } from "../sim/species";
 import { ACT, JOB } from "../sim/units";
 import { activeWar, atWar, endWar, sideOf, type War } from "./wars";
+import { bombard, wakeGuardian, wonderOf } from "./wonders";
 
 const A = war.army;
 const ORC = RACES.indexOf("orc");
@@ -34,6 +35,7 @@ export interface Army {
   startSize: number;
   player: boolean; // following a player order, not the AI
   siege: number; // ticks with no defenders left at the target
+  engines?: number; // ticks since the catapult last loosed
 }
 
 export function army(sim: Sim, id: number): Army | undefined {
@@ -192,6 +194,9 @@ function siege(sim: Sim, a: Army) {
     return;
   }
   a.state = "siege";
+  const wonder = wonderOf(sim, t.id);
+  if (wonder) wakeGuardian(sim, wonder);
+  bombard(sim, a, t);
   const u = sim.units;
   let defenders = 0;
   sim.grid.query(t.x, t.y, 10, (s) => {
@@ -231,7 +236,7 @@ function capture(sim: Sim, a: Army, t: Town) {
 function burn(sim: Sim, t: Town) {
   for (const b of sim.buildings.filter((o) => o.town === t.id)) {
     sim.fx.push({ kind: "fire", x: b.x + b.w / 2, y: b.y + b.h / 2, r: 1.5 });
-    sim.removeBuilding(b);
+    sim.removeBuilding(b, true);
   }
   const u = sim.units;
   for (let s = 0; s < u.count; s++) {

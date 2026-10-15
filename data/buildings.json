@@ -154,5 +154,17 @@
     "housing": 4,
     "stage": 3,
     "age": 2
+  },
+  "wonder": {
+    "size": [
+      3,
+      3
+    ],
+    "wood": 40,
+    "stone": 60,
+    "work": 200,
+    "housing": 0,
+    "stage": 3,
+    "age": 4
   }
 }

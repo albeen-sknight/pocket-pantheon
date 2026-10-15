@@ -35,12 +35,46 @@
     "towerDamage": 6,
     "towerEvery": 25,
     "wallArmor": 0.3,
-    "wallHp": [60, 120, 200],
+    "wallHp": [
+      60,
+      120,
+      200
+    ],
     "wallRadius": 7,
     "keepGarrisonBonus": 0.2
   },
-  "director": { "peaceYears": 80, "friction": 25 },
-  "possess": { "speedBonus": 1.2, "jumpTicks": 8, "attackEvery": 8, "talkTicks": 60 },
-  "recruit": { "food": 10, "gold": 5, "count": 5 },
-  "armyNames": ["crown", "spear", "shield", "storm", "wolf", "dawn", "iron", "river", "stone", "flame"]
+  "director": {
+    "peaceYears": 80,
+    "friction": 25
+  },
+  "possess": {
+    "speedBonus": 1.2,
+    "jumpTicks": 8,
+    "attackEvery": 8,
+    "talkTicks": 60
+  },
+  "recruit": {
+    "food": 10,
+    "gold": 5,
+    "count": 5
+  },
+  "armyNames": [
+    "crown",
+    "spear",
+    "shield",
+    "storm",
+    "wolf",
+    "dawn",
+    "iron",
+    "river",
+    "stone",
+    "flame"
+  ],
+  "siege": {
+    "age": 3,
+    "every": 60,
+    "wallDamage": 40,
+    "buildingChance": 0.35,
+    "ramMultiplier": 3
+  }
 }

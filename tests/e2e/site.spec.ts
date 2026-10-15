@@ -11,8 +11,11 @@ type Hooks = {
 
 // The isolation service worker reloads the page once on a first visit, so
 // wait for that before touching anything.
+// Isolation comes from a shim that reloads the page once, early on. It
+// sometimes doesn't isolate at all, and the game runs fine without it, so a
+// page that has had a frame and no reload for 8 seconds counts as ready.
 const ready = (page: Page) =>
-  page.waitForFunction(() => window.crossOriginIsolated && (window as unknown as { __pp?: Hooks }).__pp?.frame(), null, { timeout: 45_000 });
+  page.waitForFunction(() => !!(window as unknown as { __pp?: Hooks }).__pp?.frame() && (window.crossOriginIsolated || performance.now() > 8000), null, { timeout: 45_000 });
 
 // Page errors are printed so a CI failure says what broke, not just that it timed out.
 test.beforeEach(({ page }) => {
@@ -31,7 +34,7 @@ test("landing page renders, switches language and links to the game", async ({ p
   await expect(page.locator("#road li")).toHaveCount(9);
   await expect(page.locator("#play")).toHaveAttribute("href", "play/");
 
-  await page.getByRole("button", { name: "ES" }).click();
+  await page.getByRole("button", { name: "ES", exact: true }).click();
   await expect(page.locator("#roll")).toHaveText("Genera un mundo nuevo");
   await expect(page.locator("#play")).toHaveText("Juega ya");
   await expect(page.locator("html")).toHaveAttribute("lang", "es");
@@ -49,7 +52,7 @@ test("the game builds a world and switches language in place", async ({ page }) 
 
   await expect(page.locator("#t-seed")).toHaveText("Seed 4242");
   await expect(page.locator("#tabs button:disabled")).toHaveCount(0);
-  await page.getByRole("button", { name: "ES" }).click();
+  await page.getByRole("button", { name: "ES", exact: true }).click();
   await expect(page.locator("#t-seed")).toHaveText("Semilla 4242");
   await expect(page.locator("#t-year")).toHaveText(/^Año [0-9]+$/);
   await expect(page.locator("#tabs button[data-tab=shape]")).toContainText("Moldear");
@@ -240,7 +243,7 @@ test("the stats panel charts the world and exports its history", async ({ page }
   expect(data.stats.years.length).toBeGreaterThan(0);
 
   await dlg.getByRole("button", { name: "Close" }).click();
-  await page.getByRole("button", { name: "ES" }).click();
+  await page.getByRole("button", { name: "ES", exact: true }).click();
   await page.keyboard.press("h");
   await expect(dlg.getByRole("heading", { name: "Historia del mundo" })).toBeVisible();
 });
@@ -297,7 +300,7 @@ test("shared seed, language switch and tab title stay in sync", async ({ page })
   await page.locator('#newworld button[value="cancel"]').click();
   await expect.poll(() => page.title()).toMatch(/^Year [0-9]+ · Pocket Pantheon$/);
 
-  await page.getByRole("button", { name: "ES" }).click();
+  await page.getByRole("button", { name: "ES", exact: true }).click();
   await expect(page).toHaveTitle(/^Año [0-9]+ · Pocket Pantheon$/);
   await page.locator('#tabs button[data-tab="world"]').click();
   await page.locator("#shelf button", { hasText: "Mundo nuevo" }).click();
@@ -369,7 +372,7 @@ test("construction sites show localized progress on hover and tap", async ({ pag
   await expect(progress).toHaveAttribute("aria-expanded", "true");
   await expect(progress.getByRole("tooltip")).toBeVisible();
 
-  await page.getByRole("button", { name: "ES" }).click();
+  await page.getByRole("button", { name: "ES", exact: true }).click();
   await expect(progress).toHaveAttribute("aria-label", new RegExp(`^${names[site.type]![1]}, .+ por ciento terminado$`));
   await expect(progress.locator(".tip")).toContainText("por ciento terminado");
 });

@@ -18,6 +18,7 @@ import { directorYear, type DirectorMode } from "../director/director";
 import warData from "../../data/war.json";
 import { moraleHit, raiseArmy, updateArmies, type Army, type Stance } from "../war/armies";
 import { buildWalls, towersShoot, unitKingdom } from "../war/defense";
+import { wakeGuardian } from "../war/wonders";
 import { History } from "../stats/history";
 import { NO_INPUT, possessTick, type PossessInput } from "../war/possess";
 import { activeWar, declareWar, endWar, sideOf, yearlyWars, type War } from "../war/wars";
@@ -54,6 +55,7 @@ export interface Building {
   race: number;
   progress: number; // work done
   done: boolean;
+  guarded?: boolean; // a wonder whose Guardian has woken
 }
 
 export interface Town {
@@ -475,7 +477,10 @@ export class Sim {
     this.buildingsChanged = true;
   }
 
-  removeBuilding(b: Building) {
+  // A finished wonder shrugs off its first blow: the Guardian wakes instead.
+  // Burning a conquered town forces it.
+  removeBuilding(b: Building, force = false) {
+    if (!force && b.type === "wonder" && b.done && !b.guarded) return wakeGuardian(this, b);
     for (let dy = 0; dy < b.h; dy++) {
       for (let dx = 0; dx < b.w; dx++) {
         const i = (b.y + dy) * this.world.w + b.x + dx;

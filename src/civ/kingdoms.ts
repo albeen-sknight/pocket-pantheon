@@ -2,6 +2,7 @@
 // Kingdoms (PLAN section 11): a capital plus vassal towns under one ruler.
 // Loyalty drifts with food, distance, faith and the ruler's charm; towns that
 // fall too low rebel and split off as a new kingdom.
+import { hasWonder } from "../war/wonders";
 import civ from "../../data/civ.json";
 import { G, PERSONALITY, STAT, stat } from "../sim/genes";
 import type { Sim, Town } from "../sim/sim";
@@ -209,6 +210,7 @@ function loyalty(sim: Sim, t: Town, totalTowns: number) {
   if (k.religion && faith) target += faith === k.religion ? L.sameReligion : L.otherReligion;
   // The Director leans on empires that own more than half the world.
   if (k.towns > totalTowns * civ.director.dominance) target += L.dominance * sim.directorScale();
+  if (hasWonder(sim, k.id)) target += L.wonder;
   t.loyalty += (Math.max(0, Math.min(100, target)) - t.loyalty) * L.pull;
 }
 

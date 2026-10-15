@@ -18,6 +18,13 @@ export function bindMapInput(canvas: HTMLCanvasElement, cam: Camera, h: MapHandl
   const pointers = new Map<number, { x: number; y: number }>();
   let mode: "none" | "tool" | "pan" | "pinch" = "none";
   let pinchDist = 0;
+  // A finger that lands might be the first half of a pinch, so a touch waits
+  // a moment before it uses the power. Mouse and pen act at once.
+  let pending: ReturnType<typeof setTimeout> | null = null;
+  const cancelPending = () => {
+    if (pending) clearTimeout(pending);
+    pending = null;
+  };
 
   const local = (e: PointerEvent | WheelEvent) => {
     const r = canvas.getBoundingClientRect();
@@ -35,6 +42,7 @@ export function bindMapInput(canvas: HTMLCanvasElement, cam: Camera, h: MapHandl
     pointers.set(e.pointerId, p);
 
     if (pointers.size === 2) {
+      cancelPending();
       if (mode === "tool") h.release();
       mode = "pinch";
       const [a, b] = [...pointers.values()];
@@ -48,8 +56,14 @@ export function bindMapInput(canvas: HTMLCanvasElement, cam: Camera, h: MapHandl
       return;
     }
     mode = "tool";
-    const [tx, ty] = cam.toWorld(p.x, p.y);
-    h.press(tx, ty);
+    const press = () => {
+      pending = null;
+      const at = pointers.get(e.pointerId) ?? p;
+      const [tx, ty] = cam.toWorld(at.x, at.y);
+      h.press(tx, ty);
+    };
+    if (e.pointerType === "touch") pending = setTimeout(press, TOUCH_WAIT_MS);
+    else press();
   });
 
   canvas.addEventListener("pointermove", (e) => {
@@ -70,7 +84,7 @@ export function bindMapInput(canvas: HTMLCanvasElement, cam: Camera, h: MapHandl
       if (pinchDist > 0) cam.zoomBy(dist / pinchDist, before.x, before.y);
       pinchDist = dist;
       h.moved();
-    } else if (mode === "tool") {
+    } else if (mode === "tool" && !pending) {
       const [tx, ty] = cam.toWorld(p.x, p.y);
       h.hold(tx, ty);
     }
@@ -81,6 +95,13 @@ export function bindMapInput(canvas: HTMLCanvasElement, cam: Camera, h: MapHandl
     const wasPinch = mode === "pinch";
     const at = pointers.size === 2 ? centre() : local(e);
     pointers.delete(e.pointerId);
+    // a quick tap still counts: use the power now, then let go
+    if (pending) {
+      clearTimeout(pending);
+      pending = null;
+      const [tx, ty] = cam.toWorld(at.x, at.y);
+      h.press(tx, ty);
+    }
     if (mode === "tool") h.release();
     if (wasPinch) cam.release(at.x, at.y);
     if (pointers.size === 0 || wasPinch) {
@@ -104,3 +125,5 @@ export function bindMapInput(canvas: HTMLCanvasElement, cam: Camera, h: MapHandl
     { passive: false },
   );
 }
+
+const TOUCH_WAIT_MS = 60;
