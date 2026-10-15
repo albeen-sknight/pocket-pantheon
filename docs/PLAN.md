@@ -1,6 +1,6 @@
 # Pocket Pantheon: Execution Plan
 
-**Owner:** Albeen ([albeen-sknight](https://github.com/albeen-sknight)) · **Repository:** [albeen-sknight/pocket-pantheon](https://github.com/albeen-sknight/pocket-pantheon) · **Live site:** https://albeen-sknight.github.io/pocket-pantheon/ · **Updated:** 14 October 2026 · **Status:** Phases 0 to 6 done, Phase 7 in progress
+**Owner:** Albeen ([albeen-sknight](https://github.com/albeen-sknight)) · **Repository:** [albeen-sknight/pocket-pantheon](https://github.com/albeen-sknight/pocket-pantheon) · **Live site:** https://albeen-sknight.github.io/pocket-pantheon/ · **Updated:** 15 October 2026 · **Status:** Phases 0 to 6 done, Phase 7 in progress
 
 Pocket Pantheon is a browser god game. A living pixel world runs itself, and you shape it, command it, bless it or wreck it. This file is the single source of truth for building it. The visual target is the concept preview in [`docs/preview.html`](preview.html).
 
@@ -749,7 +749,7 @@ Every phase ends in a playable build and is merged only when its gate passes.
 | 6 Data | Charts, pyramids, war history, death stats, leaderboards, family tree | 1,000 years of history fit in 30 MB |
 | 7 Polish | Tutorial, Codex, achievements, sound, phone controls, balance, offline single file | 5,000 units at 60 fps on a mid range laptop, and every done item in section 1 passes |
 
-**Phase 7 progress, 14 October 2026**
+**Phase 7 progress, 15 October 2026**
 
 - [x] Program generated art exports the SVG favicon, 32 pixel icon, 180 pixel Apple touch icon, and 192 and 512 pixel install icons.
 - [x] The web app manifest sets the game name, colors, install icons, and play screen.
@@ -758,7 +758,11 @@ Every phase ends in a playable build and is merged only when its gate passes.
 - [x] Shared seed links open the New World screen. Invalid seeds show an error after the world loads.
 - [x] Restart keeps the current seed and settings, and asks before discarding progress.
 - [x] The localized ten step tutorial starts on a first world, advances from player actions, and can be replayed from the World tab.
-- [ ] Codex, achievements, sound system, phone controls, balance bot, and offline single file remain outside this checkout.
+- [x] The Codex: 121 entries over powers, creatures, biomes, traits and states, buildings and tech ages, built from the data files with cross references and prerequisites. Entries unlock from real events (player commands, creatures and buildings in the world, biome changes, chronicle events, the inspected unit, kingdom ages). A new or loaded world unlocks its contents quietly; later finds show a toast and a badge until read. Stored under `pp_codex_unlocked`, with unreadable data ignored. Open it with the Codex button or C.
+- [x] Sound: synthesized Web Audio effects (powers, terraforming, spawning, combat, disasters, finished buildings, births, war horns, button clicks) and a quiet generative music loop that climbs as the world ages and turns minor during disasters. Numbers live in `data/audio.json`. Sound starts on the first gesture, every sound has a minimum gap, and missing or blocked Web Audio leaves the game silent but running.
+- [x] Settings: master, effects and music sliders and mute (stored under `pp_audio_settings`, clamped on load), the screen shake and flash toggle promised in Phase 5, language and tutorial replay.
+- [x] UI audit at desktop, laptop, tablet, phone, a 320 by 568 phone and phone landscape in both languages. Fixed: tabs off screen in landscape, a four row top bar on small phones (icon buttons there now), tutorial buttons pushed out of view, a missing farm icon, unmarked language buttons and two text slips.
+- [ ] Achievements, phone controls (one finger power or pan toggle), balance bot, offline single file and release, world wonders, siege engines and the Guardian waking are still to do.
 - [ ] The 5,000 unit performance target, full Phase 7 device matrix, and all section 1 acceptance checks still need verification.
 - [ ] Keep the landing roadmap in progress until the remaining features and the Phase 7 gate pass.
 
