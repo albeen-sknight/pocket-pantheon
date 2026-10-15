@@ -113,6 +113,44 @@ dialog p.note{margin:-6px 0 12px;color:var(--mut);font-size:14px}
 .slots li{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;border:2px solid var(--line);padding:8px}
 .slots b{font-family:'Pixelify Sans',monospace}.slots small{display:block;color:var(--mut)}
 .slots button{min-height:40px;padding:6px 10px;border:2px solid var(--line);background:transparent}
+#codex-btn{position:relative;font:500 13px 'Pixelify Sans',monospace;min-height:32px;border:2px solid var(--acc);background:transparent;color:var(--acc);padding:0 10px}
+#codex-btn .badge{position:absolute;top:-8px;right:-8px;min-width:18px;height:18px;padding:0 4px;border-radius:9px;background:var(--bad);color:#f4f0e8;font:700 11px/18px Outfit,sans-serif;text-align:center}
+#codex-btn .badge[hidden]{display:none}
+dialog.codex{max-width:none;width:min(980px,calc(100vw - 16px));height:min(680px,calc(100dvh - 16px));display:flex;flex-direction:column;overflow:hidden}
+dialog.codex:not([open]){display:none}
+.cx-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin-bottom:10px}
+.cx-head h2{margin:0;flex:1 1 auto}
+.cx-progress{color:var(--mut);font-size:14px}
+.cx-body{flex:1;min-height:0;display:grid;grid-template-columns:minmax(220px,300px) 1fr;gap:14px}
+.cx-side{display:flex;flex-direction:column;gap:8px;min-height:0}
+.cx-side input{background:var(--bg);border:2px solid var(--line);padding:8px;min-height:44px;width:100%}
+.cx-cats{display:flex;flex-wrap:wrap;gap:4px}
+.cx-cats button{font:500 13px 'Pixelify Sans',monospace;min-height:36px;padding:2px 8px;border:2px solid var(--line);background:transparent}
+.cx-cats button[aria-pressed="true"]{border-color:var(--acc);background:rgba(242,201,76,.12)}
+.cx-list{list-style:none;margin:0;padding:0;overflow:auto;flex:1;min-height:0;border:2px solid var(--line)}
+.cx-item{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:4px 8px;border:0;border-bottom:1px solid var(--line);background:transparent;text-align:left}
+.cx-item[aria-pressed="true"]{background:rgba(242,201,76,.14)}
+.cx-item[data-locked="true"]{color:var(--mut)}
+.cx-item canvas,.cx-q{flex:none;width:24px;height:24px;object-fit:contain}
+.cx-item span:not(.cx-q){flex:1;overflow-wrap:anywhere}
+.cx-q{display:inline-grid;place-items:center;border:2px dashed var(--line);font:700 14px 'Pixelify Sans',monospace;color:var(--mut)}
+.cx-q.big,.cx-article canvas.big{width:56px;height:56px;font-size:28px}
+.cx-dot{flex:none;width:10px;height:10px;border-radius:50%;background:var(--bad)}
+.cx-empty{padding:10px;color:var(--mut)}
+.cx-article{overflow:auto;min-height:0;padding:4px 6px 12px;border:2px solid var(--line)}
+.cx-article header{display:flex;align-items:center;gap:14px;margin:8px 0 10px}
+.cx-article h3{font:700 22px 'Pixelify Sans',monospace;margin:0}
+.cx-article header small{color:var(--mut)}
+.cx-article p{margin:0 0 10px;max-width:62ch}
+.cx-sum{font-weight:600}
+.cx-lore{color:var(--mut)}
+.cx-article dl{display:grid;grid-template-columns:max-content 1fr;gap:4px 14px;margin:0 0 12px;font-size:14px}
+.cx-article dt{color:var(--mut)}.cx-article dd{margin:0;font-family:'Pixelify Sans',monospace}
+.cx-article h4{font:700 15px 'Pixelify Sans',monospace;margin:12px 0 4px}
+.cx-links{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:2px 10px;font-size:14px}
+.cx-links button.link{color:var(--acc);font-size:14px;min-height:36px}
+.cx-back{display:none}
+@media(max-width:700px){.cx-body{grid-template-columns:1fr}.cx-body[data-view="article"] .cx-side{display:none}.cx-body[data-view="list"] .cx-article{display:none}.cx-back{display:inline-block}dialog.codex{padding:12px}}
 #stats-btn{font:500 13px 'Pixelify Sans',monospace;min-height:32px;border:2px solid var(--acc);background:transparent;color:var(--acc);padding:0 10px}
 dialog.wide{max-width:min(960px,calc(100vw - 16px));max-height:calc(100vh - 16px);overflow:auto;padding:14px 16px}
 .st-tabs{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px}
@@ -181,7 +219,7 @@ button.link{background:none;border:0;color:var(--mut);text-decoration:underline;
 </style></head><body>
 <canvas id="world" data-ia="world_a" role="img"></canvas>
 <div id="construction" data-ia="buildings_under"></div>
-<div id="top" class="hud"><span id="t-year"></span><span id="t-pop"></span><span id="t-kin"></span><span id="t-seed"></span><span id="t-zoom"></span><button type="button" id="stats-btn" data-i="st_open" data-it="st_open_a"></button><span class="spacer"></span><a href="../" data-i="back"></a><div id="lang" role="group" data-ia="lang"><button type="button" data-l="en" aria-pressed="true">EN</button><button type="button" data-l="es" aria-pressed="false">ES</button></div></div>
+<div id="top" class="hud"><span id="t-year"></span><span id="t-pop"></span><span id="t-kin"></span><span id="t-seed"></span><span id="t-zoom"></span><button type="button" id="stats-btn" data-i="st_open" data-it="st_open_a"></button><button type="button" id="codex-btn"><span data-i="cx_open"></span><span class="badge" hidden></span></button><span class="spacer"></span><a href="../" data-i="back"></a><div id="lang" role="group" data-ia="lang"><button type="button" data-l="en" aria-pressed="true">EN</button><button type="button" data-l="es" aria-pressed="false">ES</button></div></div>
 <nav id="tabs" class="hud" role="tablist"></nav>
 <div id="shelf" class="hud" role="toolbar"></div>
 <aside id="insp" class="hud" aria-live="polite"></aside>
@@ -211,6 +249,7 @@ button.link{background:none;border:0;color:var(--mut);text-decoration:underline;
 <dialog id="saves"><h2 data-i="sv_title"></h2><p class="note" data-i="sv_local"></p><ul class="slots"></ul>
 <div class="row"><button class="btn ghost" type="button" id="sv-close" data-i="close"></button></div></dialog>
 <dialog id="confirm"><form method="dialog"><h2></h2><p></p><div class="row"><button class="btn ghost" value="cancel" data-i="cancel"></button><button class="btn" value="ok"></button></div></form></dialog>
+<dialog id="codex" class="codex" data-ia="cx_title"></dialog>
 <dialog id="stats" class="wide" data-ia="st_title"></dialog>
 <input type="file" id="import" accept=".ppworld,application/octet-stream" hidden>
 

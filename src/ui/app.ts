@@ -7,7 +7,7 @@ import { WRATH, type FrequencyKey, type WrathPower } from "../chaos/disasters";
 import { GRACE, type GracePower } from "../civ/grace";
 import type { DirectorMode } from "../director/director";
 import { paletteIndex } from "../render/palette";
-import { figure, FX_ICON, raceFigure } from "../render/art";
+import { BUILDING_ICON, figure, FX_ICON, raceFigure } from "../render/art";
 import { buildSprites, type SpriteSet } from "../render/atlas";
 import { Camera } from "../render/camera";
 import { createCanvasRenderer, paintTiles } from "../render/canvas2d";
@@ -29,6 +29,7 @@ import { defaultOptions, type Layout, type SizeKey, type World, type WorldOption
 import { $, el, randomSeed, SAVE_SLOTS, toast, txt } from "./dom";
 import { bindLangSwitch, fmt, onLangChange, t, toggleLang, type PlayKey } from "./i18n";
 import { bindMapInput } from "./input";
+import { Codex, type Entry } from "./codex";
 import { StatsPanel } from "./stats";
 import { Tutorial, type TutorialAction } from "./tutorial";
 import { armyCard, Command, type CmdTool } from "./command";
@@ -56,6 +57,8 @@ const WRATH_ICONS: Record<WrathPower, string> = {
   lightning: "bolt", fire: "flame", tornado: "tornado", earthquake: "dust", meteor: "meteor", acid: "acid", plague: "germ",
   zombie: "germ", volcano: "puff", flood: "drop", blizzard: "snow", drought: "dust", nuke: "ring",
 };
+const GENE_ICONS: Record<string, string> = { mutate: "new", trait: "raise", clone: "saves", split: "range" };
+const AGE_TONES: Record<string, string> = { stone: "#8a8f9a", bronze: "#d9822b", iron: "#aab0bc", steel: "#c8d0dc", mythril: "#5cc8e6" };
 const CMD_TOOLS: CmdTool[] = ["select", "move", "attack", "defend", "recruit", "possess", "war", "peace", "ally"];
 const CMD_ICONS: Record<CmdTool, string> = {
   select: "fit", move: "pan", attack: "volcano", defend: "saves", recruit: "new", possess: "raise", war: "range", peace: "island", ally: "paint",
@@ -114,6 +117,7 @@ export class App {
     openKingdom: (capital) => this.visitTown(capital),
   });
   private tutorial!: Tutorial;
+  private codex!: Codex;
   // Canvas pixels per CSS pixel. Starts at the device ratio (capped) and steps
   // down while frames are slow, so weak phones draw fewer pixels instead.
   private res = Math.min(RES.max, window.devicePixelRatio || 1);
@@ -165,11 +169,14 @@ export class App {
     this.sprites = buildSprites(this.renderer.kind === "webgl2");
     this.scene = new Scene(this.sprites);
     this.sim.onFrame = (f) => this.onFrame(f);
+    this.codex = new Codex((e) => this.codexIcon(e));
+    this.sim.onCommand = (cmd) => this.codex.onCommand(cmd);
     bindLangSwitch("play");
     this.tutorial = new Tutorial($("#tutorial"), (step) => this.prepareTutorialStep(step));
     onLangChange(() => {
       this.refreshText();
       this.stats.relabel();
+      this.codex.relabel();
       this.tutorial.refresh();
     });
     this.buildTabs();
@@ -307,11 +314,13 @@ export class App {
     paintTiles(world, this.miniImg, { x0: 0, y0: 0, x1: world.w, y1: world.h });
     this.miniDirty = true;
     this.inspected = null;
+    this.codex.worldChanged(world);
     this.refreshText();
   }
 
   private onFrame(f: Frame) {
     const rect = this.view.receive(f, this.world);
+    this.codex.onFrame(f);
     if (rect) this.markDirty(rect);
     if (f.owner) {
       this.owner = f.owner;
@@ -610,6 +619,7 @@ export class App {
       "]": () => this.setBrush(this.brush + 1),
       l: () => toggleLang("play"),
       h: () => this.openStats(),
+      c: () => this.codex.open(),
       "+": () => this.cam.zoomStep(1, cx, cy),
       "=": () => this.cam.zoomStep(1, cx, cy),
       "-": () => this.cam.zoomStep(-1, cx, cy),
@@ -811,18 +821,7 @@ export class App {
       case "life":
         shelf.append(panButton(), sep());
         SPECIES.forEach((key, kind) => {
-          // Races are drawn fresh in their own colours; the atlas holds key colours.
-          const src = kind < RACES.length ? mk(32, 30, figure(raceFigure(RACES[kind]!, 0, false), 0), 1) : this.sprites.atlas.canvas;
-          const sprite = kind < RACES.length ? { x: 0, y: 0, w: src.width, h: src.height } : this.sprites.atlas.sprites[this.sprites.unit(kind, 0, 0, 0)]!;
-          const icon = el("canvas", { width: 24, height: 24, className: "px" });
-          const ctx = icon.getContext("2d")!;
-          const k = Math.min(1, 24 / Math.max(sprite.w, sprite.h));
-          ctx.imageSmoothingEnabled = false;
-          const w = Math.round(sprite.w * k);
-          const h = Math.round(sprite.h * k);
-          ctx.drawImage(src, sprite.x, sprite.y, sprite.w, sprite.h, (24 - w) / 2, 24 - h, w, h);
-          icon.setAttribute("aria-hidden", "true");
-          const b = this.toolButton(icon, txt(("kind_" + key) as PlayKey), "tip_life", () => {
+          const b = this.toolButton(this.creatureIcon(kind), txt(("kind_" + key) as PlayKey), "tip_life", () => {
             this.spawnKind = kind;
             this.tool = "spawn";
             this.buildShelf();
@@ -929,6 +928,60 @@ export class App {
   private gene(cmd: Parameters<SimClient["command"]>[0]) {
     if (!this.selected) return toast(t("gene_none"));
     this.sim.command(cmd);
+  }
+
+  private creatureIcon(kind: number) {
+    // Races are drawn fresh in their own colours; the atlas holds key colours.
+    const src = kind < RACES.length ? mk(32, 30, figure(raceFigure(RACES[kind]!, 0, false), 0), 1) : this.sprites.atlas.canvas;
+    const sprite = kind < RACES.length ? { x: 0, y: 0, w: src.width, h: src.height } : this.sprites.atlas.sprites[this.sprites.unit(kind, 0, 0, 0)]!;
+    const icon = el("canvas", { width: 24, height: 24, className: "px" });
+    const ctx = icon.getContext("2d")!;
+    const k = Math.min(1, 24 / Math.max(sprite.w, sprite.h));
+    ctx.imageSmoothingEnabled = false;
+    const w = Math.round(sprite.w * k);
+    const h = Math.round(sprite.h * k);
+    ctx.drawImage(src, sprite.x, sprite.y, sprite.w, sprite.h, (24 - w) / 2, 24 - h, w, h);
+    icon.setAttribute("aria-hidden", "true");
+    return icon;
+  }
+
+  // The same pixel art the rest of the game uses, so entries look familiar.
+  private codexIcon(e: Entry): HTMLElement {
+    const flat = (c: HTMLCanvasElement) => {
+      c.style.width = c.style.height = "";
+      return c;
+    };
+    const [group, ...rest] = e.key.split("_");
+    const sub = rest.join("_");
+    switch (e.cat) {
+      case "creature":
+        return this.creatureIcon(SPECIES.indexOf(e.key as (typeof SPECIES)[number]));
+      case "biome": {
+        const tones = BIOMES.find((b) => b.key === e.key)!.tones;
+        return flat(mk(12, 12, (R) => {
+          R(0, 0, 12, 12, tones[0]!);
+          for (let i = 0; i < 12; i += 3) R((i * 5) % 11, i, 2, 2, tones[1]!);
+          R(3, 6, 2, 2, tones[2] ?? tones[1]!);
+        }, 2));
+      }
+      case "trait":
+        if (e.key === "blessed") return flat(mk(7, 7, FX_ICON.sparkle!, 3));
+        if (e.key === "immune") return flat(mk(7, 7, FX_ICON.plus!, 3));
+        if (e.key === "sick") return this.atlasIcon("fx.germ");
+        return flat(mk(14, 14, TAB_ICONS.gene!, 2));
+      case "building":
+        return flat(mk(8, 8, (BUILDING_ICON[e.key] ?? BUILDING_ICON.site!)("human"), 3));
+      case "age":
+        return flat(mk(12, 12, (R) => {
+          R(1, 6, 10, 5, AGE_TONES[e.key]!);
+          R(3, 3, 6, 4, AGE_TONES[e.key]!);
+        }, 2));
+    }
+    if (group === "wrath") return this.atlasIcon(`fx.${WRATH_ICONS[sub as WrathPower]}`);
+    if (group === "grace") return flat(mk(12, 12, graceIcon(sub as GracePower), 2));
+    if (group === "shape") return flat(mk(12, 12, TOOL_ICONS[sub]!, 2));
+    if (group === "gene") return flat(mk(12, 12, TOOL_ICONS[GENE_ICONS[sub]!]!, 2));
+    return flat(mk(12, 12, TOOL_ICONS[CMD_ICONS[sub as CmdTool]]!, 2));
   }
 
   // A small canvas icon cut from the sprite atlas.
@@ -1122,6 +1175,7 @@ export class App {
 
   private bindDialogs() {
     $("#stats-btn").onclick = () => this.openStats();
+    $("#codex-btn").onclick = () => this.codex.open();
     const dlg = $<HTMLDialogElement>("#newworld");
     const out = (id: string) => {
       const input = $<HTMLInputElement>(id);

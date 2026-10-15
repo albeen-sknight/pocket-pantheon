@@ -149,6 +149,8 @@ export interface UnitDetail {
   says: string;
   topic: number;
   blessed: boolean;
+  sick: boolean;
+  immune: boolean;
 }
 
 export interface Frame {
@@ -330,6 +332,8 @@ export function detail(sim: Sim, uid: number): UnitDetail | null {
     says: isCiv(u.kind[s]!) ? phrase(sim.cultureFor(u.kind[s]!, u.town[s]!).lang, topicOf(sim, s)) : "",
     topic: topicOf(sim, s),
     blessed: u.blessed[s]! > 0,
+    sick: u.sick[s]! > 0,
+    immune: u.immune[s]! > 0,
   };
 }
 

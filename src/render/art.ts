@@ -608,6 +608,7 @@ export const BUILDING_ART: Record<string, { w: number; h: number; draw: (race: R
 export const BUILDING_ICON: Record<string, (race: RaceKey) => Draw> = {
   hall: (race) => (R) => { R(1, 2, 6, 6, "#aab0bc"); R(3, 0, 1, 3, WH); R(4, 0, 3, 2, LOOK[race].flag); },
   house: (race) => (R, E, P, T) => { R(1, 4, 6, 4, LOOK[race].wall); T(4, 0, 4, 4, LOOK[race].roof); },
+  farm: () => (R) => { R(0, 0, 8, 8, "#8a5a36"); R(1, 1, 6, 1, "#d4a94e"); R(1, 3, 6, 1, "#5fbf4a"); R(1, 5, 6, 1, "#d4a94e"); },
   lumber: () => (R) => { R(0, 3, 8, 2, WOOD); R(0, 6, 8, 2, WOOD); },
   well: () => (R) => { R(1, 4, 6, 4, "#8a8f9a"); R(2, 5, 4, 1, "#3b78d8"); },
   site: () => (R) => { R(0, 6, 8, 2, "#b38d55"); R(1, 1, 1, 6, WOOD); R(6, 1, 1, 6, WOOD); },
