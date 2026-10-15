@@ -736,7 +736,6 @@
     "st_none_kingdom": "No kingdom has risen yet.",
     "st_none_religion": "No faith has been founded yet.",
     "st_none_subspecies": "No subspecies has split off yet.",
-    "st_pop_title": "Population by {by}",
     "st_other": "Everyone else",
     "st_for": "Show for",
     "st_ages_title": "Ages of the {name}",
@@ -1143,6 +1142,11 @@
     "set_help": "Help",
     "set_audio_on": "Sound is on.",
     "set_audio_wait": "Sound starts after your first click or key press.",
-    "set_audio_none": "This browser can't play the game's sound. Everything else works as usual."
+    "set_audio_none": "This browser can't play the game's sound. Everything else works as usual.",
+    "tip_replay": "Walk through the 10 tutorial steps again.",
+    "st_pop_by_race": "Population by race",
+    "st_pop_by_kingdom": "Population by kingdom",
+    "st_pop_by_religion": "Population by religion",
+    "st_pop_by_subspecies": "Population by subspecies"
   }
 }

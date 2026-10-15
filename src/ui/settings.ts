@@ -109,7 +109,7 @@ export class Settings {
       el("h3", { textContent: t("set_language") }),
       language,
       el("h3", { textContent: t("set_help") }),
-      el("div", { className: "row start" }, replay),
+      el("div", { className: "row start" }, replay, el("a", { href: "../", className: "btn ghost small", textContent: t("back") })),
       el("div", { className: "row" }, close),
     );
   }

@@ -736,7 +736,6 @@
     "st_none_kingdom": "Aún no ha surgido ningún reino.",
     "st_none_religion": "Aún no se ha fundado ninguna fe.",
     "st_none_subspecies": "Aún no se ha separado ninguna subespecie.",
-    "st_pop_title": "Población por {by}",
     "st_other": "El resto",
     "st_for": "Ver para",
     "st_ages_title": "Edades: {name}",
@@ -1143,6 +1142,11 @@
     "set_help": "Ayuda",
     "set_audio_on": "El sonido está activado.",
     "set_audio_wait": "El sonido empieza después de tu primer clic o tecla.",
-    "set_audio_none": "Este navegador no puede reproducir el sonido del juego. Todo lo demás funciona con normalidad."
+    "set_audio_none": "Este navegador no puede reproducir el sonido del juego. Todo lo demás funciona con normalidad.",
+    "tip_replay": "Repasa otra vez los 10 pasos del tutorial.",
+    "st_pop_by_race": "Población por raza",
+    "st_pop_by_kingdom": "Población por reino",
+    "st_pop_by_religion": "Población por religión",
+    "st_pop_by_subspecies": "Población por subespecie"
   }
 }

@@ -204,7 +204,7 @@ export class StatsPanel {
       return;
     }
     const year = (y: number) => t("year", { n: y });
-    this.place({ kind: "lines", title: t("st_pop_title", { by: t(("st_by_" + this.by) as PlayKey) }), x: r.years, xName: year, series }, series, () =>
+    this.place({ kind: "lines", title: t(("st_pop_by_" + this.by) as PlayKey), x: r.years, xName: year, series }, series, () =>
       table([t("st_col_year"), ...series.map((s) => s.name)], r.years.map((y, i) => [String(y), ...series.map((s) => fmt(s.values[i] ?? 0))]).reverse()),
     );
     if (r.years.length < cfg.fewYears) this.extra.replaceChildren(el("p", { className: "st-empty", textContent: t("st_young") }));

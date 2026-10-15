@@ -913,7 +913,8 @@ export class App {
         shelf.append(panButton(), this.iconButton("fit", "tool_pick", "in_hint", pick("inspect"), this.tool === "inspect"));
         return;
       case "world": {
-        const replay = el("button", { type: "button", className: "tutorial-replay", onclick: () => this.tutorial.replay() }, txt("tut_replay"));
+        const replay = this.iconButton("help", "tut_replay", "tip_replay", () => this.tutorial.replay());
+        replay.classList.add("tutorial-replay");
         const saves = this.iconButton("saves", "w_saves", "tip_saves", () => this.openSaves());
         saves.dataset.tutorial = "save-world";
         shelf.append(
@@ -1190,6 +1191,8 @@ export class App {
   // Dialogs, saves, files
 
   private bindDialogs() {
+    // pixel icons in front of the top bar labels; narrow screens show only these
+    for (const [id, icon] of [["#stats-btn", "stats"], ["#settings-btn", "gear"], ["#codex-btn", "book"]] as const) $(id).prepend(mk(12, 12, TOOL_ICONS[icon]!, 2));
     $("#stats-btn").onclick = () => this.openStats();
     $("#codex-btn").onclick = () => this.codex.open();
     $("#settings-btn").onclick = () => this.settings.open();

@@ -28,7 +28,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 #lang{display:flex}
 #lang button{font:700 13px 'Pixelify Sans',monospace;min-width:44px;min-height:36px;border:2px solid var(--btn);background:transparent}
 #lang button[aria-pressed="true"]{background:var(--btn);color:var(--btnt)}
-#tabs{left:8px;top:var(--below-top,64px);display:flex;flex-direction:column;gap:4px;padding:4px}
+#tabs{left:8px;top:var(--below-top,64px);display:flex;flex-direction:column;gap:4px;padding:4px;max-height:calc(100dvh - var(--below-top,64px) - 84px - env(safe-area-inset-bottom,0px));overflow-y:auto;scrollbar-width:thin}
 #tabs button{display:flex;align-items:center;gap:8px;min-width:44px;min-height:44px;padding:4px 8px;border:2px solid transparent;background:transparent;font:500 14px 'Pixelify Sans',monospace;text-align:left}
 #tabs button[aria-selected="true"]{border-color:var(--acc);background:rgba(242,201,76,.12)}
 #tabs button:disabled{opacity:.4;cursor:not-allowed}
@@ -216,17 +216,22 @@ button.link{background:none;border:0;color:var(--mut);text-decoration:underline;
 .tutorial-check{display:grid;place-items:center;width:20px;height:20px;border:1px solid var(--line);border-radius:50%;color:var(--mut);font:11px 'Pixelify Sans',monospace}
 .tutorial-check[data-done="true"],.tutorial-check[data-current="true"]{border-color:var(--acc);color:var(--acc)}
 .tutorial-check[data-current="true"]{background:rgba(242,201,76,.14)}
-.tutorial-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.tutorial-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;position:sticky;bottom:-12px;margin:0 -14px -12px;padding:8px 14px 12px;background:var(--panel)}
 .tutorial-actions .btn{min-height:44px}
 .tutorial-highlight{position:fixed;z-index:26;border:3px solid var(--acc);border-radius:5px;box-shadow:0 0 0 3px rgba(242,201,76,.18),0 0 18px rgba(242,201,76,.7);pointer-events:none;animation:tutorial-pulse 1.4s ease-in-out infinite}
 .tutorial-arrow{position:fixed;z-index:27;color:var(--acc);font:700 28px/1 Outfit,sans-serif;text-shadow:2px 2px 0 #13152b;pointer-events:none}
 @keyframes tutorial-pulse{50%{box-shadow:0 0 0 7px rgba(242,201,76,.08),0 0 9px rgba(242,201,76,.38)}}
+.topbtn{display:inline-flex;align-items:center;gap:6px}
+.topbtn canvas{flex:none}
+@media(max-width:520px){#top .lbl{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}#top #back,#t-zoom,#t-seed{display:none}.topbtn{min-width:40px;justify-content:center}#speed button{min-width:32px;padding:0 4px}}
+@media(max-height:640px){.tutorial-checklist{display:none}}
+@media(max-height:500px){.tutorial-card{top:var(--below-top,64px);bottom:calc(84px + env(safe-area-inset-bottom,0px));max-height:none;left:120px}#tabs{display:grid;grid-template-columns:repeat(2,auto)}#tabs .lbl{display:none}#tabs button{min-height:40px}#help{display:none}}
 @media(max-width:760px){#tabs .lbl{display:none}#insp{display:none}#insp.open{display:block;left:8px;right:8px;width:auto;top:auto;bottom:100px}#help{display:none}#mini canvas{width:110px}#shelf{bottom:calc(8px + env(safe-area-inset-bottom,0px));left:8px;right:8px;transform:none;max-width:none}#mini{bottom:84px}#top{font-size:13px;gap:4px 10px}}
 @media(prefers-reduced-motion:reduce){#loading .barfill{transition:none}.tutorial-highlight{animation:none}}
 </style></head><body>
 <canvas id="world" data-ia="world_a" role="img"></canvas>
 <div id="construction" data-ia="buildings_under"></div>
-<div id="top" class="hud"><span id="t-year"></span><span id="t-pop"></span><span id="t-kin"></span><span id="t-seed"></span><span id="t-zoom"></span><button type="button" id="stats-btn" data-i="st_open" data-it="st_open_a"></button><button type="button" id="settings-btn" data-i="set_open" data-it="set_open_a"></button><button type="button" id="codex-btn"><span data-i="cx_open"></span><span class="badge" hidden></span></button><span class="spacer"></span><a href="../" data-i="back"></a><div id="lang" role="group" data-ia="lang"><button type="button" data-l="en" aria-pressed="true">EN</button><button type="button" data-l="es" aria-pressed="false">ES</button></div></div>
+<div id="top" class="hud"><span id="t-year"></span><span id="t-pop"></span><span id="t-kin"></span><span id="t-seed"></span><span id="t-zoom"></span><button type="button" id="stats-btn" class="topbtn" data-ia="st_open_a" data-it="st_open_a"><span class="lbl" data-i="st_open"></span></button><button type="button" id="settings-btn" class="topbtn" data-ia="set_open_a" data-it="set_open_a"><span class="lbl" data-i="set_open"></span></button><button type="button" id="codex-btn" class="topbtn"><span class="lbl" data-i="cx_open"></span><span class="badge" hidden></span></button><span class="spacer"></span><a href="../" id="back" data-i="back"></a><div id="lang" role="group" data-ia="lang"><button type="button" data-l="en" aria-pressed="true">EN</button><button type="button" data-l="es" aria-pressed="false">ES</button></div></div>
 <nav id="tabs" class="hud" role="tablist"></nav>
 <div id="shelf" class="hud" role="toolbar"></div>
 <aside id="insp" class="hud" aria-live="polite"></aside>
