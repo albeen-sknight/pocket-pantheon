@@ -84,7 +84,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 #possess .pad-buttons{display:flex;flex-wrap:wrap;gap:6px}
 #possess .stick{display:none;position:relative;width:96px;height:96px;border:2px solid var(--line);border-radius:50%;touch-action:none}
 #possess .knob{position:absolute;left:30px;top:30px;width:36px;height:36px;border-radius:50%;background:var(--acc)}
-@media(pointer:coarse){#possess .stick{display:block}#possess p{display:none}}
+@media(pointer:coarse){#possess .stick{display:block}#possess p{display:none}#speed button,#lang button,.topbtn{min-height:44px;min-width:44px}}
 #flash{position:fixed;inset:0;background:#f4f0e8;opacity:0;pointer-events:none;z-index:12}
 #flash.on{animation:flash .35s ease-out}
 @keyframes flash{from{opacity:.75}to{opacity:0}}
