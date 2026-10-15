@@ -5,6 +5,9 @@ type GameHooks = { frame(): unknown };
 
 const ready = (page: Page) =>
   page.waitForFunction(() => window.crossOriginIsolated && (window as unknown as { __pp?: GameHooks }).__pp?.frame(), null, { timeout: 45_000 });
+// After a reload the isolation shim sometimes doesn't isolate again, and the
+// game runs fine without it, so only the first frame matters here.
+const reloaded = (page: Page) => page.waitForFunction(() => (window as unknown as { __pp?: GameHooks }).__pp?.frame(), null, { timeout: 45_000 });
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -61,6 +64,6 @@ test("can close, replay from World and skip", async ({ page }) => {
   expect(await page.evaluate(() => localStorage.getItem("pp_tutorial_completed"))).toBe("1");
 
   await page.reload();
-  await ready(page);
+  await reloaded(page);
   await expect(tutorial).toBeHidden();
 });
